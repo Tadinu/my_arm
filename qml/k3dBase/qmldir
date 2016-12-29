@@ -1,0 +1,36 @@
+module k3dBase
+K3DSupportGLWidget 1.0 K3DSupportGLWidget.qml
+K3DBorderRectangle 1.0 K3DBorderRectangle.qml
+K3DButton 1.0 K3DButton.qml
+K3DImage 1.0 K3DImage.qml
+K3DCircularProgressBar 1.0 K3DCircularProgressBar.qml
+K3DContextMenuList 1.0 K3DContextMenuList.qml
+K3DDialog 1.0 K3DDialog.qml
+K3DDragButton 1.0 K3DDragButton.qml
+K3DGroupBox 1.0 K3DGroupBox.qml
+K3DItem 1.0 K3DItem.qml
+K3DItemList 1.0 K3DItemList.qml
+K3DItemListBase 1.0 K3DItemListBase.qml
+K3DMouseArea 1.0 K3DMouseArea.qml
+K3DMovingAnimation 1.0 K3DMovingAnimation.qml
+K3DProgressBar 1.0 K3DProgressBar.qml
+K3DRectangle 1.0 K3DRectangle.qml
+K3DSlider 1.0 K3DSlider.qml
+K3DSpinBox 1.0 K3DSpinBox.qml
+K3DStateButton 1.0 K3DStateButton.qml
+K3DSwitch 1.0 K3DSwitch.qml
+K3DTabButton 1.0 K3DTabButton.qml
+K3DText 1.0 K3DText.qml
+K3DTextField 1.0 K3DTextField.qml
+K3DHorizontalSlider 1.0 K3DHorizontalSlider.qml
+K3DComboBox 1.0 K3DComboBox.qml
+K3DComboBoxButton 1.0 K3DComboBoxButton.qml
+K3DTooltip 1.0 K3DTooltip.qml
+K3DNotificationBar 1.0 K3DNotificationBar.qml
+K3DCheckBox 1.0 K3DCheckBox.qml
+K3DSpinBoxItem 1.0 K3DSpinBoxItem.qml
+K3DSwitchItem 1.0 K3DSwitchItem.qml
+K3DVolumeControl 1.0 K3DVolumeControl.qml
+K3DDialogVolumeControl 1.0 K3DDialogVolumeControl.qml
+
+typeinfo k3dBase.qmltypes

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(my_arm)
 
 # http://doc.qt.io/qt-5/cmake-manual.html
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++11 ${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt5.7.1/5.7/gcc64 ${CMAKE_PREFIX_PATH}")
 
 # Find includes in corresponding build directories
@@ -20,7 +20,9 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
+  gazebo_ros
 )
+find_package(gazebo REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Gui REQUIRED)
 find_package(Qt5Widgets REQUIRED)
@@ -133,6 +135,8 @@ catkin_package(
 #  LIBRARIES myArm
 #  CATKIN_DEPENDS roscpp rospy geometry_msgs sensor_msgs std_msgs tf
 #  DEPENDS system_lib
+   DEPENDS
+      gazebo_ros
 )
 
 ###########
@@ -153,7 +157,13 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
 ## Your package locations should be listed before other locations
 # include_directories(include)
 
+## my_arm --
 include_directories(include/my_arm ${catkin_INCLUDE_DIRS})
+
+## Gazebo --
+include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
+
+## Qt --
 include_directories(${Qt5Core_INCLUDE_DIRS})
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 include_directories(${Qt5Gui_INCLUDE_DIRS})
@@ -246,6 +256,17 @@ target_link_libraries(robotArmController ${catkin_LIBRARIES}
 #   FILES_MATCHING PATTERN "*.h"
 #   PATTERN ".svn" EXCLUDE
 # )
+
+## TODO ++
+#install(DIRECTORY launch
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+#
+#install(DIRECTORY meshes
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+#
+#install(DIRECTORY models
+#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+## TODO --
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

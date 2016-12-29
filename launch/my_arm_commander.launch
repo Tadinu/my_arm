@@ -1,5 +1,19 @@
 <launch>
-        <param name="robot_description" command="cat $(find my_arm)/model/myArm2.urdf" />
-        <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
-        <node name="robotArmController" pkg="my_arm" type="robotArmController" />
+    <param name="robot_description" command="cat $(find my_arm)/models/myArm2.urdf" />
+
+    <!-- send fake joint values -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <param name="use_gui" value="TRUE"/>
+    </node>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+    <node name="robotArmController" pkg="my_arm" type="robotArmController" />
+
+    <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
+    <include file="$(find my_arm)/launch/my_arm_commander.launch">
+        <arg name="robot_arm" value="$(find my_arm)/worlds/robotArm.world"/>
+    </include>
+
+    <!-- more default parameters can be changed here -->
+    <!-- Spawn a robot into Gazebo -->
+    <node name="robotArmControllerGazebo" pkg="gazebo_ros" type="spawn_model" args="-file $(find my_arm)/models/myArm2.urdf -urdf -z 1 -model robotArm" />
 </launch>

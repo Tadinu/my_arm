@@ -41,8 +41,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 DISTFILES += \
     launch/my_arm_commander.launch \
-    model/myArm.urdf \
-    model/myArm2.urdf \
+    models/myArm.urdf \
+    models/myArm2.urdf \
+    worlds/robotArm.world \
     meshes/base_link.STL \
     meshes/finger_1_dist_link.STL \
     meshes/finger_1_med_liink.STL \
@@ -53,7 +54,12 @@ DISTFILES += \
     meshes/finger_3_dist_link.STL \
     meshes/finger_3_med_link.STL \
     package.xml \
-    CMakeLists.txt
+    CMakeLists.txt \
+    worlds/robotArm.world \
+    launch/my_arm_world.launch \
+    models/myArm2.xacro \
+    models/materials.xacro \
+    models/myArm2.gazebo
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

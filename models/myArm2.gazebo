@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<robot>
+
+    <!-- ros_control plugin -->
+    <gazebo>
+      <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>/my_arm</robotNamespace>
+        <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+      </plugin>
+    </gazebo>
+
+    <!-- base_link -->
+    <gazebo reference="base_link">
+      <material>Gazebo/Orange</material>
+    </gazebo>
+
+    <!-- body1 -->
+    <gazebo reference="body1">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Blue</material>
+    </gazebo>
+
+    <!-- body10 -->
+    <gazebo reference="body10">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/White</material>
+    </gazebo>
+
+    <!-- Body 2 -->
+    <gazebo reference="body2">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Green</material>
+    </gazebo>
+
+    <!-- Body 2 -->
+    <gazebo reference="brHand">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_1_prox_link -->
+    <gazebo reference="finger_1_prox_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_1_med_liink -->
+    <gazebo reference="finger_1_med_liink">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_1_dist_link -->
+    <gazebo reference="finger_1_dist_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_2_prox_link -->
+    <gazebo reference="finger_2_prox_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_2_med_link -->
+    <gazebo reference="finger_2_med_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_2_dist_link -->
+    <gazebo reference="finger_2_dist_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_3_med_link -->
+    <gazebo reference="finger_3_med_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+    <!-- finger_3_dist_link -->
+    <gazebo reference="finger_3_dist_link">
+      <mu1>0.2</mu1>
+      <mu2>0.2</mu2>
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+</robot>

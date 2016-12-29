@@ -34,7 +34,7 @@ ApplicationWindow {
         anchors.top: joyPad.bottom
         anchors.topMargin: 20
         onClicked: {
-            _geopadMainWindow.rotateElement(0, 3.14/4);
+            _geopadMainWindow.rotateElement(0, Math.PI/2);
         }
     }
 

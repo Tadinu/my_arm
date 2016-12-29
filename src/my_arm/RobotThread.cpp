@@ -42,8 +42,8 @@ RobotThread::~RobotThread()
         ros::waitForShutdown();
     }//end if
 
-    m_pMutex->tryLock(5000);
-    m_pMutex->unlock();
+    //m_pMutex->tryLock(5000);
+    //m_pMutex->unlock();
 
     if(!m_pThread->wait(5000)) //Wait until it actually has terminated (max. 5 sec)
     {
@@ -58,7 +58,7 @@ bool RobotThread::init()
     m_pThread = new QThread();
     this->moveToThread(m_pThread);
 
-    m_pMutex = new QMutex();
+    //m_pMutex = new QMutex();
 
     connect(m_pThread, &QThread::started, this, &RobotThread::run);
     ros::init(m_Init_argc, m_pInit_argv, "gui_command");
@@ -78,13 +78,15 @@ bool RobotThread::init()
 
 void RobotThread::poseCallback(const nav_msgs::Odometry & msg)
 {
-    {
-        QMutexLocker mutexLocker(m_pMutex);
+    QMutex * pMutex = new QMutex();
 
-        m_xPos = msg.pose.pose.position.x;
-        m_yPos = msg.pose.pose.position.y;
-        m_aPos = msg.pose.pose.orientation.w;
-    }
+    pMutex->lock();
+    m_xPos = msg.pose.pose.position.x;
+    m_yPos = msg.pose.pose.position.y;
+    m_aPos = msg.pose.pose.orientation.w;
+    pMutex->unlock();
+
+    delete pMutex;
     Q_EMIT newPose(m_xPos, m_yPos, m_aPos);
 }//callback method to update the robot's position.
 
@@ -100,7 +102,7 @@ void RobotThread::run()
 
     // robot state
     double tilt = 0, tinc = degree, height=0, hinc=0.005;
-    static double angle = 0, angleDelta = 0;
+    static double angle = 0;
     double jointValues[12] = {0};
     int jointNo = 12;
     // message declarations
@@ -111,21 +113,12 @@ void RobotThread::run()
 #endif  // ducta --
 
     ros::Rate loop_rate(30);
+    QMutex * pMutex;
     while (ros::ok())
     {
+        pMutex = new QMutex();
 #if 1 // ducta ++
-        QMutexLocker mutexLocker(m_pMutex);
         {
-            // Each time m_angleDelta is set to a new value,
-            // The joint rotates until angleDeta reaches m_angleDelta then halts!
-            if(angleDelta > m_angleDelta) {
-                QThread::msleep(1000);
-                if(angle > TWO_PI)
-                    angle -= TWO_PI;
-                m_angle = angle;
-                angleDelta = 0;
-                continue;
-            }
             //update joint_state
             joint_state.header.stamp = ros::Time::now();
             joint_state.name.resize(jointNo);
@@ -183,14 +176,26 @@ void RobotThread::run()
             if (tilt<-.5 || tilt>0) tinc *= -1;
             height += hinc;
             if (height>.2 || height<0) hinc *= -1;
-            jointValues[0] += degree;
-            angle += degree/4;
-            // ducta ++
-            angleDelta = angle - m_angle;
-            // ducta --
+
+            // !NOTE: THE PROBLEM IS WE MUST LET THE JOINT KEEP PUBLISHING ITS STATE INFO
+            // Each time m_angleDelta is set to a new value,
+            // The joint rotates until angleDeta reaches m_angleDelta then halts!
+            pMutex->lock();
+            if((angle - m_angle) < m_angleDelta) {
+                jointValues[0] += degree;
+                angle += degree/4;
+            }
+            else {
+                if(angle > TWO_PI) angle -= TWO_PI;
+                // Stop rotating, though still keep publishing its state with current angle!
+                m_angle = angle;
+                m_angleDelta = 0;
+            }
+            pMutex->unlock();
         }
         // This will adjust as needed per iteration
         loop_rate.sleep();
+		delete pMutex;
 #else
         pMutex = new QMutex();
 
@@ -210,15 +215,21 @@ void RobotThread::run()
 
 void RobotThread::SetSpeed(double speed, double angle)
 {
-    QMutexLocker mutexLocker(m_pMutex);
+    QMutex * pMutex = new QMutex();
+    pMutex->lock();
     m_speed = speed;
     m_angle = angle;
+	pMutex->unlock();
+	delete pMutex;
 }//set the speed of the robot.
 
-void RobotThread::rotateJoint(int jointId, double angle)
+void RobotThread::rotateJoint(int jointId, double angleDelta)
 {
-    QMutexLocker mutexLocker(m_pMutex);
-    m_angleDelta = angle;
+    QMutex * pMutex = new QMutex();
+    pMutex->lock();
+    m_angleDelta = angleDelta;
+	pMutex->unlock();
+	delete pMutex;
 }
 
 double RobotThread::getXSpeed(){ return m_speed; }

@@ -31,7 +31,7 @@ public:
     void poseCallback(const nav_msgs::Odometry & msg);
 
 	void SetSpeed(double speed, double angle);
-    void rotateJoint(int jointId, double angle);
+    void rotateJoint(int jointId, double angleDelta);
     void setPose(QList<double> to_set);
 
     Q_SLOT void run();

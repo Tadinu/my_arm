@@ -6,6 +6,8 @@
 #include <QEventLoop>
 #include <QMetaObject>
 
+#include <ros/console.h>
+
 #if   ( (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) )
 #define K3DS_QT5
 #elif ( (QT_VERSION >= QT_VERSION_CHECK(4, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) )

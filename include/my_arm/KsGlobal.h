@@ -221,6 +221,14 @@
 #define GB_SHARED_KEY_UC_STATE   (QLatin1String("KevSharedPrinterState"))
 #define GB_SHARED_KEY_PRINT_INFO (QLatin1String("KevSharedPrintInfo"))
 
+#define V_DELETE_POINTER(pt) { \
+    delete pt; pt = nullptr; \
+}
+
+#define V_DELETE_POINTER_ARRAY(ptArr) { \
+    delete [] ptArr; ptArr = nullptr;    \
+}
+
 class KsGlobal : public QObject
 {
     Q_OBJECT
@@ -231,6 +239,75 @@ public:
         ERROR_DOWNLOAD_NULL_URL,
         ERROR_DOWNLOAD_OPEN_FILE,
         ERROR_DOWNLOAD_NETWORK
+    };
+
+    enum VROBOT_TYPE {
+        VMY_ARM   = 0x01,
+        VJACO_ARM = 0x02
+    };
+
+    enum VMY_ARM_JOINT {
+        VMYARM_BASE_JOINT,    // Revolute
+        VJOINT20,             // Fixed
+        VJOINT2,              // Revolute
+        VJOINT3,              // Revolute
+
+        // Fingers --
+        //
+        VFINGER_1_PROX_JOINT,
+        VFINGER_1_MED_JOINT,
+        VFINGER_1_DIST_JOINT,
+
+        VFINGER_2_PROX_JOINT,
+        VFINGER_2_MED_JOINT,
+        VFINGER_2_DIST_JOINT,
+
+        VFINGER_3_MED_JOINT,
+        VFINGER_3_DIST_JOINT,
+
+        VMY_ARM_JOINT_TOTAL
+    };
+
+    enum VJACO_ARM_JOINT {
+        VJACO_ARM_BASE_JOINT, // Fixed
+        VBASE_INTERNAL_JOINT, // Fixed
+
+        VRING_1_JOINT,        // Fixed
+        VARM_0_JOINT,         // Continuous
+
+        VRING_2_JOINT,        // Fixed
+        VARM_1_JOINT,         // Revolute
+
+        VRING_3_JOINT,        // Fixed
+        VARM_2_JOINT,         // Revolute
+
+        VRING_4_JOINT,        // Fixed
+        VARM_3_JOINT,         // Continuous
+
+        VRING_5_JOINT,        // Fixed
+        VARM_4_JOINT,         // Continuous
+
+        VRING_6_JOINT,        // Fixed
+        VARM_5_JOINT,         // Continuous
+
+        // Fingers --
+        //
+        VFINGERS_BASE_JOINT,  // Fixed
+        VFINGERS_MOUNT_INDEX_JOINT, // Fixed
+
+        VFINGERS_JOINT_0,     // Revolute
+        VFINGERS_JOINT_1,     // Fixed
+
+        VFINGERS_MOUNT_THUMB_JOINT, // Fixed
+        VFINGERS_JOINT_2,     // Revolute
+
+        VFINGERS_JOINT_3,     // Fixed
+        VFINGERS_MOUNT_PINKIE_JOINT, // Fixed
+
+        VFINGERS_JOINT_4,     // Revolute
+        VFINGERS_JOINT_5,     // Fixed
+
+        VJACO_ARM_JOINT_TOTAL
     };
 
 public:

@@ -119,7 +119,10 @@ class GeopadQMLAdapter : public QObject {
     Q_ENUMS(GEOPAD_DOUBLE_PARAM_OPERATION)
     Q_ENUMS(GEOPAD_TRIPLE_PARAM_OPERATION)
     Q_ENUMS(GEOPAD_QML_ITEM)
-    Q_ENUMS(VROBOT_ARM_ELEMENT)
+
+    Q_ENUMS(VROBOT_ARM_TYPE)
+    Q_ENUMS(VMY_ARM_JOINT)
+    Q_ENUMS(VJACO_ARM_JOINT)
 public:
 
     static const int OBJECT_IMAGE_WIDTH  = 80;
@@ -180,28 +183,6 @@ public:
     static const QString QML_PROPERTY_ITEM[GEOPAD_QML_ITEM_TOTAL];
 
     //KDialog* getKsDialog(int dialogId);
-
-    enum VROBOT_ARM_ELEMENT {
-        VWHOLE_ARM,
-        VBASE_JOINT,
-        VJOINT20,
-        VJOINT2,
-        VJOINT3,
-
-        VFINGER_1_PROX_JOINT,
-        VFINGER_1_MED_JOINT,
-        VFINGER_1_DIST_JOINT,
-
-        VFINGER_2_PROX_JOINT,
-        VFINGER_2_MED_JOINT,
-        VFINGER_2_DIST_JOINT,
-
-        VFINGER_3_PROX_JOINT,
-        VFINGER_3_MED_JOINT,
-        VFINGER_3_DIST_JOINT,
-
-        VFINGER_TOTAL
-    };
 
 public:
     GeopadQMLAdapter();

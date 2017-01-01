@@ -3,6 +3,8 @@
 
 #include <QtCore>
 #include <QThread>
+#include <QVector3D>
+#include <QQuaternion>
 #include <QStringList>
 #include <stdlib.h>
 #include <QMutex>
@@ -13,6 +15,9 @@
 #include <ros/network.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
+#include <sensor_msgs/JointState.h>
+#include <tf/transform_broadcaster.h>
+#include <visualization_msgs/Marker.h>
 
 class RobotThread : public QObject {
 	Q_OBJECT
@@ -29,35 +34,53 @@ public:
     bool init();
 
     void poseCallback(const nav_msgs::Odometry & msg);
-
+    void runArmOperation(int armId);
+    std::string getRobotNodeName(int armId);
 	void SetSpeed(double speed, double angle);
-    void rotateJoint(int jointId, double angleDelta);
     void setPose(QList<double> to_set);
 
-    Q_SLOT void run();
+    void rotateJoint(int jointId, double angleDelta);
+    void setMarkerPos(const QVector3D& markerPos);
 
-    Q_SIGNAL void newPose(double,double,double);
+    // Send methods --
+    void sendRobot(int robotId, geometry_msgs::TransformStamped& world_trans,
+                   tf::TransformBroadcaster& broadcaster,
+                   ros::Publisher& joint_pub, sensor_msgs::JointState& jointState);
+    void sendMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
+                     const QVector3D& pos = QVector3D(), const QVector3D& orient = QVector3D(),
+                     double rotAngle = 1.0f,
+                     const QVector3D& scale = QVector3D(1.0f, 1.0f, 1.0f));
+
+public slots:
+    void run();
+
+signals:
+    void newPose(double, double, double);
+    void jointPosUpdated(int jointId, const QVector3D& pos, double angle);
+
 private:
-    int m_Init_argc;
-    char** m_pInit_argv;
-    const char * m_topic;
+    int _init_argc;
+    char** _pInit_argv;
+    const char * _topic;
 
-    double m_speed;
-    double m_angle;
-    double m_angleDelta;
+    double _speed;
+    double _angle;
+    double _angleDelta;
 
-    double m_xPos;
-    double m_yPos;
-    double m_aPos;
+    double _xPos;
+    double _yPos;
+    double _aPos;
 
-    double m_maxRange;
-    double m_minRange;
+    double _maxRange;
+    double _minRange;
 
-    QThread * m_pThread;
-    QMutex* m_pMutex;
+    QThread * _pThread;
+    QMutex* _pMutex;
 
-    ros::Subscriber pose_listener;
-    ros::Publisher  sim_velocity;
+    ros::Subscriber _pose_listener;
+    ros::Publisher  _sim_velocity;
+
+    QVector3D _marker_pos;
 };
 #endif
 

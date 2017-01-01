@@ -35,7 +35,7 @@ GeopadMainWindowAgent* GeopadMainWindowAgent::_instance = nullptr;
 // --- CalibrationDialog ---
 GeopadMainWindowAgent::GeopadMainWindowAgent(int argc, char **argv, QObject *parent)
     :QObject(parent),
-     m_RobotThread(argc, argv)
+     _robotThread(argc, argv)
 {
 
     // For Common KStudio Download Manager
@@ -44,8 +44,10 @@ GeopadMainWindowAgent::GeopadMainWindowAgent(int argc, char **argv, QObject *par
     // - CANCEL DOWNLOADING JOB: TO BE CONNECTED ON DOWNLOAD ACTION BEING TRIGGERED
     // connect(&_progressDialog, SIGNAL(canceled()), &_kDownloader, SLOT(cancelDownloading()));
 
-    connect(&m_RobotThread, &RobotThread::newPose, this, &GeopadMainWindowAgent::updatePoseDisplay);
-    m_RobotThread.init();
+    connect(&_robotThread, &RobotThread::newPose, this, &GeopadMainWindowAgent::updatePoseDisplay);
+    connect(&_robotThread, &RobotThread::jointPosUpdated, this, &GeopadMainWindowAgent::updateJointPosInfo);
+
+    _robotThread.init();
 }
 
 GeopadMainWindowAgent::~GeopadMainWindowAgent()
@@ -92,11 +94,11 @@ void GeopadMainWindowAgent::qmlLog(QVariant logVariant)
 {
 }
 
-void GeopadMainWindowAgent::goForward(){m_RobotThread.SetSpeed(0.25, 0);}
-void GeopadMainWindowAgent::goBackward(){m_RobotThread.SetSpeed(-0.25, 0);}
-void GeopadMainWindowAgent::goRight(){m_RobotThread.SetSpeed(0, -PI / 6.0);}
-void GeopadMainWindowAgent::goLeft(){m_RobotThread.SetSpeed(0, PI / 6.0);}
-void GeopadMainWindowAgent::halt(){ m_RobotThread.SetSpeed(0, 0); }
+void GeopadMainWindowAgent::goForward(){_robotThread.SetSpeed(0.25, 0);}
+void GeopadMainWindowAgent::goBackward(){_robotThread.SetSpeed(-0.25, 0);}
+void GeopadMainWindowAgent::goRight(){_robotThread.SetSpeed(0, -PI / 6.0);}
+void GeopadMainWindowAgent::goLeft(){_robotThread.SetSpeed(0, PI / 6.0);}
+void GeopadMainWindowAgent::halt(){ _robotThread.SetSpeed(0, 0); }
 
 void GeopadMainWindowAgent::updatePoseDisplay(double x, double y, double theta)
 {
@@ -110,7 +112,17 @@ void GeopadMainWindowAgent::updatePoseDisplay(double x, double y, double theta)
     //p_aDisplay->setText(aPose);
 }//update the display.
 
+void GeopadMainWindowAgent::updateJointPosInfo(int jointId, const QVector3D& jointPos, double jointRotAngle)
+{
+
+}
+
 void GeopadMainWindowAgent::rotateElement(int elementId, double angle)
 {
-     m_RobotThread.rotateJoint(0, angle);
+     _robotThread.rotateJoint(0, angle);
+}
+
+void GeopadMainWindowAgent::setTargetPos(const QVector3D& pos)
+{
+    _robotThread.setMarkerPos(pos);
 }

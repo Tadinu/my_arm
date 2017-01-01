@@ -50,7 +50,9 @@ public slots:
     void halt();
 
     // GeopadQMLAdapter::VROBOT_ARM_ELEMENT
+    void updateJointPosInfo(int jointId, const QVector3D& jointPos, double jointRotAngle);
     Q_INVOKABLE void rotateElement(int elementId, double angle);
+    Q_INVOKABLE void setTargetPos(const QVector3D& pos);
 
 private:
     static GeopadMainWindowAgent *_instance;
@@ -58,7 +60,7 @@ private:
     //KDownloadManager  _kDownloader;
     //KProgressDialog   _progressDialog;
 
-    RobotThread m_RobotThread;
+    RobotThread _robotThread;
 };
 
 #endif // GEOPAD_MAINWINDOW_AGENT_H

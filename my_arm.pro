@@ -41,8 +41,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 DISTFILES += \
     launch/my_arm_commander.launch \
-    models/myArm.urdf \
-    models/myArm2.urdf \
     worlds/robotArm.world \
     meshes/base_link.STL \
     meshes/finger_1_dist_link.STL \
@@ -57,9 +55,63 @@ DISTFILES += \
     CMakeLists.txt \
     worlds/robotArm.world \
     launch/my_arm_world.launch \
-    models/myArm2.xacro \
     models/materials.xacro \
-    models/myArm2.gazebo
+    models/myArm2.gazebo \
+    models/jaco_joint_control_vel.xacro \
+    models/jaco_joint_control.xacro \
+    models/jaco_robot_multi.urdf.xacro \
+    models/jaco_robot.urdf.xacro \
+    models/jaco.urdf.xacro \
+    README.md \
+    launch/jaco_gazebo.launch \
+    launch/jaco_standalone_gazebo.launch \
+    launch/test_two_arms.launch \
+    models/jaco_robot.urdf \
+    launch/jaco_arm_commander.launch \
+    meshes/jaco/0_baseA.STL \
+    meshes/jaco/0_baseB_limb.STL \
+    meshes/jaco/1_shoulder_limb.STL \
+    meshes/jaco/2_upperarm_limb.STL \
+    meshes/jaco/3_forearm_limb.STL \
+    meshes/jaco/4_upperwrist_limb.STL \
+    meshes/jaco/5_lowerwrist_limb.STL \
+    meshes/jaco/6_hand_limb.STL \
+    meshes/jaco/7_index_finger.STL \
+    meshes/jaco/7_pinkie_finger.STL \
+    meshes/jaco/7_thumb_finger.STL \
+    meshes/jaco/ring_1.STL \
+    meshes/jaco/ring_2.STL \
+    meshes/jaco/ring_3.STL \
+    meshes/jaco/ring_4.STL \
+    meshes/jaco/ring_5.STL \
+    meshes/jaco/ring_6.STL \
+    meshes/jaco2/0_baseA.STL \
+    meshes/jaco2/0_baseB_limb.STL \
+    meshes/jaco2/1_shoulder_limb.STL \
+    meshes/jaco2/2_upperarm_limb.STL \
+    meshes/jaco2/3_forearm_limb.STL \
+    meshes/jaco2/4_upperwrist_limb.STL \
+    meshes/jaco2/5_lowerwrist_limb.STL \
+    meshes/jaco2/6_hand_limb.STL \
+    meshes/jaco2/7_finger_mount_index.STL \
+    meshes/jaco2/7_finger_mount_pinkie.STL \
+    meshes/jaco2/7_finger_mount_thumb.STL \
+    meshes/jaco2/8_finger_index.STL \
+    meshes/jaco2/8_finger_pinkie.STL \
+    meshes/jaco2/8_finger_thumb.STL \
+    meshes/jaco2/9_finger_index_tip.STL \
+    meshes/jaco2/9_finger_pinkie_tip.STL \
+    meshes/jaco2/9_finger_thumb_tip.STL \
+    meshes/jaco2/ring_1.STL \
+    meshes/jaco2/ring_2.STL \
+    meshes/jaco2/ring_3.STL \
+    meshes/jaco2/ring_4.STL \
+    meshes/jaco2/ring_5.STL \
+    meshes/jaco2/ring_6.STL \
+    models/myArm_gripper.urdf \
+    models/myArm_brHand.urdf \
+    models/myArm_brHand2.urdf \
+    models/myArm_brHand.xacro
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

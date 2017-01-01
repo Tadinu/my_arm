@@ -9,6 +9,8 @@
       </plugin>
     </gazebo>
 
+    <!-- world link with fixed joint : no need -->
+
     <!-- base_link -->
     <gazebo reference="base_link">
       <material>Gazebo/Orange</material>

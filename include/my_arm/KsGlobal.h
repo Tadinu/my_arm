@@ -247,10 +247,14 @@ public:
     };
 
     enum VMY_ARM_JOINT {
-        VMYARM_BASE_JOINT,    // Revolute
-        VJOINT20,             // Fixed
-        VJOINT2,              // Revolute
-        VJOINT3,              // Revolute
+        // Arm --
+        //
+        VMYARM_BASE_JOINT,    // Revolute Z
+        VJOINT10,             // Continuous Y
+        VJOINT1,              // Fixed - at Joint10 pos
+        VJOINT20,             // Continuous Y
+        VJOINT2,              // Fixed - at Joint20 pos
+        VJOINT3,              // Revolute Z
 
         // Fingers --
         //
@@ -269,6 +273,8 @@ public:
     };
 
     enum VJACO_ARM_JOINT {
+        // Arm --
+        //
         VJACO_ARM_BASE_JOINT, // Fixed
         VBASE_INTERNAL_JOINT, // Fixed
 

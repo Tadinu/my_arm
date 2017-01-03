@@ -37,7 +37,6 @@ GeopadMainWindowAgent::GeopadMainWindowAgent(int argc, char **argv, QObject *par
     :QObject(parent),
      _robotThread(argc, argv)
 {
-
     // For Common KStudio Download Manager
     //connect(&_kDownloader, SIGNAL(progressDownloading(quint8)), this, SLOT(updateDownloadProgress(quint8)));
     //connect(&_kDownloader, SIGNAL(completedDownloading(int, const QString&, quint64, const QString&, int)), this, SLOT(finalizeUpdateGeopadData(int, const QString&, quint64, const QString&, int)));
@@ -117,12 +116,22 @@ void GeopadMainWindowAgent::updateJointPosInfo(int jointId, const QVector3D& joi
 
 }
 
-void GeopadMainWindowAgent::rotateElement(int elementId, double angle)
+void GeopadMainWindowAgent::setRobotJointPos(int elementId, double pos)
 {
-     _robotThread.rotateJoint(0, angle);
+     _robotThread.rotateJoint(elementId, pos);
+}
+
+void GeopadMainWindowAgent::moveTarget(const QVector3D& distance)
+{
+    _robotThread.moveBall(tf::Vector3(distance.x(), distance.y(), distance.z()));
 }
 
 void GeopadMainWindowAgent::setTargetPos(const QVector3D& pos)
 {
-    _robotThread.setMarkerPos(pos);
+    _robotThread.setBallPos(tf::Vector3(pos.x(), pos.y(), pos.z()), true);
+}
+
+void GeopadMainWindowAgent::resetRobotPosture()
+{
+    _robotThread.updateBallFollowingEndTip(); // Joint values mean angle values, Link values mean length values
 }

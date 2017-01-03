@@ -23,53 +23,120 @@ ApplicationWindow {
     //
     GeoJoypad {
         id: joyPad
-        anchors.centerIn: parent
-    }
-
-    // SEND BUTTON ===============================================
-    //
-    Button {
-        text: "Move"
-        anchors.horizontalCenter: mainWindow.horizontalCenter
-        anchors.top: joyPad.bottom
-        anchors.topMargin: 20
-        onClicked: {
-            _geopadMainWindow.rotateElement(0, Math.PI/2);
+        anchors.right : parent.right
+        anchors.verticalCenter : parent.verticalCenter
+        anchors.rightMargin : 80
+        onPosMoved : {
+            _geopadMainWindow.moveTarget(distance);
         }
     }
 
     // SLIDERS ==============================================
     //
     Slider {
-        id: scaleX
+        id: moveZ
         tickmarksEnabled: true
-        anchors.left: joyPad.left
-        anchors.top: joyPad.bottom
-        anchors.topMargin: 5
-        anchors.right: joyPad.right
-    }
-
-    Slider {
-        id: scaleY
-        tickmarksEnabled: true
-        anchors.top: joyPad.top
-        anchors.right: joyPad.left
-        anchors.rightMargin: 5
-        anchors.bottom: joyPad.bottom
+        anchors.left: joyPad.right
+        anchors.leftMargin: width
+        anchors.verticalCenter: joyPad.verticalCenter
         orientation: Qt.Vertical
+
+        stepSize: 0.01
+        minimumValue: -100
+        maximumValue: 100
+
+        value: 0.0
+        property real _value: 0.0
+        Component.onCompleted: {
+            _value = value;
+        }
+
+        onValueChanged: {
+            _geopadMainWindow.moveTarget(Qt.vector3d(0,0, (value - _value)/10));
+            _value = value;
+        }
     }
 
-    Slider {
-        id: scaleZ
-        tickmarksEnabled: true
-        anchors.top: mainWindow.top
-        anchors.horizontalCenter: mainWindow.horizontalCenter
-        orientation: Qt.Horizontal
+    Button {
+        text: "Center"
+        anchors.horizontalCenter: sliderGroup.horizontalCenter
+        anchors.top: sliderGroup.bottom
+        anchors.topMargin: 20
+        onClicked: {
+            moveBaseJoint.value = moveJoint10.value =
+            moveJoint20.value   = moveJoint3.value  = 0;
+            _geopadMainWindow.resetRobotPosture();
+        }
     }
 
-    Component.onCompleted: {
-        scaleX.value = 1.0
-        scaleY.value = 1.0
-        scaleZ.value = 1.0
+    // JOINT VALUES ===============================================
+    //
+    Row {
+        id: sliderGroup
+        anchors.verticalCenter : parent.verticalCenter
+        anchors.left: parent.left
+        anchors.leftMargin: 80
+
+        property real _CPOS_LIMIT: 2*Math.PI/3
+        spacing: 5
+        Slider {
+            id: moveBaseJoint
+            tickmarksEnabled: true
+            orientation: Qt.Vertical
+            anchors.verticalCenter: parent.verticalCenter
+
+            stepSize: 0.01
+            value : 0
+            minimumValue: -sliderGroup._CPOS_LIMIT
+            maximumValue: sliderGroup._CPOS_LIMIT
+            onValueChanged: {
+                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.MYARM_BASE_JOINT, value);
+            }
+        }
+
+        Slider {
+            id: moveJoint10
+            tickmarksEnabled: true
+            orientation: Qt.Vertical
+            anchors.verticalCenter: parent.verticalCenter
+
+            stepSize: 0.01
+            value : 0
+            minimumValue: -sliderGroup._CPOS_LIMIT
+            maximumValue: sliderGroup._CPOS_LIMIT
+            onValueChanged: {
+                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT10, value);
+            }
+        }
+
+        Slider {
+            id: moveJoint20
+            tickmarksEnabled: true
+            orientation: Qt.Vertical
+            anchors.verticalCenter: parent.verticalCenter
+
+            stepSize: 0.01
+            value : 0
+            minimumValue: -sliderGroup._CPOS_LIMIT
+            maximumValue: sliderGroup._CPOS_LIMIT
+            onValueChanged: {
+                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT20, value);
+            }
+        }
+
+        Slider {
+            id: moveJoint3 // Wrist Joint : Revolute Z
+            tickmarksEnabled: true
+            orientation: Qt.Vertical
+            anchors.verticalCenter: parent.verticalCenter
+
+            stepSize: 0.01
+            value : 0
+            minimumValue: -sliderGroup._CPOS_LIMIT
+            maximumValue: sliderGroup._CPOS_LIMIT
+            onValueChanged: {
+                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT3, value);
+            }
+        }
     }
 }

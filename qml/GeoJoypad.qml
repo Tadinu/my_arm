@@ -16,6 +16,7 @@ Item {
     width: 250
     height: 250
 
+    signal posMoved(var distance)
     Image {
         id: joyBase
         anchors.fill: parent
@@ -24,34 +25,36 @@ Item {
         Image {
             id: joyThumb
             source: "qrc:///res/images/joystick_thumb.png"
-            x: cX
-            y: cY
+            x: (joyBase.width - joyThumb.width)/2
+            y: (joyBase.height - joyThumb.height)/2
 
-            readonly property int cX: (joyBase.width - width) / 2
-            readonly property int cY: (joyBase.height - height) / 2
+            property real cX: 0
+            property real cY: 0
 
             property var twist: {'linear': {'x': 0, 'y': 0, 'z': 0}, 'angular': {'x': 0, 'y': 0, 'z': 0}}
 
-            //function publishTwist() {
-            //    var header = {seq: 0, stamp: ros.now(), frame_id: ''}
-            //
-            //    twist.linear.x = (joyThumb.x - joyThumb.cX) * scaleX.value
-            //    twist.angular.x = (joyThumb.y - joyThumb.cY) * scaleY.value
-            //
-            //    pubJoy.publish({header: header, twist: joyThumb.twist})
-            //}
+            function publishTwist() {
+                //var header = {seq: 0, stamp: ros.now(), frame_id: ''}
+                //
+                //twist.linear.x = (joyThumb.x - joyThumb.cX) * scaleX.value
+                //twist.angular.x = (joyThumb.y - joyThumb.cY) * scaleY.value
+                //
+                //pubJoy.publish({header: header, twist: joyThumb.twist})
+                // -------------------------------------------------------
+                joyPad.posMoved(Qt.vector3d((joyThumb.x - joyThumb.cX)/100, (joyThumb.y - joyThumb.cY)/100, 0));
+                updateThumbPos();
+            }
 
-            onXChanged: {
-                if (mouseArea.drag.active) {
-                    //publishTwist()
+            function updateThumbPos() {
+                if(joyThumb.x !== joyThumb.cX ||
+                   joyThumb.y !== joyThumb.cY) {
+                    joyThumb.cX = joyThumb.x;
+                    joyThumb.cY = joyThumb.y;
                 }
             }
 
-            onYChanged: {
-                if (mouseArea.drag.active) {
-                    //publishTwist()
-                }
-            }
+            onXChanged: publishTwist()
+            onYChanged: publishTwist()
 
             MouseArea {
                 id: mouseArea
@@ -62,9 +65,8 @@ Item {
                 drag.maximumX: joyBase.width - joyThumb.width
                 drag.maximumY: joyBase.height - joyThumb.height
 
-                onReleased: {
-                    drag.target.x = drag.target.cX
-                    drag.target.y = drag.target.cY
+                onPressed: {
+                    joyThumb.updateThumbPos();
                 }
             }
         }

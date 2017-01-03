@@ -51,8 +51,10 @@ public slots:
 
     // GeopadQMLAdapter::VROBOT_ARM_ELEMENT
     void updateJointPosInfo(int jointId, const QVector3D& jointPos, double jointRotAngle);
-    Q_INVOKABLE void rotateElement(int elementId, double angle);
+    Q_INVOKABLE void setRobotJointPos(int elementId, double pos);
+    Q_INVOKABLE void moveTarget(const QVector3D& distance);
     Q_INVOKABLE void setTargetPos(const QVector3D& pos);
+    Q_INVOKABLE void resetRobotPosture();
 
 private:
     static GeopadMainWindowAgent *_instance;

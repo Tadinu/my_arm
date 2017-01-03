@@ -120,9 +120,9 @@ class GeopadQMLAdapter : public QObject {
     Q_ENUMS(GEOPAD_TRIPLE_PARAM_OPERATION)
     Q_ENUMS(GEOPAD_QML_ITEM)
 
-    Q_ENUMS(VROBOT_ARM_TYPE)
-    Q_ENUMS(VMY_ARM_JOINT)
-    Q_ENUMS(VJACO_ARM_JOINT)
+    Q_ENUMS(QML_ROBOT_TYPE)
+    Q_ENUMS(QML_MY_ARM_JOINT)
+    Q_ENUMS(QML_JACO_ARM_JOINT)
 public:
 
     static const int OBJECT_IMAGE_WIDTH  = 80;
@@ -183,6 +183,81 @@ public:
     static const QString QML_PROPERTY_ITEM[GEOPAD_QML_ITEM_TOTAL];
 
     //KDialog* getKsDialog(int dialogId);
+    //
+    enum QML_ROBOT_TYPE {
+        MY_ARM   = KsGlobal::VMY_ARM,
+        JACO_ARM = KsGlobal::VJACO_ARM
+    };
+
+    enum QML_MY_ARM_JOINT {
+        // Arm --
+        //
+        MYARM_BASE_JOINT    = KsGlobal::VMYARM_BASE_JOINT,    // Revolute Z
+        JOINT10             = KsGlobal::VJOINT10         ,    // Continuous
+        JOINT1              = KsGlobal::VJOINT1          ,    // Fixed
+        JOINT20             = KsGlobal::VJOINT20         ,    // Continuous
+        JOINT2              = KsGlobal::VJOINT2          ,    // Fixed
+        JOINT3              = KsGlobal::VJOINT3          ,    // Revolute Z
+
+        // Fingers --
+        //
+        FINGER_1_PROX_JOINT = KsGlobal::VFINGER_1_PROX_JOINT,
+        FINGER_1_MED_JOINT  = KsGlobal::VFINGER_1_MED_JOINT ,
+        FINGER_1_DIST_JOINT = KsGlobal::VFINGER_1_DIST_JOINT,
+
+        FINGER_2_PROX_JOINT = KsGlobal::VFINGER_2_PROX_JOINT,
+        FINGER_2_MED_JOINT  = KsGlobal::VFINGER_2_MED_JOINT ,
+        FINGER_2_DIST_JOINT = KsGlobal::VFINGER_2_DIST_JOINT,
+
+        FINGER_3_MED_JOINT  = KsGlobal::VFINGER_3_MED_JOINT ,
+        FINGER_3_DIST_JOINT = KsGlobal::VFINGER_3_DIST_JOINT,
+
+        MY_ARM_JOINT_TOTAL
+    };
+
+    enum QML_JACO_ARM_JOINT {
+        // Arm --
+        //
+        JACO_ARM_BASE_JOINT, // Fixed
+        BASE_INTERNAL_JOINT, // Fixed
+
+        RING_1_JOINT,        // Fixed
+        ARM_0_JOINT,         // Continuous
+
+        RING_2_JOINT,        // Fixed
+        ARM_1_JOINT,         // Revolute
+
+        RING_3_JOINT,        // Fixed
+        ARM_2_JOINT,         // Revolute
+
+        RING_4_JOINT,        // Fixed
+        ARM_3_JOINT,         // Continuous
+
+        RING_5_JOINT,        // Fixed
+        ARM_4_JOINT,         // Continuous
+
+        RING_6_JOINT,        // Fixed
+        ARM_5_JOINT,         // Continuous
+
+        // Fingers --
+        //
+        FINGERS_BASE_JOINT,  // Fixed
+        FINGERS_MOUNT_INDEX_JOINT, // Fixed
+
+        FINGERS_JOINT_0,     // Revolute
+        FINGERS_JOINT_1,     // Fixed
+
+        FINGERS_MOUNT_THUMB_JOINT, // Fixed
+        FINGERS_JOINT_2,     // Revolute
+
+        FINGERS_JOINT_3,     // Fixed
+        FINGERS_MOUNT_PINKIE_JOINT, // Fixed
+
+        FINGERS_JOINT_4,     // Revolute
+        FINGERS_JOINT_5,     // Fixed
+
+        JACO_ARM_JOINT_TOTAL
+    };
 
 public:
     GeopadQMLAdapter();

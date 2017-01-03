@@ -2,4 +2,6 @@
 Ros Arm Controller
 
 Reference:
-https://github.com/JenniferBuehler (XACRO, STL)
+[Jaco Arm](https://github.com/JenniferBuehler)
+[Barrett Hand-Ros-1](http://wiki.ros.org/Robots/BarrettHand)
+[Barrett Hand-Ros-2](http://wiki.ros.org/barrett_hand)

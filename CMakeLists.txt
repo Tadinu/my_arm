@@ -287,3 +287,24 @@ target_link_libraries(robotArmController ${catkin_LIBRARIES}
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+#<export>
+#   <cpp cflags="`pkg-config --cflags eigen3` -I${prefix}/include `rosboost-cfg --cflags`"
+#        lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lplanning_models"/>
+#</export>
+
+#
+#find_package(catkin REQUIRED cmake_modules)
+#find_package(Eigen REQUIRED)
+#
+#catkin_package(
+#               INCLUDE_DIRS
+#               LIBRARIES
+#               CATKIN_DEPENDS
+#               DEPENDS Eigen )
+#
+#include_directories(
+#                    ... ${Eigen_INCLUDE_DIRS} )
+#                    target_link_libraries(my_target
+#                    ....
+#                    ${Eigen_LIBRARIES}
+#                    )

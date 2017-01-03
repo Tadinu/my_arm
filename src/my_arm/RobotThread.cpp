@@ -1,5 +1,9 @@
+#include <string>
 #include <QMutexLocker>
 #include <QtMath>
+#include <tf/exceptions.h>
+//#include <Eigen/Core>
+//#include <Eigen/Geometry>
 #include "RobotThread.h"
 #include "KsGlobal.h"
 
@@ -14,10 +18,23 @@
 #define CWORLD_FRAME ("world")
 #define CBASE_LINK ("base_link")
 
+#define ROS_TOPIC(linkName) (std::string("//") + linkName)
+
 const double degree = M_PI/180;
 const double TWO_PI = 2 * M_PI;
 
+const double l0 = 0;
+const double l1 = 0.7;
+const double l2 = 0.7;
+const double l3 = 0.15;
+const double l4 = 0.025;
+
+const tf::Vector3 CLOCAL_END_TIP(0, 0, l4);
+
 const char* CMY_ARM_JOINTS[KsGlobal::VMY_ARM_JOINT_TOTAL] = {
+    ("base_joint"),
+    ("j10"),
+    ("j1"),
     ("j20"),
     ("j2"),
     ("j3"),
@@ -30,9 +47,29 @@ const char* CMY_ARM_JOINTS[KsGlobal::VMY_ARM_JOINT_TOTAL] = {
     ("finger_2_med_joint"),
     ("finger_2_dist_joint"),
 
-    ("finger_3_prox_joint"),
     ("finger_3_med_joint"),
     ("finger_3_dist_joint")
+};
+
+const char* CMY_ARM_LINKS[KsGlobal::VMY_ARM_JOINT_TOTAL+1] = {
+    CBASE_LINK,
+    ("body1"),
+    ("body10"),
+    ("body2"),
+    ("body20"),
+    ("body3"),
+
+    ("brHand"),
+    ("finger_1_prox_link"),
+    ("finger_1_med_liink"),
+    ("finger_1_dist_link"),
+
+    ("finger_2_prox_link"),
+    ("finger_2_med_link"),
+    ("finger_2_dist_link"),
+
+    ("finger_3_med_link"),
+    ("finger_3_dist_link")
 };
 
 const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
@@ -68,8 +105,11 @@ RobotThread::RobotThread(int argc, char** pArgv, const char * topic)
             : _init_argc(argc),
               _pInit_argv(pArgv),
               _topic(topic),
-              _angleDelta(0)
-{/** Constructor for the robot thread **/}
+              _jointNo(0),
+              _joint_poses(nullptr),
+              _frame_trans(nullptr)
+{/** Constructor for the robot thread **/
+}
 
 RobotThread::~RobotThread()
 {
@@ -82,13 +122,16 @@ RobotThread::~RobotThread()
     //m_pMutex->tryLock(5000);
     //m_pMutex->unlock();
 
+    V_DELETE_POINTER_ARRAY(_joint_poses);
+    V_DELETE_POINTER_ARRAY(_frame_trans);
+
     if(!_pThread->wait(5000)) //Wait until it actually has terminated (max. 5 sec)
     {
         qWarning("Thread deadlock detected, bad things may have happened !!!");
         _pThread->terminate(); //Thread didn't exit in time, probably deadlocked, terminate it!
         _pThread->wait(); //Note: We have to wait again here!
     }
-}//end destructor
+} //end destructor
 
 bool RobotThread::init()
 {
@@ -141,84 +184,156 @@ void RobotThread::runArmOperation(int armId)
     world_trans.child_frame_id  = CBASE_LINK;
 
     ros::Publisher joint_pub = node_handler.advertise<sensor_msgs::JointState>("joint_states", 1);
-    tf::TransformBroadcaster broadcaster;
-
+    tf::TransformBroadcaster trans_broadcaster;
+    tf::TransformListener trans_listener;
     // ------------------------------------------------------------------------------
     // MARKERS --
     ros::Publisher marker_pub = node_handler.advertise<visualization_msgs::Marker>("visualization_marker", 1);
-    uint32_t shape = visualization_msgs::Marker::CUBE;
+    uint32_t shape = visualization_msgs::Marker::SPHERE;
 #endif  // ducta --
 
     ros::Rate loop_rate(300);
+
+    // Joint No
+    _jointNo = KsGlobal::VMY_ARM == armId ? KsGlobal::VMY_ARM_JOINT_TOTAL   :
+               KsGlobal::VJACO_ARM        ? KsGlobal::VJACO_ARM_JOINT_TOTAL : 0;
+    _linkNo = _jointNo + 1;
+    if(_jointNo <= 0) {
+        ROS_ERROR_ONCE("The robot has no joint???");
+        return;
+    }
+
+    // Joint Pos
+    _joint_poses = new double[_jointNo];
+    for(size_t i = 0; i < _jointNo; i++) {
+        _joint_poses[i] = 0;
+    }
+
+    // Frame Transforms
+    _frame_trans = new tf::StampedTransform[_jointNo+1];
+    for(size_t i = 0; i < _jointNo+1; i++) {
+        _frame_trans[i].setRotation(tf::Quaternion(0,0,0,0));
+    }
+
+    // Run the ros loop
     //
     while (ros::ok())
     {
         // =====================================================================================
-        // Send Robot
-        sendRobot(armId, world_trans, broadcaster, joint_pub, joint_state);
+        // Listen for frame transforms
+        //
+        detectFrameTransforms(armId, trans_listener);
+        determineRobotOperationLimit();
+        // =====================================================================================
+        // Publish Joint State
+        publishJointState(armId, joint_pub, joint_state);
+
+        // =====================================================================================
+        // Move Robot to a position
+        moveRobot(world_trans, trans_broadcaster);
 
         // =====================================================================================
         // Send Markers
-        //sendMarkers(marker_pub, shape, _marker_pos);
+        publishMarkers(marker_pub, shape, tf::Vector3(0.1f, 0.1f, 0.1f), _marker_pos);
 
         // =====================================================================================
         // This will adjust as needed per iteration
         loop_rate.sleep();
     } //do ros things.
 }
-void RobotThread::setMarkerPos(const QVector3D& markerPos)
+
+void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener& listener)
 {
     QMutex * pMutex = new QMutex();
+    tf::StampedTransform transform;
+    //
+    static bool flag = false;
+    switch(robotId) {
+        case KsGlobal::VMY_ARM:
+            pMutex->lock();
+            for(size_t i = 0; i < _linkNo; i++) {
+                try {
+                    listener.waitForTransform(CBASE_LINK, CMY_ARM_LINKS[i],
+                                             ros::Time(0), ros::Duration(3.0)); // !!!
+                    listener.lookupTransform(CBASE_LINK, CMY_ARM_LINKS[i],
+                                             ros::Time(0), transform);
+                }
+                catch (tf::TransformException e) {
+                    ROS_ERROR("Error looking up transform of %s relative to base_link", CMY_ARM_LINKS[i]);
+                    ROS_ERROR("%s",e.what());
+                    ros::Duration(1.0).sleep();
+                    continue;
+                }
 
-    pMutex->lock();
-    _marker_pos = markerPos;
+                // -----------------------------------------------------------------------------------
+                // Store new transform!
+                if(!(_frame_trans[i] == transform)) {
+                    _frame_trans[i] = transform;
+                    tf::Vector3 point(0,0,0);
+                    tf::Vector3 point_bl = transform * point;
+                    //ROS_INFO("%s: %f %f %f", CMY_ARM_LINKS[i], point_bl[0], point_bl[1], point_bl[2]);
+                }
+            }
+        break;
+    }
     pMutex->unlock();
     delete pMutex;
 }
 
-void RobotThread::sendRobot(int robotId, geometry_msgs::TransformStamped& world_trans,
+void RobotThread::moveRobot(geometry_msgs::TransformStamped& world_trans,
                             tf::TransformBroadcaster& broadcaster,
-                            ros::Publisher& joint_pub, sensor_msgs::JointState& joint_state)
+                            const tf::Quaternion& quaternion)
 {
-    QMutex * pMutex = new QMutex();
-    static double tilt = 0, tinc = degree, height=0, hinc=0.005;
-    static double angle = 0;
-    static double *joint_values = nullptr;
-    static int jointNo = 0;
-
-    joint_state.header.stamp = ros::Time::now();
-    // Joint No
-    jointNo = KsGlobal::VMY_ARM == robotId ? KsGlobal::VMY_ARM_JOINT_TOTAL   :
-              KsGlobal::VJACO_ARM          ? KsGlobal::VJACO_ARM_JOINT_TOTAL : 0;
-    if(jointNo <= 0)
-        return;
-    // ---------------------------------------------------------------------------
-    joint_values = new double[jointNo];
-
-    // Joint State
-    joint_state.name.resize(jointNo);
-    joint_state.position.resize(jointNo);
-
     // WHOLE ROBOT MOVEMENT --------------------------------------------------------
     // update transform
     // (moving in a circle with radius=2)
     world_trans.header.stamp            = ros::Time::now();
-    world_trans.transform.translation.x = cos(angle)*2;
-    world_trans.transform.translation.y = sin(angle)*2;
-    world_trans.transform.translation.z = .7;
-    world_trans.transform.rotation      = tf::createQuaternionMsgFromYaw(angle+M_PI/2);
+    world_trans.transform.translation.x = quaternion.x();
+    world_trans.transform.translation.y = quaternion.y();
+    world_trans.transform.translation.z = quaternion.z();
+    world_trans.transform.rotation      = tf::createQuaternionMsgFromYaw(quaternion.w());
+
+    // Broadcast the transform
+    broadcaster.sendTransform(world_trans);
+}
+
+void RobotThread::publishJointState(int robotId,
+                                    const ros::Publisher& joint_pub,
+                                    sensor_msgs::JointState& joint_state)
+{
+    QMutex * pMutex = new QMutex();
+    static double angle = 0, tilt = 0, tinc = degree, height=0, hinc=0.005;
+    if(_jointNo <= 0) return;
+    static int jointNo = 0;
+    static double *current_joint_poses = nullptr;
+
+    // Initialize local current joint poses info
+    //
+    if(jointNo != _jointNo) {
+        jointNo = _jointNo;
+        V_DELETE_POINTER_ARRAY(current_joint_poses);
+        current_joint_poses = new double[_jointNo];
+        for(size_t i = 0; i < _jointNo; i++) {
+            current_joint_poses[i] = 0;
+        }
+    }
+
+    // -----------------------------------------------------------------------------------
+    // Joint State
+    joint_state.header.stamp = ros::Time::now();
+    joint_state.name.resize(_jointNo);
+    joint_state.position.resize(_jointNo);
 
     switch(robotId) {
         case KsGlobal::VMY_ARM:
-            for(size_t i = 0; i < jointNo; i++) {
+            for(size_t i = 0; i < _jointNo; i++) {
                 joint_state.name[i]     = CMY_ARM_JOINTS[i];
-                joint_state.position[i] = joint_values[i];
+                joint_state.position[i] = current_joint_poses[i];
             }
 
             // JOINT STATE PUBLISHING ====================================================
             //send the joint state and transform
             joint_pub.publish(joint_state);
-            broadcaster.sendTransform(world_trans);
 
             // JOINT STATE PARAMETERS PREPARATION ========================================
             // Create new robot state
@@ -228,18 +343,24 @@ void RobotThread::sendRobot(int robotId, geometry_msgs::TransformStamped& world_
             if (height>.2 || height<0) hinc *= -1;
 
             // !NOTE: THE PROBLEM IS WE MUST LET THE JOINT KEEP PUBLISHING ITS STATE INFO
-            // Each time m_angleDelta is set to a new value,
-            // The joint rotates until angleDeta reaches m_angleDelta then halts!
+            // Each time _joint_poses[i] is set to a new value,
+            // The joint rotates until current_joint_poses meets _joint_poses[i] then halts!
             pMutex->lock();
-            if((angle - _angle) < _angleDelta) {
-                joint_values[0] += degree;
-                angle += degree/4;
-            }
-            else {
-                if(angle > TWO_PI) angle -= TWO_PI;
-                // Stop rotating, though still keep publishing its state with current angle!
-                _angle = angle;
-                _angleDelta = 0;
+            for(size_t i = 0; i < _jointNo; i++) {
+                // 1-
+                if(qAbs(current_joint_poses[i] - _joint_poses[i]) <= degree) {
+                    if(current_joint_poses[i] > M_PI) current_joint_poses[i] -= M_PI;
+                    // Stop rotating, though still keep publishing its state with current angle!
+                    _joint_poses[i] = current_joint_poses[i];
+                }
+                // 2.1-
+                else if(current_joint_poses[i] < _joint_poses[i]) {
+                    current_joint_poses[i] += degree;
+                }
+                // 2.2-
+                else if(current_joint_poses[i] > _joint_poses[i]) {
+                    current_joint_poses[i] -= degree;
+                }
             }
             pMutex->unlock();
         break;
@@ -248,15 +369,14 @@ void RobotThread::sendRobot(int robotId, geometry_msgs::TransformStamped& world_
         // START JACO ARM OPERATION ===============================================================================
         //
         case KsGlobal::VJACO_ARM:
-            for(size_t i = 0; i < jointNo; i++) {
+            for(size_t i = 0; i < _jointNo; i++) {
                 joint_state.name[i]     = CMY_ARM_JOINTS[i];
-                joint_state.position[i] = joint_values[i];
+                joint_state.position[i] = _joint_poses[i];
             }
 
             // JOINT STATE PUBLISHING ====================================================
             //send the joint state and transform
             joint_pub.publish(joint_state);
-            broadcaster.sendTransform(world_trans);
 
             // JOINT STATE PARAMETERS PREPARATION ========================================
             // Create new robot state
@@ -266,32 +386,38 @@ void RobotThread::sendRobot(int robotId, geometry_msgs::TransformStamped& world_
             if (height>.2 || height<0) hinc *= -1;
 
             // !NOTE: THE PROBLEM IS WE MUST LET THE JOINT KEEP PUBLISHING ITS STATE INFO
-            // Each time m_angleDelta is set to a new value,
-            // The joint rotates until angleDeta reaches m_angleDelta then halts!
+            // Each time _joint_poses[i] is set to a new value,
+            // The joint rotates until current_joint_poses meets _joint_poses[i] then halts!
             pMutex->lock();
-            if((angle - _angle) < _angleDelta) {
-                joint_values[0] += degree;
-                angle += degree/4;
-            }
-            else {
-                if(angle > TWO_PI) angle -= TWO_PI;
-                // Stop rotating, though still keep publishing its state with current angle!
-                _angle = angle;
-                _angleDelta = 0;
+            for(size_t i = 0; i < _jointNo; i++) {
+                // 1-
+                if(qAbs(current_joint_poses[i] - _joint_poses[i]) <= degree) {
+                    if(current_joint_poses[i] > M_PI) current_joint_poses[i] -= M_PI;
+                    // Stop rotating, though still keep publishing its state with current angle!
+                    _joint_poses[i] = current_joint_poses[i];
+                }
+                // 2.1-
+                else if(current_joint_poses[i] < _joint_poses[i]) {
+                    current_joint_poses[i] += degree;
+                }
+                // 2.2-
+                else if(current_joint_poses[i] > _joint_poses[i]) {
+                    current_joint_poses[i] -= degree;
+                }
             }
             pMutex->unlock();
         break;
     } //switch(armId)
 
     V_DELETE_POINTER(pMutex);
-    V_DELETE_POINTER_ARRAY(joint_values);
 }
 
-void RobotThread::sendMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
-                              const QVector3D& pos, const QVector3D& orient, double rotAngle,
-                              const QVector3D& scale)
+void RobotThread::publishMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
+                                 const tf::Vector3& scale,
+                                 const tf::Vector3& pos,
+                                 const tf::Quaternion& orient)
 {
-    //QMutex * pMutex = new QMutex();
+    QMutex * pMutex = new QMutex();
     visualization_msgs::Marker marker;
     // Set the frame ID and timestamp.  See the TF tutorials for information on these.
     marker.header.frame_id = CWORLD_FRAME;
@@ -312,10 +438,11 @@ void RobotThread::sendMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
     marker.pose.position.x = pos.x();
     marker.pose.position.y = pos.y();
     marker.pose.position.z = pos.z();
+    // geometry_msgs::Quaternion <- tf::Quaternion
     marker.pose.orientation.x = orient.x();
     marker.pose.orientation.y = orient.y();
     marker.pose.orientation.z = orient.z();
-    marker.pose.orientation.w = qCos(rotAngle);
+    marker.pose.orientation.w = orient.w();
 
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
     marker.scale.x = scale.x();
@@ -342,6 +469,7 @@ void RobotThread::sendMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
     }
     marker_pub.publish(marker);
 
+#if 0
     // Cycle between different shapes
     switch (shape)
     {
@@ -358,7 +486,8 @@ void RobotThread::sendMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
       shape = visualization_msgs::Marker::CUBE;
       break;
     }
-    //delete pMutex;
+#endif
+    delete pMutex;
 }
 
 std::string RobotThread::getRobotNodeName(int robotId)
@@ -392,27 +521,117 @@ void RobotThread::run()
 
 void RobotThread::SetSpeed(double speed, double angle)
 {
-    QMutex * pMutex = new QMutex();
-    pMutex->lock();
-    _speed = speed;
-    _angle = angle;
-	pMutex->unlock();
-	delete pMutex;
+    //QMutex * pMutex = new QMutex();
+    //pMutex->lock();
+    //_speed = speed;
+    //_angle = angle;
+    //pMutex->unlock();
+    //delete pMutex;
 }//set the speed of the robot.
 
-void RobotThread::rotateJoint(int jointId, double angleDelta)
+void RobotThread::rotateJoint(int jointId, double pos, bool updateBallPos)
 {
     QMutex * pMutex = new QMutex();
     pMutex->lock();
-    _angleDelta = angleDelta;
-	pMutex->unlock();
-	delete pMutex;
+
+    if(jointId >= 0 && jointId < _jointNo) {
+        _joint_poses[jointId] = pos;
+    }
+    pMutex->unlock();
+    delete pMutex;
+    // -----------------------------------------------
+    //
+    if(updateBallPos) {
+        this->updateBallFollowingEndTip();
+    }
+}
+
+void RobotThread::updateBallFollowingEndTip()
+{
+    // Move Ball to the end-tip
+    tf::Vector3 endTipPos = determineEndTipPos();
+    //ROS_INFO("HAND POS: %f %f %f", endTipPos[0], endTipPos[1], endTipPos[2]);
+    setBallPos(endTipPos);
+}
+
+void RobotThread::moveBall(const tf::Vector3& distance)
+{
+    QMutex * pMutex = new QMutex();
+
+    pMutex->lock();
+    _marker_pos += distance;
+    this->determineArmArrangement(_marker_pos);
+    pMutex->unlock();
+    delete pMutex;
+}
+
+void RobotThread::setBallPos(const tf::Vector3& pos, bool armFollowOrder)
+{
+    QMutex * pMutex = new QMutex();
+
+    pMutex->lock();
+    _marker_pos = pos;
+    pMutex->unlock();
+    delete pMutex;
+    // -----------------------------------------
+    if(armFollowOrder) {
+        this->determineArmArrangement(pos);
+    }
 }
 
 double RobotThread::getXSpeed(){ return _speed; }
-double RobotThread::getASpeed(){ return _angle; }
+double RobotThread::getASpeed(){ return 0; }
 
 double RobotThread::getXPos(){ return _xPos; }
 double RobotThread::getYPos(){ return _yPos; }
 double RobotThread::getAPos(){ return _aPos; }
 
+void RobotThread::determineRobotOperationLimit()
+{
+    QMutex pMutex;
+    QMutexLocker locker(&pMutex);
+    _arm_reach_limit = (_frame_trans == nullptr) ? tf::Vector3(0,0,0) :
+                       tf::Vector3(l2+l3+l4, l2+l3+l4, l0+l1+l2+l3+l4);
+}
+
+// FORWARD KINEMATICS ---------------------------------
+//
+tf::Vector3 RobotThread::determineEndTipPos()
+{
+    QMutex pMutex;
+    QMutexLocker locker(&pMutex);
+    return (_frame_trans != nullptr) ? (_frame_trans[KsGlobal::VJOINT3 + 1] * CLOCAL_END_TIP):
+                                       tf::Vector3(0,0,0);
+}
+
+// INVERSE KINEMATICS ---------------------------------
+//
+void RobotThread::determineArmArrangement(const tf::Vector3& target_pos)
+{
+    QMutex pMutex;
+    QMutexLocker locker(&pMutex);
+    if(target_pos.x() > _arm_reach_limit.x() ||
+       target_pos.y() > _arm_reach_limit.y() ||
+       target_pos.z() > _arm_reach_limit.z()) {
+        ROS_WARN_ONCE("The target is out of reach of the arm!");
+        return;
+    }
+
+    // Theta 1 : Joint 2
+    // CLOCAL_END_TIP already constains l4 info.
+    tf::Vector3 vector = (_marker_pos - CLOCAL_END_TIP);
+    double y = vector.dot(tf::Vector3(0,1,0));
+    double x = vector.dot(tf::Vector3(1,0,0));
+    double theta = std::atan2(y, x);
+
+    rotateJoint(KsGlobal::VJOINT10, M_PI/2 - theta, false);
+    ROS_INFO_ONCE("JOINT10: %f", theta);
+    // Theta 2 : Joint 3
+    //
+    vector -= l1*tf::Vector3(1,0,0) + l0*tf::Vector3(1,0,0); // - l1*Z1 - l0*Z0;
+    double value = (vector.length2() - l2*l2 - l3*l3) / (2*l2*l3);
+    theta = std::acos(value);
+
+    rotateJoint(KsGlobal::VJOINT20, theta, false);
+    ROS_INFO_ONCE("JOINT20: %f", theta);
+}

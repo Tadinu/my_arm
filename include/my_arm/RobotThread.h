@@ -17,6 +17,7 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/JointState.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 
 class RobotThread : public QObject {
@@ -36,27 +37,41 @@ public:
     void poseCallback(const nav_msgs::Odometry & msg);
     void runArmOperation(int armId);
     std::string getRobotNodeName(int armId);
-	void SetSpeed(double speed, double angle);
+    void SetSpeed(double speed, double angle);
     void setPose(QList<double> to_set);
 
-    void rotateJoint(int jointId, double angleDelta);
-    void setMarkerPos(const QVector3D& markerPos);
-
-    // Send methods --
-    void sendRobot(int robotId, geometry_msgs::TransformStamped& world_trans,
+    // Action command --
+    //
+    void moveRobot(geometry_msgs::TransformStamped& world_trans,
                    tf::TransformBroadcaster& broadcaster,
-                   ros::Publisher& joint_pub, sensor_msgs::JointState& jointState);
-    void sendMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
-                     const QVector3D& pos = QVector3D(), const QVector3D& orient = QVector3D(),
-                     double rotAngle = 1.0f,
-                     const QVector3D& scale = QVector3D(1.0f, 1.0f, 1.0f));
+                   const tf::Quaternion& quaternion = tf::Quaternion());
+    void rotateJoint(int jointId, double posDelta, bool updateBallPos = true);
+    void moveBall(const tf::Vector3& distance);
+    void setBallPos(const tf::Vector3& pos, bool armFollowOrder = false);
+    tf::Vector3 determineEndTipPos();
+    void determineRobotOperationLimit();
+    void determineArmArrangement(const tf::Vector3& pos);
+    void updateBallFollowingEndTip();
+
+    // Publish/Send methods --
+    //
+    void publishJointState(int robotId,
+                           const ros::Publisher& joint_pub,
+                           sensor_msgs::JointState& jointState);
+    void publishMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
+                        const tf::Vector3& scale = tf::Vector3(1.0f, 1.0f, 1.0f),
+                        const tf::Vector3& pos = tf::Vector3(),
+                        const tf::Quaternion& orient = tf::Quaternion());
+
+    // Transforms --
+    void detectFrameTransforms(int robotId, const tf::TransformListener& listener);
 
 public slots:
     void run();
 
 signals:
     void newPose(double, double, double);
-    void jointPosUpdated(int jointId, const QVector3D& pos, double angle);
+    void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);
 
 private:
     int _init_argc;
@@ -64,8 +79,11 @@ private:
     const char * _topic;
 
     double _speed;
-    double _angle;
-    double _angleDelta;
+    double *_joint_poses;
+    size_t _jointNo;
+    size_t _linkNo;
+    tf::StampedTransform* _frame_trans;
+    tf::Vector3 _arm_reach_limit;
 
     double _xPos;
     double _yPos;
@@ -80,7 +98,7 @@ private:
     ros::Subscriber _pose_listener;
     ros::Publisher  _sim_velocity;
 
-    QVector3D _marker_pos;
+    tf::Vector3 _marker_pos;
 };
 #endif
 

@@ -19,9 +19,12 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
+#include <interactive_markers/interactive_marker_server.h>
+#include "rviz/VMarker.h"
 
 class RobotThread : public QObject {
-	Q_OBJECT
+    Q_OBJECT
+
 public:
     RobotThread(int argc, char **pArgv, const char * topic  = "/odom");
     virtual ~RobotThread();
@@ -42,36 +45,45 @@ public:
 
     // Action command --
     //
-    void moveRobot(geometry_msgs::TransformStamped& world_trans,
-                   tf::TransformBroadcaster& broadcaster,
-                   const tf::Quaternion& quaternion = tf::Quaternion());
+    void setRobotPos(const tf::Vector3 &pos);
+    tf::Vector3 getRobotPos();
     void rotateJoint(int jointId, double posDelta, bool updateBallPos = true);
     void moveBall(const tf::Vector3& distance);
     void setBallPos(const tf::Vector3& pos, bool armFollowOrder = false);
-    tf::Vector3 determineEndTipPos();
-    void determineRobotOperationLimit();
-    void determineArmArrangement(const tf::Vector3& pos);
-    void updateBallFollowingEndTip();
 
+    void determineArrangement_MyArm(tf::Vector3& world_target_pos);
+    void determineArrangement_JacoArm(tf::Vector3& world_target_pos);
+
+    void updateBallFollowingEndTip();
+public slots:
+    void run();
+    void determineArmArrangement(const QVector3D& world_target_pos);
+signals:
+    void newPose(double, double, double);
+    void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);
+
+private:
+    void publishRobotPose(int robotId,
+                          geometry_msgs::TransformStamped& world_trans,
+                          tf::TransformBroadcaster& broadcaster);
     // Publish/Send methods --
     //
     void publishJointState(int robotId,
                            const ros::Publisher& joint_pub,
                            sensor_msgs::JointState& jointState);
-    void publishMarkers(const ros::Publisher& marker_pub, uint32_t& shape,
-                        const tf::Vector3& scale = tf::Vector3(1.0f, 1.0f, 1.0f),
-                        const tf::Vector3& pos = tf::Vector3(),
-                        const tf::Quaternion& orient = tf::Quaternion());
+    void publishStaticMarkers(const ros::Publisher& marker_pub, visualization_msgs::Marker& marker);
+
+    void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
+
+    tf::Vector3 determineEndTipLocalPos();
+    void determineRobotOperationLimit();
 
     // Transforms --
     void detectFrameTransforms(int robotId, const tf::TransformListener& listener);
+    tf::Vector3 convertWorld2RobotFramePos(const tf::Vector3& world_target_pos);
+    tf::Vector3 convertRobotFrame2WorldPos(const tf::Vector3& robot_local_pos);
 
-public slots:
-    void run();
-
-signals:
-    void newPose(double, double, double);
-    void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);
+    double distanceToJoin(int jointId, const tf::Vector3& point);
 
 private:
     int _init_argc;
@@ -84,7 +96,9 @@ private:
     size_t _linkNo;
     tf::StampedTransform* _frame_trans;
     tf::Vector3 _arm_reach_limit;
-
+    tf::Vector3 _robot_pos;
+    // --------------------------------------------------------------------
+    //
     double _xPos;
     double _yPos;
     double _aPos;
@@ -97,8 +111,6 @@ private:
 
     ros::Subscriber _pose_listener;
     ros::Publisher  _sim_velocity;
-
-    tf::Vector3 _marker_pos;
 };
 #endif
 

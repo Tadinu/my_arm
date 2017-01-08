@@ -21,41 +21,41 @@ ApplicationWindow {
 
     // JOYPAD ===============================================
     //
-    GeoJoypad {
-        id: joyPad
-        anchors.right : parent.right
-        anchors.verticalCenter : parent.verticalCenter
-        anchors.rightMargin : 80
-        onPosMoved : {
-            _geopadMainWindow.moveTarget(distance);
-        }
-    }
-
-    // SLIDERS ==============================================
+    //GeoJoypad {
+    //    id: joyPad
+    //    anchors.right : parent.right
+    //    anchors.verticalCenter : parent.verticalCenter
+    //    anchors.rightMargin : 80
+    //    onPosMoved : {
+    //        _geopadMainWindow.moveTarget(distance);
+    //    }
+    //}
     //
-    Slider {
-        id: moveZ
-        tickmarksEnabled: true
-        anchors.left: joyPad.right
-        anchors.leftMargin: width
-        anchors.verticalCenter: joyPad.verticalCenter
-        orientation: Qt.Vertical
-
-        stepSize: 0.01
-        minimumValue: -100
-        maximumValue: 100
-
-        value: 0.0
-        property real _value: 0.0
-        Component.onCompleted: {
-            _value = value;
-        }
-
-        onValueChanged: {
-            _geopadMainWindow.moveTarget(Qt.vector3d(0,0, (value - _value)/10));
-            _value = value;
-        }
-    }
+    //// SLIDERS ==============================================
+    ////
+    //Slider {
+    //    id: moveZ
+    //    tickmarksEnabled: true
+    //    anchors.left: joyPad.right
+    //    anchors.leftMargin: width
+    //    anchors.verticalCenter: joyPad.verticalCenter
+    //    orientation: Qt.Vertical
+    //
+    //    stepSize: 0.01
+    //    minimumValue: -100
+    //    maximumValue: 100
+    //
+    //    value: 0.0
+    //    property real _value: 0.0
+    //    Component.onCompleted: {
+    //        _value = value;
+    //    }
+    //
+    //    onValueChanged: {
+    //        _geopadMainWindow.moveTarget(Qt.vector3d(0,0, (value - _value)/10));
+    //        _value = value;
+    //    }
+    //}
 
     Button {
         text: "Center"
@@ -105,7 +105,7 @@ ApplicationWindow {
             minimumValue: -sliderGroup._CPOS_LIMIT
             maximumValue: sliderGroup._CPOS_LIMIT
             onValueChanged: {
-                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT10, value);
+                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT1, value);
             }
         }
 
@@ -120,7 +120,7 @@ ApplicationWindow {
             minimumValue: -sliderGroup._CPOS_LIMIT
             maximumValue: sliderGroup._CPOS_LIMIT
             onValueChanged: {
-                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT20, value);
+                _geopadMainWindow.setRobotJointPos(K3DQMLAdapter.JOINT2, value);
             }
         }
 

@@ -18,6 +18,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   geometry_msgs
   sensor_msgs
+  visualization_msgs
+  interactive_markers
   std_msgs
   tf
   gazebo_ros
@@ -151,6 +153,7 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/K3DStateMachine.h
                         include/my_arm/KsGlobal.h
                         include/my_arm/RobotThread.h
+                        include/my_arm/rviz/VMarker.h
                         )
 
 ## Specify additional locations of header files
@@ -192,6 +195,7 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/KsGlobal.cpp
                                   src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotThread.cpp
+                                  src/my_arm/rviz/VMarker.cpp
 
                                   ${QT_RESOURCES_CPP}
                                   ${QT_MOC_HPP})
@@ -210,24 +214,24 @@ target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          Qt5::Network
                                          )
 ## BOOST ++
-#set(Boost_USE_STATIC_LIBS OFF)
-#set(Boost_USE_MULTITHREADED ON)
-#set(Boost_USE_STATIC_RUNTIME OFF)
-#find_package(Boost REQUIRED COMPONENTS system program_options regex)
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Boost REQUIRED COMPONENTS system program_options regex)
 #find_package(Boost 1.45.0 COMPONENTS *boost libraries here*)
 
-#if(Boost_FOUND)
-#    include_directories(${Boost_INCLUDE_DIRS})
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
 #    add_executable(progname file1.cxx file2.cxx)
-#    target_link_libraries(progname ${Boost_LIBRARIES})
+    target_link_libraries(robotArmController ${Boost_LIBRARIES})
 
-# target_link_libraries(<my_app> ${PROJECT_NAME} ${Boost_FILESYSTEM_LIBRARY}
-#                                ${Boost_SYSTEM_LIBRARY}
-#                                ${Boost_PROGRAM_OPTIONS_LIBRARY}
-#                                ${Boost_REGEX_LIBRARY})
-#
-# endif()
-## BOOST --
+ target_link_libraries(robotArmController ${Boost_FILESYSTEM_LIBRARY}
+                              ${Boost_SYSTEM_LIBRARY}
+                              ${Boost_PROGRAM_OPTIONS_LIBRARY}
+                              ${Boost_REGEX_LIBRARY})
+
+endif()
+# BOOST --
 
 #############
 ## Install ##

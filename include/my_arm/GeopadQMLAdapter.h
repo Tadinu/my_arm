@@ -193,10 +193,10 @@ public:
         // Arm --
         //
         MYARM_BASE_JOINT    = KsGlobal::VMYARM_BASE_JOINT,    // Revolute Z
-        JOINT10             = KsGlobal::VJOINT10         ,    // Continuous
-        JOINT1              = KsGlobal::VJOINT1          ,    // Fixed
-        JOINT20             = KsGlobal::VJOINT20         ,    // Continuous
-        JOINT2              = KsGlobal::VJOINT2          ,    // Fixed
+        JOINT1              = KsGlobal::VJOINT1          ,    // Continuous
+        JOINT10             = KsGlobal::VJOINT10         ,    // Fixed
+        JOINT2              = KsGlobal::VJOINT2          ,    // Continuous
+        JOINT20             = KsGlobal::VJOINT20         ,    // Fixed
         JOINT3              = KsGlobal::VJOINT3          ,    // Revolute Z
 
         // Fingers --

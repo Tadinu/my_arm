@@ -11,7 +11,8 @@ SOURCES += main.cpp \
     src/my_arm/K3DStateMachine.cpp \
     src/my_arm/KsGlobal.cpp \
     src/my_arm/K3DMaskedMouseArea.cpp \
-    src/my_arm/RobotArmControllerMain.cpp
+    src/my_arm/RobotArmControllerMain.cpp \
+    src/my_arm/rviz/VMarker.cpp
 
 RESOURCES += qml.qrc
 
@@ -122,4 +123,5 @@ HEADERS += \
     include/my_arm/K3DStateMachine.h \
     include/my_arm/K3DMaskedMouseArea.h \
     include/my_arm/KsGlobal.h \
-    include/my_arm/RobotArmControllerMain.h
+    include/my_arm/RobotArmControllerMain.h \
+    include/my_arm/rviz/VMarker.h

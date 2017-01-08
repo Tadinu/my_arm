@@ -14,7 +14,7 @@
 #define K3DS_QT4
 #endif
 
-#define PI (3.14)
+#define PI (3.1415926535897931)
 
 #define K3D_MEMFUNC_CALL(object, method) ((object).*(method))
 
@@ -229,11 +229,27 @@
     delete [] ptArr; ptArr = nullptr;    \
 }
 
+#define V_UNLOCK_DELETE_PMUTEX(pMutex) { \
+    pMutex->unlock(); delete pMutex; pMutex = nullptr; \
+}
+
+#define V_TF_2_QVECTOR3D(tfVector) (QVector3D(tfVector.x(), tfVector.y(), tfVector.z()))
+#define V_QVECTOR3D_2TF(qVector)   (tf::Vector3(qVector.x(), qVector.y(), qVector.z()))
+// ----------------------------------------------------------------------------------
+// ROS DEFINE
+
+// FRAMES --
+#define CWORLD_FRAME ("world")
+#define CBASE_LINK ("base_link")
+#define RAD_2_ANGLE(rad)   ((rad*180)/PI)
+#define ANGLE_2_RAD(angle) ((angle*PI)/180)
+
+#define VMARKER_INSTANCE() VMarker::getInstance()
+
 class KsGlobal : public QObject
 {
     Q_OBJECT
 public:
-
     enum ERROR_DOWNLOAD {
         ERROR_DOWNLOAD_OK,
         ERROR_DOWNLOAD_NULL_URL,
@@ -250,10 +266,10 @@ public:
         // Arm --
         //
         VMYARM_BASE_JOINT,    // Revolute Z
-        VJOINT10,             // Continuous Y
-        VJOINT1,              // Fixed - at Joint10 pos
-        VJOINT20,             // Continuous Y
-        VJOINT2,              // Fixed - at Joint20 pos
+        VJOINT1,              // Continuous Y
+        VJOINT10,             // Fixed - at Joint1 pos
+        VJOINT2,              // Continuous Y
+        VJOINT20,             // Fixed - at Joint2 pos
         VJOINT3,              // Revolute Z
 
         // Fingers --
@@ -329,6 +345,12 @@ public:
     // To be invoked from worker threads
     Q_INVOKABLE static void startWaitInfoTimer(int interval);
     Q_INVOKABLE static void stopWaitInfoTimer();
+
+    static double rand( double min, double max )
+    {
+        double t = (double)std::rand() / (double)RAND_MAX;
+        return min + t*(max-min);
+    }
 
 signals:
 

@@ -70,6 +70,10 @@ public:
         emit markerPosChanged(pos);
     }
 
+    void setInteractiveMarkerPosLimit(const tf::Vector3& limit) {
+        _pos_limit = limit;
+    }
+
     bool checkPosLimit(const tf::Vector3 & pos) {
 #if 0
         return true;

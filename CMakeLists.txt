@@ -14,7 +14,9 @@ set(CMAKE_AUTOMOC ON)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  rospack
   roscpp
+  roslib
   rospy
   geometry_msgs
   sensor_msgs
@@ -22,7 +24,19 @@ find_package(catkin REQUIRED COMPONENTS
   interactive_markers
   std_msgs
   tf
+
+  ## Gazebo --
   gazebo_ros
+
+  ## Leap Motion --
+  camera_calibration_parsers
+  camera_info_manager
+  image_transport
+  message_generation
+  message_runtime
+
+  ## OpenMP --
+  #OpenMP
 )
 find_package(gazebo REQUIRED)
 find_package(Qt5Core REQUIRED)
@@ -83,6 +97,12 @@ get_target_property(QtCore_location Qt5::Network ${QT_LIB_DIR})
 #   Message2.msg
 # )
 
+add_message_files(
+    FILES
+    LeapMotion/leap.msg
+    LeapMotion/leapros.msg
+)
+
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
@@ -132,6 +152,7 @@ get_target_property(QtCore_location Qt5::Network ${QT_LIB_DIR})
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES myArm
@@ -139,6 +160,13 @@ catkin_package(
 #  DEPENDS system_lib
    DEPENDS
       gazebo_ros
+      camera_calibration_parsers
+      camera_info_manager
+      geometry_msgs
+      image_transport
+      message_runtime
+
+      rospack roscpp roslib rospy sensor_msgs std_msgs tf
 )
 
 ###########
@@ -154,14 +182,16 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/KsGlobal.h
                         include/my_arm/RobotThread.h
                         include/my_arm/rviz/VMarker.h
+                        include/my_arm/RobotLeapAdapter.h
                         )
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
 
-## my_arm --
-include_directories(include/my_arm ${catkin_INCLUDE_DIRS})
+## my_arm & ROS catkin --
+include_directories(include include/my_arm include/LeapMotion
+                    ${catkin_INCLUDE_DIRS})
 
 ## Gazebo --
 include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
@@ -173,6 +203,11 @@ include_directories(${Qt5Gui_INCLUDE_DIRS})
 include_directories(${Qt5Qml_INCLUDE_DIRS})
 include_directories(${Qt5Quick_INCLUDE_DIRS})
 include_directories(${Qt5Network_INCLUDE_DIRS})
+
+## Leap Motion --
+include_directories(
+    if($ENV{LEAP_SDK} $ENV{LEAP_SDK}/include)
+)
 
 ## Declare a C++ library
 # add_library(myArm
@@ -196,6 +231,10 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotThread.cpp
                                   src/my_arm/rviz/VMarker.cpp
+                                  src/my_arm/RobotLeapAdapter.cpp
+
+                                  src/LeapMotion/hands_listener.cpp
+                                  src/LeapMotion/camera_listener.cpp
 
                                   ${QT_RESOURCES_CPP}
                                   ${QT_MOC_HPP})
@@ -222,16 +261,21 @@ find_package(Boost REQUIRED COMPONENTS system program_options regex)
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
+    link_directories(${Boost_LIBRARY_DIRS})
 #    add_executable(progname file1.cxx file2.cxx)
-    target_link_libraries(robotArmController ${Boost_LIBRARIES})
-
- target_link_libraries(robotArmController ${Boost_FILESYSTEM_LIBRARY}
-                              ${Boost_SYSTEM_LIBRARY}
-                              ${Boost_PROGRAM_OPTIONS_LIBRARY}
-                              ${Boost_REGEX_LIBRARY})
-
+    target_link_libraries(robotArmController ${Boost_FILESYSTEM_LIBRARY}
+                                             ${Boost_LIBRARIES}
+                                             ${Boost_SYSTEM_LIBRARY}
+                                             ${Boost_PROGRAM_OPTIONS_LIBRARY}
+                                             ${Boost_REGEX_LIBRARY})
 endif()
 # BOOST --
+
+# LEAP MOTION ++
+if(DEFINED ENV{LEAP_SDK})
+    target_link_libraries(robotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
+endif()
+# LEAP MOTION --
 
 #############
 ## Install ##
@@ -246,6 +290,11 @@ endif()
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
+
+install(PROGRAMS
+    scripts/LeapMotion/leap_interface.py scripts//LeapMotion/sender.py scripts//LeapMotion/subscriber.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 
 ## Mark executables and/or libraries for installation
 # install(TARGETS myArm myArm_node
@@ -272,12 +321,17 @@ endif()
 #  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 ## TODO --
 
+
+
+
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
 #   # myfile1
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
+
+
 
 #############
 ## Testing ##

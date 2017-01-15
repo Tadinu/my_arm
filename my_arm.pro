@@ -12,7 +12,10 @@ SOURCES += main.cpp \
     src/my_arm/KsGlobal.cpp \
     src/my_arm/K3DMaskedMouseArea.cpp \
     src/my_arm/RobotArmControllerMain.cpp \
-    src/my_arm/rviz/VMarker.cpp
+    src/my_arm/rviz/VMarker.cpp \
+    src/LeapMotion/hands_listener.cpp \
+    src/LeapMotion/camera_listener.cpp \
+    src/my_arm/RobotLeapAdapter.cpp
 
 RESOURCES += qml.qrc
 
@@ -22,8 +25,11 @@ QML_IMPORT_PATH =
 # Additional import path used to resolve QML modules just for Qt Quick Designer
 QML_DESIGNER_IMPORT_PATH =
 
-INCLUDEPATH+= ./include/my_arm \
-              /opt/ros/kinetic/include
+INCLUDEPATH+= ./include        \
+              ./include/my_arm \
+              /opt/ros/kinetic/include \
+              /home/brhm/LeapSDK/include
+
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -112,7 +118,25 @@ DISTFILES += \
     models/myArm_gripper.urdf \
     models/myArm_brHand.urdf \
     models/myArm_brHand2.urdf \
-    models/myArm_brHand.xacro
+    models/myArm_brHand.xacro \
+    msg/LeapMotion/leapros.msg \
+    msg/LeapMotion/leap.msg \
+    scripts/LeapMotion/leap_interface.pyc \
+    scripts/LeapMotion/Leap.pyc \
+    scripts/LeapMotion/LeapPython.so \
+    scripts/LeapMotion/libLeap.so \
+    scripts/LeapMotion/leap_interface.py \
+    scripts/LeapMotion/Leap.py \
+    scripts/LeapMotion/sender.py \
+    scripts/LeapMotion/skeleton_sender.py \
+    scripts/LeapMotion/subscriber.py \
+    config/LeapMotion/leap_cal_right.yml \
+    config/LeapMotion/leap_cal_left.yml \
+    test/LeapMotion/test_leap_motion.test \
+    test/LeapMotion/test_sender.test \
+    launch/LeapMotion/sensor_sender.launch \
+    launch/LeapMotion/leap_camera.launch \
+    launch/LeapMotion/leap_stereo.launch
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -124,4 +148,7 @@ HEADERS += \
     include/my_arm/K3DMaskedMouseArea.h \
     include/my_arm/KsGlobal.h \
     include/my_arm/RobotArmControllerMain.h \
-    include/my_arm/rviz/VMarker.h
+    include/my_arm/rviz/VMarker.h \
+    include/LeapMotion/camera_listener.h \
+    include/LeapMotion/hands_listener.h \
+    include/my_arm/RobotLeapAdapter.h

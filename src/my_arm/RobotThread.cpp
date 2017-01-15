@@ -164,6 +164,26 @@ bool RobotThread::init()
     return true;
 }//set up the thread
 
+void RobotThread::run()
+{
+    // Robot Arm --
+    this->runArmOperation(CRUN_ROBOT);
+#if 0
+        pMutex = new QMutex();
+
+        geometry_msgs::Twist cmd_msg;
+        pMutex->lock();
+        cmd_msg.linear.x = m_speed;
+        cmd_msg.angular.z = m_angle;
+        pMutex->unlock();
+
+        sim_velocity.publish(cmd_msg);
+        ros::spinOnce();
+        loop_rate.sleep();
+        delete pMutex;
+#endif
+}
+
 void RobotThread::poseCallback(const nav_msgs::Odometry & msg)
 {
     QMutex * pMutex = new QMutex();
@@ -184,17 +204,6 @@ void RobotThread::runArmOperation(int armId)
     ros::init(_init_argc, _pInit_argv, getRobotNodeName(armId)); // Name of the node specified in launch file
     ros::NodeHandle node_handler;
 
-    // ROBOT --
-    // message declarations
-    geometry_msgs::TransformStamped world_trans;
-    sensor_msgs::JointState joint_state;
-    world_trans.header.frame_id = CWORLD_FRAME;
-    world_trans.child_frame_id  = CBASE_LINK;
-
-    ros::Publisher joint_pub = node_handler.advertise<sensor_msgs::JointState>("joint_states", 1);
-    tf::TransformBroadcaster trans_broadcaster;
-    tf::TransformListener trans_listener;
-
     // -------------------------------------------------------------------------------------------------------
     // MARKERS --
     ros::Publisher marker_pub = node_handler.advertise<visualization_msgs::Marker>("visualization_marker", 1);
@@ -203,6 +212,13 @@ void RobotThread::runArmOperation(int armId)
     // create a timer to update the published transforms
     ros::Timer frame_timer = node_handler.createTimer(ros::Duration(0.01), &VMarker::frameCallback);
 
+    // -------------------------------------------------------------------------------------------------------
+    // LEAP HANDS --
+    _robotLeapAdapter.initLeapMotion();
+
+    // =======================================================================================================
+    // MAIN ROS SPINNING LOOP --
+    //
 #endif  // ducta --
     ros::Rate loop_rate(300);
 
@@ -215,13 +231,28 @@ void RobotThread::runArmOperation(int armId)
         return;
     }
 
+    // -------------------------------------------------------------------------------------------------------
+    // ROBOT --
+    //
+    // message declarations
+    geometry_msgs::TransformStamped world_trans;
+    sensor_msgs::JointState joint_state;
+    world_trans.header.frame_id = CWORLD_FRAME;
+    world_trans.child_frame_id  = CBASE_LINK;
+
+    ros::Publisher joint_pub = node_handler.advertise<sensor_msgs::JointState>("joint_states", 1);
+    tf::TransformBroadcaster trans_broadcaster;
+    tf::TransformListener trans_listener;
+
     // Joint Pos
+    //
     _joint_poses = new double[_jointNo];
     for(size_t i = 0; i < _jointNo; i++) {
         _joint_poses[i] = 0;
     }
 
     // Frame Transforms
+    //
     _frame_trans = new tf::StampedTransform[_jointNo+1];
     for(size_t i = 0; i < _jointNo+1; i++) {
         _frame_trans[i].setRotation(tf::Quaternion(0,0,0,0));
@@ -534,25 +565,6 @@ std::string RobotThread::getRobotNodeName(int robotId)
     }
 }
 
-void RobotThread::run()
-{
-    this->runArmOperation(CRUN_ROBOT);
-#if 0
-        pMutex = new QMutex();
-
-        geometry_msgs::Twist cmd_msg;
-        pMutex->lock();
-        cmd_msg.linear.x = m_speed;
-        cmd_msg.angular.z = m_angle;
-        pMutex->unlock();
-
-        sim_velocity.publish(cmd_msg);
-        ros::spinOnce();
-        loop_rate.sleep();
-        delete pMutex;
-#endif
-}
-
 void RobotThread::SetSpeed(double speed, double angle)
 {
     //QMutex * pMutex = new QMutex();
@@ -621,6 +633,8 @@ void RobotThread::determineRobotOperationLimit()
     QMutexLocker locker(&pMutex);
     _arm_reach_limit = (_frame_trans == nullptr) ? tf::Vector3(0,0,0) :
                        tf::Vector3(l2+l3+l4, l2+l3+l4, l0+l1+l2+l3+l4);
+
+    VMARKER_INSTANCE()->setInteractiveMarkerPosLimit(tf::Vector3(10, 10, _arm_reach_limit.z()));
 }
 
 // FORWARD KINEMATICS ---------------------------------
@@ -741,3 +755,4 @@ void RobotThread::determineArrangement_MyArm(tf::Vector3& target_pos) // as worl
 void RobotThread::determineArrangement_JacoArm(tf::Vector3& target_pos)
 {}
 
+// =========================================================================================

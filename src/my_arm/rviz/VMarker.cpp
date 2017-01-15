@@ -41,31 +41,34 @@ void VMarker::frameCallback(const ros::TimerEvent&)
 void VMarker::processFeedback(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
 {
-    static tf::Vector3 lastPos;
-    if(feedback->marker_name == CMARKER_NAME) {
-        if(lastPos.x() != feedback->pose.position.x ||
-           lastPos.y() != feedback->pose.position.y ||
-           lastPos.z() != feedback->pose.position.z
-        ) {
-            if(VMARKER_INSTANCE()->checkPosLimit(tf::Vector3(feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z)))
-            {
-                lastPos.setX(feedback->pose.position.x);
-                lastPos.setY(feedback->pose.position.y);
-                lastPos.setZ(feedback->pose.position.z);
 
-                VMARKER_INSTANCE()->emitMarkerPosChanged(QVector3D(lastPos.x(), lastPos.y(), lastPos.z()));
-            }
-            else {
-                VMARKER_INSTANCE()->setMarkerPos(feedback->marker_name.c_str(), lastPos);
-            }
-        }
-    }
 
     // --------------------------------------------------------------------
     switch ( feedback->event_type )
     {
         case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
         {
+            static tf::Vector3 lastPos;
+            if(feedback->marker_name == CMARKER_NAME) {
+                if(lastPos.x() != feedback->pose.position.x ||
+                   lastPos.y() != feedback->pose.position.y ||
+                   lastPos.z() != feedback->pose.position.z
+                ) {
+                    if(VMARKER_INSTANCE()->checkPosLimit(tf::Vector3(feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z)))
+                    {
+                        lastPos.setX(feedback->pose.position.x);
+                        lastPos.setY(feedback->pose.position.y);
+                        lastPos.setZ(feedback->pose.position.z);
+
+                        VMARKER_INSTANCE()->emitMarkerPosChanged(QVector3D(lastPos.x(), lastPos.y(), lastPos.z()));
+                    }
+                    else {
+                        VMARKER_INSTANCE()->setMarkerPos(feedback->marker_name.c_str(), lastPos);
+                    }
+                }
+            }
+#if 0
+            // -------------------------------------------------------------
             //compute difference vector for this cube
 
             tf::Vector3 fb_pos(feedback->pose.position.x, feedback->pose.position.y, feedback->pose.position.z);
@@ -95,7 +98,7 @@ void VMarker::processFeedback(
                 s << i;
                 VMARKER_INSTANCE()->setMarkerPos(s.str(), gb_cloud_cube_positions[i]);
             }
-
+#endif
             break;
         }
     }
@@ -233,7 +236,7 @@ void VMarker::initialize()
     _menu_handler.insert("First Entry" , &VMarker::processFeedback);
     _menu_handler.insert("Second Entry", &VMarker::processFeedback);
     interactive_markers::MenuHandler::EntryHandle sub_menu_handle = _menu_handler.insert("Submenu");
-    _menu_handler.insert(sub_menu_handle, "First Entry", &VMarker::processFeedback);
+    _menu_handler.insert(sub_menu_handle, "First Entry",  &VMarker::processFeedback);
     _menu_handler.insert(sub_menu_handle, "Second Entry", &VMarker::processFeedback);
 
     // Make Marker Interactive Controls --

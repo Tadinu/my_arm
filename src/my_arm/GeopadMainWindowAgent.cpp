@@ -95,8 +95,8 @@ void GeopadMainWindowAgent::qmlLog(QVariant logVariant)
 
 void GeopadMainWindowAgent::goForward(){_robotThread.SetSpeed(0.25, 0);}
 void GeopadMainWindowAgent::goBackward(){_robotThread.SetSpeed(-0.25, 0);}
-void GeopadMainWindowAgent::goRight(){_robotThread.SetSpeed(0, -PI / 6.0);}
-void GeopadMainWindowAgent::goLeft(){_robotThread.SetSpeed(0, PI / 6.0);}
+void GeopadMainWindowAgent::goRight(){_robotThread.SetSpeed(0, -V_PI / 6.0);}
+void GeopadMainWindowAgent::goLeft(){_robotThread.SetSpeed(0, V_PI / 6.0);}
 void GeopadMainWindowAgent::halt(){ _robotThread.SetSpeed(0, 0); }
 
 void GeopadMainWindowAgent::updatePoseDisplay(double x, double y, double theta)

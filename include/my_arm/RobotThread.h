@@ -21,6 +21,7 @@
 #include <visualization_msgs/Marker.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include "rviz/VMarker.h"
+#include "RobotLeapAdapter.h"
 
 class RobotThread : public QObject {
     Q_OBJECT
@@ -111,6 +112,11 @@ private:
 
     ros::Subscriber _pose_listener;
     ros::Publisher  _sim_velocity;
+
+    // --------------------------------------------------------------------
+    //
+    // LeapMotion Hands --
+    RobotLeapAdapter _robotLeapAdapter;
 };
 #endif
 

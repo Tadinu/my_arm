@@ -14,7 +14,7 @@
 #define K3DS_QT4
 #endif
 
-#define PI (3.1415926535897931)
+#define V_PI (3.1415926535897931)
 
 #define K3D_MEMFUNC_CALL(object, method) ((object).*(method))
 
@@ -241,8 +241,8 @@
 // FRAMES --
 #define CWORLD_FRAME ("world")
 #define CBASE_LINK ("base_link")
-#define RAD_2_ANGLE(rad)   ((rad*180)/PI)
-#define ANGLE_2_RAD(angle) ((angle*PI)/180)
+#define RAD_2_ANGLE(rad)   ((rad*180)/V_PI)
+#define ANGLE_2_RAD(angle) ((angle*V_PI)/180)
 
 #define VMARKER_INSTANCE() VMarker::getInstance()
 

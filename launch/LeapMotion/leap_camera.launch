@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="my_arm" type="camera_listener" name="camera_listener" output="screen"/>
+    <node pkg="my_arm" type="hands_listener" name="hands_listener" output="screen"/>
+</launch>

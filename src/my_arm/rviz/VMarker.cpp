@@ -41,14 +41,12 @@ void VMarker::frameCallback(const ros::TimerEvent&)
 void VMarker::processFeedback(
     const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
 {
-
-
     // --------------------------------------------------------------------
     switch ( feedback->event_type )
     {
         case visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE:
         {
-            static tf::Vector3 lastPos;
+            static tf::Vector3 lastPos(0,0,0);
             if(feedback->marker_name == CMARKER_NAME) {
                 if(lastPos.x() != feedback->pose.position.x ||
                    lastPos.y() != feedback->pose.position.y ||
@@ -165,83 +163,82 @@ VMarker* VMarker::getInstance()
     return _instance;
 }
 
+void VMarker::deleteInstace()
+{
+    delete _instance;
+    _instance = nullptr;
+}
+
+bool VMarker::checkInstance()
+{
+    return _instance != nullptr;
+}
+
 VMarker::VMarker():
-         _pos_limit(10, 10, 100) {}
+         _pos_limit(10, 10, 100),
+         _static_markers(std::vector<visualization_msgs::Marker>(MARKER_ID_TOTAL)) {
+    // Don't call VMarker::initialize(); here!!!
+}
 
 VMarker::~VMarker()
 {
     _server.reset();
 }
 
-void VMarker::initializeMarker(const char* header_frame,
-                               uint32_t marker_shape_type,
-                               const tf::Vector3& scale,
-                               const tf::Vector3& pos,
-                               const tf::Quaternion& orient)
+void VMarker::setStaticMarkerProperties(int markerId,
+                                        const char* header_frame,
+                                        uint32_t marker_shape_type,
+                                        const tf::Vector3& scale,
+                                        const tf::Vector3& pos,
+                                        const tf::Quaternion& orient)
 {
     // Set the frame ID and timestamp.  See the TF tutorials for information on these.
-    _static_marker.header.frame_id = header_frame;
-    _static_marker.header.stamp = ros::Time::now();
+    _static_markers[markerId].header.frame_id = header_frame;
+    _static_markers[markerId].header.stamp = ros::Time::now();
 
     // Set the namespace and id for this marker.  This serves to create a unique ID
     // Any marker sent with the same namespace and id will overwrite the old one
-    _static_marker.ns = "basic_shapes";
-    _static_marker.id = 0;
+    _static_markers[markerId].ns = "basic_shapes";
+    _static_markers[markerId].id = 0;
 
     // Set the marker type.  Initially this is CUBE, and cycles between that and SPHERE, ARROW, and CYLINDER
-    _static_marker.type = marker_shape_type;
-
-    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
-    _static_marker.action = visualization_msgs::Marker::ADD;
+    _static_markers[markerId].type = marker_shape_type;
 
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-    _static_marker.pose.position.x = pos.x();
-    _static_marker.pose.position.y = pos.y();
-    _static_marker.pose.position.z = pos.z();
+    _static_markers[markerId].pose.position.x = pos.x();
+    _static_markers[markerId].pose.position.y = pos.y();
+    _static_markers[markerId].pose.position.z = pos.z();
 
+#if 0
     // geometry_msgs::Quaternion <- tf::Quaternion
-    _static_marker.pose.orientation.x = orient.x();
-    _static_marker.pose.orientation.y = orient.y();
-    _static_marker.pose.orientation.z = orient.z();
-    _static_marker.pose.orientation.w = orient.w();
+    _static_markers[markerId].pose.orientation.x = orient.x();
+    _static_markers[markerId].pose.orientation.y = orient.y();
+    _static_markers[markerId].pose.orientation.z = orient.z();
+    _static_markers[markerId].pose.orientation.w = orient.w();
+#endif
 
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    _static_marker.scale.x = scale.x();
-    _static_marker.scale.y = scale.y();
-    _static_marker.scale.z = scale.z();
+    _static_markers[markerId].scale.x = scale.x();
+    _static_markers[markerId].scale.y = scale.y();
+    _static_markers[markerId].scale.z = scale.z();
 
     // Set the color -- be sure to set alpha to something non-zero!
-    _static_marker.color.r = 0.0f;
-    _static_marker.color.g = 1.0f;
-    _static_marker.color.b = 0.0f;
-    _static_marker.color.a = 1.0;
+    _static_markers[markerId].color.r = 0.0f;
+    _static_markers[markerId].color.g = 1.0f;
+    _static_markers[markerId].color.b = 0.0f;
+    _static_markers[markerId].color.a = 1.0;
 
-    _static_marker.lifetime = ros::Duration();
-
-    // ----------------------------------------------------------------------------------------------------------
-    // ADD INTERACTIVE CONTROL --
-    VMarker::initialize();
+    _server->applyChanges();
 }
 
-void VMarker::initialize()
+void VMarker::createInteractiveMarkers()
 {
-    _server.reset(new interactive_markers::InteractiveMarkerServer("my_arm","",false));
-    //_marker.header.frame_id = "/base_link";
+    // -----------------------------------------------------------------------------------------------
+    // MAKE SOME MAKERS AT INITIALIZATION --
     //
-    ros::Duration(0.1).sleep();
-
-    // create a timer to update the published transforms
-    //ros::Timer frame_timer = node_handler.createTimer(ros::Duration(0.01), &VMarker::frameCallback);
-
-    _menu_handler.insert("First Entry" , &VMarker::processFeedback);
-    _menu_handler.insert("Second Entry", &VMarker::processFeedback);
-    interactive_markers::MenuHandler::EntryHandle sub_menu_handle = _menu_handler.insert("Submenu");
-    _menu_handler.insert(sub_menu_handle, "First Entry",  &VMarker::processFeedback);
-    _menu_handler.insert(sub_menu_handle, "Second Entry", &VMarker::processFeedback);
-
     // Make Marker Interactive Controls --
     //
-    make6DofMarker( false, visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D, true, _static_marker);
+    make6DofMarker(false, visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE_3D, true, _static_markers[TARGET_BALL]);
 
     // Make Cube Cloud --
     //
@@ -274,39 +271,86 @@ void VMarker::initialize()
     position = tf::Vector3( 0,-9, 0);
     makeButtonMarker( makeMarker() );
 #endif
-
     _server->applyChanges();
+}
+
+void VMarker::initialize()
+{
+    // Static Markers --
+    //
+    for(size_t i = 0; i < MARKER_ID_TOTAL; i++) {
+        _static_markers[i].header.frame_id = CWORLD_FRAME;
+        _static_markers[i].header.stamp    = ros::Time::now();
+
+        // Set the namespace and id for this marker.  This serves to create a unique ID
+        // Any marker sent with the same namespace and id will overwrite the old one
+        _static_markers[i].ns = "basic_shapes";
+        _static_markers[i].id = 0;
+
+        // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+        _static_markers[i].action = visualization_msgs::Marker::ADD;
+
+        _static_markers[i].lifetime = ros::Duration();
+    }
+
+    // Interactive Markers --
+    //
+    _server.reset(new interactive_markers::InteractiveMarkerServer("my_arm","",false));
+    //_marker.header.frame_id = "/base_link";
+    //
+    ros::Duration(0.1).sleep();
+
+    // create a timer to update the published transforms
+    //ros::Timer frame_timer = node_handler.createTimer(ros::Duration(0.01), &VMarker::frameCallback);
+    //
+    _menu_handler.insert("First Entry" , &VMarker::processFeedback);
+    _menu_handler.insert("Second Entry", &VMarker::processFeedback);
+    interactive_markers::MenuHandler::EntryHandle sub_menu_handle = _menu_handler.insert("Submenu");
+    _menu_handler.insert(sub_menu_handle, "First Entry",  &VMarker::processFeedback);
+    _menu_handler.insert(sub_menu_handle, "Second Entry", &VMarker::processFeedback);
 }
 
 // Static Marker --
 //
-void VMarker::setStaticMarker(const visualization_msgs::Marker& marker)
+void VMarker::setStaticMarker(int markerId, const visualization_msgs::Marker& marker)
 {
-    _static_marker = marker;
+    if(markerId >= 0 && markerId < MARKER_ID_TOTAL) {
+        _static_markers[markerId] = marker;
+    }
 }
 
-visualization_msgs::Marker& VMarker::getStaticMarker()
+visualization_msgs::Marker& VMarker::getStaticMarker(int markerId)
 {
-    return _static_marker;
+    assert(markerId >= 0 && markerId < MARKER_ID_TOTAL);
+    return _static_markers[markerId];
 }
 
-tf::Vector3 VMarker::getStaticMarkerPos()
+tf::Vector3 VMarker::getStaticMarkerPos(int markerId)
 {
-    return tf::Vector3(_static_marker.pose.position.x, _static_marker.pose.position.y, _static_marker.pose.position.z);
+    if(markerId >= 0 && markerId < MARKER_ID_TOTAL) {
+        return tf::Vector3(_static_markers[markerId].pose.position.x, _static_markers[markerId].pose.position.y, _static_markers[markerId].pose.position.z);
+    }
+    else {
+        return tf::Vector3();
+    }
 }
 
-void VMarker::setStaticMarkerPos(const tf::Vector3& pos)
+void VMarker::setStaticMarkerPos(int markerId, const tf::Vector3& pos)
 {
-    _static_marker.pose.position.x = pos.x();
-    _static_marker.pose.position.y = pos.y();
-    _static_marker.pose.position.z = pos.z();
+    if(markerId >= 0 && markerId < MARKER_ID_TOTAL) {
+        _static_markers[markerId].pose.position.x = pos.x();
+        _static_markers[markerId].pose.position.y = pos.y();
+        _static_markers[markerId].pose.position.z = pos.z();
+    }
 }
 
-void VMarker::moveStaticMarkerPos(const tf::Vector3& distance)
+void VMarker::moveStaticMarkerPos(int markerId, const tf::Vector3& distance)
 {
-    _static_marker.pose.position.x += distance.x();
-    _static_marker.pose.position.y += distance.y();
-    _static_marker.pose.position.z += distance.z();
+    if(markerId >= 0 && markerId < MARKER_ID_TOTAL) {
+        _static_markers[markerId].pose.position.x += distance.x();
+        _static_markers[markerId].pose.position.y += distance.y();
+        _static_markers[markerId].pose.position.z += distance.z();
+    }
 }
 
 // Interactive Marker --
@@ -466,7 +510,7 @@ void VMarker::make6DofMarker( bool fixed, unsigned int interaction_mode, bool sh
     if (interaction_mode != visualization_msgs::InteractiveMarkerControl::NONE)
         _menu_handler.apply( *_server, int_marker.name );
 
-    ROS_INFO_ONCE("Make6DOF Marker Donw");
+    ROS_INFO_ONCE("Make6DOF Marker Done");
 }
 // %EndTag(6DOF)%
 
@@ -722,19 +766,31 @@ void VMarker::makeMovingMarker(const visualization_msgs::Marker& marker)
 }
 // %EndTag(Moving)%
 
-visualization_msgs::Marker VMarker::makeMarker()
+visualization_msgs::Marker VMarker::makeStaticMarker(int marker_type)
 {
     visualization_msgs::Marker marker;
-    marker.type = visualization_msgs::Marker::CUBE;
-    marker.scale.x = 1 * 0.45;
-    marker.scale.y = 1 * 0.45;
-    marker.scale.z = 1 * 0.45;
+
+    // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+    marker.header.frame_id = CMARKER_BASE_FRAME;
+    marker.header.stamp = ros::Time::now();
+
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "basic_shapes";
+    marker.id = 0;
+
+    marker.type = marker_type;
+    marker.scale.x = 0.1;
+    marker.scale.y = 0.1;
+    marker.scale.z = 0.1;
     marker.color.r = 0.5;
     marker.color.g = 0.5;
     marker.color.b = 0.5;
     marker.color.a = 1.0;
 
-    return _static_marker;
+    marker.lifetime = ros::Duration();
+
+    return marker;
 }
 
 visualization_msgs::InteractiveMarkerControl&

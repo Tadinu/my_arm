@@ -17,21 +17,21 @@
     </gazebo>
 
     <!-- body1 -->
-    <gazebo reference="body1">
+    <gazebo reference="body2">
       <mu1>0.2</mu1>
       <mu2>0.2</mu2>
       <material>Gazebo/Blue</material>
     </gazebo>
 
     <!-- body10 -->
-    <gazebo reference="body10">
+    <gazebo reference="body20">
       <mu1>0.2</mu1>
       <mu2>0.2</mu2>
       <material>Gazebo/White</material>
     </gazebo>
 
     <!-- Body 2 -->
-    <gazebo reference="body2">
+    <gazebo reference="body3">
       <mu1>0.2</mu1>
       <mu2>0.2</mu2>
       <material>Gazebo/Green</material>

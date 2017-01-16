@@ -65,7 +65,7 @@ ApplicationWindow {
         onClicked: {
             moveBaseJoint.value = moveJoint10.value =
             moveJoint20.value   = moveJoint3.value  = 0;
-            _geopadMainWindow.resetRobotPosture();
+            _geopadMainWindow.onRobotPostureReset();
         }
     }
 

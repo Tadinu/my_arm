@@ -54,7 +54,7 @@ public slots:
     Q_INVOKABLE void setRobotJointPos(int elementId, double pos);
     Q_INVOKABLE void moveTarget(const QVector3D& distance);
     Q_INVOKABLE void setTargetPos(const QVector3D& pos);
-    Q_INVOKABLE void resetRobotPosture();
+    Q_INVOKABLE void onRobotPostureReset();
 
 private:
     static GeopadMainWindowAgent *_instance;

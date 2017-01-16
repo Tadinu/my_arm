@@ -44,14 +44,14 @@
 <!---............................. BASE JOINT REVOLUTE Z ................................-->
 <joint name="base_joint" type="revolute">
     <parent link="base_link"/>
-    <child link="body1"/>
+    <child link="body2"/>
     <axis xyz="0 0 1"/>
     <origin rpy="0 0 0" xyz="0 0 0.6"/> <!-- z - offset (difference between two joint center) (Base link + Link1) length/2 -->
     <limit effort="1000.0" lower="-2.96" upper="2.96" velocity="0.5"/>
 </joint>
 
 <!---............................. LINK 1 YELLOW ................................-->
-<link name="body1">
+<link name="body2">
     <visual>
         <geometry>
             <cylinder length="1" radius="0.2"/>
@@ -62,16 +62,16 @@
 </link>
 
 <!---............................. JOINT 20 FIXED ................................-->
-<joint name="j20" type="fixed">
-    <parent link="body1"/>
-    <child link="body10"/>
+<joint name="j30" type="fixed">
+    <parent link="body2"/>
+    <child link="body20"/>
     <axis xyz="1 0 0"/>
     <origin rpy="0 0 0" xyz="0 0.2 0.7"/>
     <limit effort="1000.0" lower="-2.96" upper="2.96" velocity="0.5"/>
 </joint>
 
 <!---............................. LINK 10 DUMP WHITE ................................-->
-<link name="body10">
+<link name="body20">
     <visual>
         <geometry>
             <cylinder length="0.8" radius="0.2"/> <!-- Double the diameter of link cylinder-->
@@ -82,16 +82,16 @@
 </link>
 
 <!---............................. JOINT 2 REVOLUTE Y ................................-->
-<joint name="j2" type="revolute">
-    <parent link="body10"/>
-    <child link="body2"/>
+<joint name="j3" type="revolute">
+    <parent link="body20"/>
+    <child link="body3"/>
     <axis xyz="0 1 0"/>
     <origin rpy="0 0 0" xyz="0 0.2 0.3"/>
     <limit effort="1000.0" lower="-2.96" upper="2.96" velocity="0.5"/>
 </joint>
 
 <!---............................. LINK 2 GREEN .......................................-->
-<link name="body2">
+<link name="body3">
     <visual>
         <geometry>
             <cylinder length="1" radius="0.2"/>
@@ -102,8 +102,8 @@
 </link>
 
 <!---............................. JOINT 3 REVOLUTE Y ................................-->
-<joint name="j3" type="revolute">
-    <parent link="body2"/>
+<joint name="j4" type="revolute">
+    <parent link="body3"/>
     <child link="brHand"/>
     <origin rpy="0 0 0" xyz="0 0 0.6"/>
     <axis xyz="0 1 0"/>
@@ -112,7 +112,7 @@
 
 <!---............................. LINK 3 BLUE .......................................-->
 <!---
-<link name="body3">
+<link name="body4">
     <visual>
         <geometry>
             <cylinder length="0.2" radius="0.2"/>

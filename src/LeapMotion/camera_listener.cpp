@@ -1,4 +1,5 @@
 #include "LeapMotion/camera_listener.h"
+#include "KsGlobal.h"
 
 #define targetWidth 500
 #define targetHeight 500
@@ -24,9 +25,9 @@ void CameraListener::onInit(const Controller& controller){
   rp.getSearchPathFromEnv(search_path);
   rp.crawl(search_path, 1);
   std::string path;
-  if (rp.find("leap_motion",path)==true) {
-    default_l_info_filename = path + std::string("/camera_info/leap_cal_left.yml");
-    default_r_info_filename = path + std::string("/camera_info/leap_cal_right.yml");
+  if (rp.find(CROS_PACKAGE_NAME,path)==true) {
+    default_l_info_filename = path + std::string("/config/LeapMotion/leap_cal_left.yml");
+    default_r_info_filename = path + std::string("/config/LeapMotion/leap_cal_right.yml");
   }
   else {
     default_l_info_filename = "";
@@ -44,7 +45,7 @@ void CameraListener::onInit(const Controller& controller){
 }
 
 void CameraListener::onConnect(const Controller& controller) {
-  std::cout << "Connected" << std::endl;
+  std::cout << "Leap Camera Connected" << std::endl;
   controller.enableGesture(Gesture::TYPE_CIRCLE);
   controller.enableGesture(Gesture::TYPE_KEY_TAP);
   controller.enableGesture(Gesture::TYPE_SCREEN_TAP);
@@ -53,11 +54,11 @@ void CameraListener::onConnect(const Controller& controller) {
 
 void CameraListener::onDisconnect(const Controller& controller) {
   // Note: not dispatched when running in a debugger.
-  std::cout << "Disconnected" << std::endl;
+  std::cout << "Leap Camera Disconnected" << std::endl;
 }
 
 void CameraListener::onExit(const Controller& controller) {
-  std::cout << "Exited" << std::endl;
+  std::cout << "Leap Camera Exited" << std::endl;
 }
 
 void CameraListener::onFrame(const Controller& controller) {
@@ -93,7 +94,7 @@ void CameraListener::onFrame(const Controller& controller) {
     }
     if(camera_num==0){
       sensor_msgs::CameraInfoPtr info_msg(new sensor_msgs::CameraInfo(info_mgr_left->getCameraInfo()));
-      image_msg.header.frame_id = info_msg->header.frame_id ="leap_optical_frame";
+      image_msg.header.frame_id = info_msg->header.frame_id = CLEAP_BASE_FRAME;
       info_msg->width = image_msg.width;
       info_msg->height = image_msg.height;
       info_msg->header.stamp = image_msg.header.stamp;
@@ -102,7 +103,7 @@ void CameraListener::onFrame(const Controller& controller) {
       _pub_info_left.publish(*info_msg);
     }else{
       sensor_msgs::CameraInfoPtr info_msg(new sensor_msgs::CameraInfo(info_mgr_right->getCameraInfo()));
-      image_msg.header.frame_id = info_msg->header.frame_id = "leap_optical_frame";
+      image_msg.header.frame_id = info_msg->header.frame_id = CLEAP_BASE_FRAME;
       info_msg->width = image_msg.width;
       info_msg->height = image_msg.height;
       info_msg->header.stamp = image_msg.header.stamp;
@@ -129,15 +130,15 @@ void CameraListener::onFrame(const Controller& controller) {
 }
 
 void CameraListener::onFocusGained(const Controller& controller) {
-  std::cout << "Focus Gained" << std::endl;
+  std::cout << "Leap Camera Focus Gained" << std::endl;
 }
 
 void CameraListener::onFocusLost(const Controller& controller) {
-  std::cout << "Focus Lost" << std::endl;
+  std::cout << "Leap Camera Focus Lost" << std::endl;
 }
 
 void CameraListener::onDeviceChange(const Controller& controller) {
-  std::cout << "Device Changed" << std::endl;
+  std::cout << "Leap Camera Device Changed" << std::endl;
   const DeviceList devices = controller.devices();
 
   for (int i = 0; i < devices.count(); ++i) {
@@ -147,9 +148,9 @@ void CameraListener::onDeviceChange(const Controller& controller) {
 }
 
 void CameraListener::onServiceConnect(const Controller& controller) {
-  std::cout << "Service Connected" << std::endl;
+  std::cout << "Leap Camera Service Connected" << std::endl;
 }
 
 void CameraListener::onServiceDisconnect(const Controller& controller) {
-  std::cout << "Service Disconnected" << std::endl;
+  std::cout << "Leap Camera Service Disconnected" << std::endl;
 }

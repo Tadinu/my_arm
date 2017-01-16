@@ -15,7 +15,10 @@ SOURCES += main.cpp \
     src/my_arm/rviz/VMarker.cpp \
     src/LeapMotion/hands_listener.cpp \
     src/LeapMotion/camera_listener.cpp \
-    src/my_arm/RobotLeapAdapter.cpp
+    src/my_arm/RobotLeapAdapter.cpp \
+    src/kinect/hand_interaction/analyze_hands.cpp \
+    src/kinect/hand_interaction/detect_hands_wskel.cpp \
+    src/kinect/hand_interaction/detect_hands.cpp
 
 RESOURCES += qml.qrc
 
@@ -136,7 +139,40 @@ DISTFILES += \
     test/LeapMotion/test_sender.test \
     launch/LeapMotion/sensor_sender.launch \
     launch/LeapMotion/leap_camera.launch \
-    launch/LeapMotion/leap_stereo.launch
+    launch/LeapMotion/leap_stereo.launch \
+    launch/kinect/hand_interaction/finger_detector.launch \
+    launch/kinect/hand_interaction/hand_detector.launch \
+    config/kinect/hand_interaction/fingerdetection.vcg \
+    config/kinect/hand_interaction/handdetection.vcg \
+    models/myArm_softHand.xacro \
+    models/pisa_iit_soft_hand/materials.urdf.xacro \
+    models/pisa_iit_soft_hand/soft_hand.gazebo.xacro \
+    models/pisa_iit_soft_hand/soft_hand.inertia.xacro \
+    models/pisa_iit_soft_hand/soft_hand.transmission.xacro \
+    models/pisa_iit_soft_hand/soft_hand.urdf.xacro \
+    models/pisa_iit_soft_hand/accesories/clamp.urdf.xacro \
+    models/pisa_iit_soft_hand/accesories/kuka_coupler.urdf.xacro \
+    models/pisa_iit_soft_hand/accesories/softhand_base.urdf.xacro \
+    meshes/pisa_iit_soft_hand/fingertip.stl \
+    meshes/pisa_iit_soft_hand/knuckle.stl \
+    meshes/pisa_iit_soft_hand/palm_left.stl \
+    meshes/pisa_iit_soft_hand/palm_right.stl \
+    meshes/pisa_iit_soft_hand/phalanx.stl \
+    meshes/pisa_iit_soft_hand/softhand_base_left.stl \
+    meshes/pisa_iit_soft_hand/thumb_knuckle_left.stl \
+    meshes/pisa_iit_soft_hand/thumb_knuckle_right.stl \
+    meshes/pisa_iit_soft_hand/fingertip_collision.stl \
+    meshes/pisa_iit_soft_hand/knuckle_collision.stl \
+    meshes/pisa_iit_soft_hand/palm_left_collision.stl \
+    meshes/pisa_iit_soft_hand/palm_right_collision.stl \
+    meshes/pisa_iit_soft_hand/phalanx_collision.stl \
+    meshes/pisa_iit_soft_hand/thumb_knuckle_left_collision.stl \
+    meshes/pisa_iit_soft_hand/thumb_knuckle_right_collision.stl \
+    meshes/pisa_iit_soft_hand/accesories/clamp.stl \
+    meshes/pisa_iit_soft_hand/accesories/kuka_coupler.stl \
+    meshes/pisa_iit_soft_hand/accesories/softhand_base_left.stl \
+    meshes/pisa_iit_soft_hand/accesories/softhand_base_right.stl \
+    launch/my_arm_pisa_iit_soft_hand.launch
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

@@ -8,6 +8,7 @@
 #include <QStringList>
 #include <stdlib.h>
 #include <QMutex>
+#include <mutex>
 #include <iostream>
 #include "assert.h"
 
@@ -48,6 +49,7 @@ public:
     //
     void setRobotPos(const tf::Vector3 &pos);
     tf::Vector3 getRobotPos();
+    void resetRobotPosture();
     void rotateJoint(int jointId, double posDelta, bool updateBallPos = true);
     void moveBall(const tf::Vector3& distance);
     void setBallPos(const tf::Vector3& pos, bool armFollowOrder = false);
@@ -56,16 +58,19 @@ public:
     void determineArrangement_JacoArm(tf::Vector3& world_target_pos);
 
     void updateBallFollowingEndTip();
+
 public slots:
     void run();
     void determineArmArrangement(const QVector3D& world_target_pos);
+    void determineHandArrangmentOnLeapHands();
+
 signals:
     void newPose(double, double, double);
     void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);
 
 private:
     void publishRobotPose(int robotId,
-                          geometry_msgs::TransformStamped& world_trans,
+                          geometry_msgs::TransformStamped& _world_trans,
                           tf::TransformBroadcaster& broadcaster);
     // Publish/Send methods --
     //
@@ -91,11 +96,17 @@ private:
     char** _pInit_argv;
     const char * _topic;
 
+    //tf::transformStampedMsgToTF(...);
+    //tf::transformStampedTFToMsg();
+    //tf::transformTFToMsg();
+    //tf::transformMsgToTF();
+    geometry_msgs::TransformStamped _world_trans;
+    tf::StampedTransform* _frame_trans;
+
     double _speed;
     double *_joint_poses;
     size_t _jointNo;
     size_t _linkNo;
-    tf::StampedTransform* _frame_trans;
     tf::Vector3 _arm_reach_limit;
     tf::Vector3 _robot_pos;
     // --------------------------------------------------------------------
@@ -108,7 +119,7 @@ private:
     double _minRange;
 
     QThread * _pThread;
-    QMutex* _pMutex;
+    QMutex* _pMutex; // std::mutex
 
     ros::Subscriber _pose_listener;
     ros::Publisher  _sim_velocity;
@@ -116,7 +127,6 @@ private:
     // --------------------------------------------------------------------
     //
     // LeapMotion Hands --
-    RobotLeapAdapter _robotLeapAdapter;
 };
 #endif
 

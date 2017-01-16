@@ -6,6 +6,6 @@
         <param name="use_gui" value="TRUE"/>
     </node>
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-    <node name="jacoArmController" pkg="my_arm" type="jacoArmController" />
+    <node name="robotArmController" pkg="my_arm" type="robotArmController" />
 
 </launch>

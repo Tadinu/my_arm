@@ -237,6 +237,11 @@
 #define V_QVECTOR3D_2TF(qVector)   (tf::Vector3(qVector.x(), qVector.y(), qVector.z()))
 // ----------------------------------------------------------------------------------
 // ROS DEFINE
+#define ROBOT_LEAP_HANDS
+#define CLEAP_HANDS_TOPIC      ("hands")
+#define CLEAP_HANDS_BONE_TOPIC ("hands_line")
+// PACKAGE NAME --
+#define CROS_PACKAGE_NAME ("my_arm")
 
 // FRAMES --
 #define CWORLD_FRAME ("world")
@@ -245,6 +250,9 @@
 #define ANGLE_2_RAD(angle) ((angle*V_PI)/180)
 
 #define VMARKER_INSTANCE() VMarker::getInstance()
+
+#define VLEAP_INSTANCE() RobotLeapAdapter::getInstance()
+#define CLEAP_BASE_FRAME (CWORLD_FRAME)
 
 class KsGlobal : public QObject
 {
@@ -258,19 +266,20 @@ public:
     };
 
     enum VROBOT_TYPE {
-        VMY_ARM   = 0x01,
-        VJACO_ARM = 0x02
+        VMY_ARM    = 0x01,
+        VJACO_ARM  = 0x02,
+        VSOFT_HAND = 0x03,
     };
 
     enum VMY_ARM_JOINT {
         // Arm --
         //
         VMYARM_BASE_JOINT,    // Revolute Z
-        VJOINT1,              // Continuous Y
-        VJOINT10,             // Fixed - at Joint1 pos
         VJOINT2,              // Continuous Y
-        VJOINT20,             // Fixed - at Joint2 pos
-        VJOINT3,              // Revolute Z
+        VJOINT20,             // Fixed - at Joint1 pos
+        VJOINT3,              // Continuous Y
+        VJOINT30,             // Fixed - at Joint2 pos
+        VJOINT4,              // Revolute Z
 
         // Fingers --
         //

@@ -10,6 +10,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
 
+set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -37,6 +39,10 @@ find_package(catkin REQUIRED COMPONENTS
 
   ## OpenMP --
   #OpenMP
+
+  ## Graspit --
+  graspit
+  ## graspit_ros_planning_msgs
 )
 find_package(gazebo REQUIRED)
 find_package(Qt5Core REQUIRED)
@@ -159,6 +165,7 @@ catkin_package(
 #  CATKIN_DEPENDS roscpp rospy geometry_msgs sensor_msgs std_msgs tf
 #  DEPENDS system_lib
    DEPENDS
+      rospack roscpp roslib rospy sensor_msgs std_msgs tf
       gazebo_ros
       camera_calibration_parsers
       camera_info_manager
@@ -166,7 +173,7 @@ catkin_package(
       image_transport
       message_runtime
 
-      rospack roscpp roslib rospy sensor_msgs std_msgs tf
+      ##graspit_ros_planning_msgs
 )
 
 ###########
@@ -208,6 +215,26 @@ include_directories(${Qt5Network_INCLUDE_DIRS})
 include_directories(
     if($ENV{LEAP_SDK} $ENV{LEAP_SDK}/include)
 )
+
+## Graspit include files should now come directly from the graspit package
+set(GRASPIT_ROOT $ENV{GRASPIT})
+include_directories(${GRASPIT_ROOT})
+include_directories(${GRASPIT_ROOT}/src)
+include_directories(${GRASPIT_ROOT}/include)
+
+## OpenNI2 ##
+# set(OPENNI2_DIR "{location of OpenNI2 library} /Linux-x64/OpenNI-Linux-x64-2.2.0/")
+# rosbuild_init()
+#
+# set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+# set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+#
+# link_directories("${OPENNI2_DIR}/Redist/")
+# include_directories("${OPENNI2_DIR}/Include")
+#
+# rosbuild_add_executable(capri src/sensor.cpp)
+# target_link_libraries(capri boost_filesystem boost_system OpenNI2)
+
 
 ## Declare a C++ library
 # add_library(myArm
@@ -292,7 +319,7 @@ endif()
 # )
 
 install(PROGRAMS
-    scripts/LeapMotion/leap_interface.py scripts//LeapMotion/sender.py scripts//LeapMotion/subscriber.py
+    scripts/LeapMotion/leap_interface.py scripts/LeapMotion/sender.py scripts/LeapMotion/subscriber.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

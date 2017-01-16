@@ -131,7 +131,7 @@ void GeopadMainWindowAgent::setTargetPos(const QVector3D& pos)
     _robotThread.setBallPos(tf::Vector3(pos.x(), pos.y(), pos.z()), true);
 }
 
-void GeopadMainWindowAgent::resetRobotPosture()
+void GeopadMainWindowAgent::onRobotPostureReset()
 {
     _robotThread.updateBallFollowingEndTip(); // Joint values mean angle values, Link values mean length values
 }

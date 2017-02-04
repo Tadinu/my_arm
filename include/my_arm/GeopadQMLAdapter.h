@@ -185,14 +185,15 @@ public:
     //KDialog* getKsDialog(int dialogId);
     //
     enum QML_ROBOT_TYPE {
-        MY_ARM   = KsGlobal::VMY_ARM,
-        JACO_ARM = KsGlobal::VJACO_ARM
+        BRHAND__ARM        = KsGlobal::VBRHAND_ARM,
+        JACO_ARM           = KsGlobal::VJACO_ARM,
+        PISA_SOFT_HAND_ARM = KsGlobal::VPISA_SOFT_HAND_ARM
     };
 
     enum QML_MY_ARM_JOINT {
         // Arm --
         //
-        MYARM_BASE_JOINT    = KsGlobal::VMYARM_BASE_JOINT,    // Revolute Z
+        MYARM_BASE_JOINT    = KsGlobal::VBRHAND_ARM_BASE_JOINT,    // Revolute Z
         JOINT1              = KsGlobal::VJOINT2          ,    // Continuous
         JOINT10             = KsGlobal::VJOINT20         ,    // Fixed
         JOINT2              = KsGlobal::VJOINT3          ,    // Continuous

@@ -62,7 +62,7 @@ public:
 public slots:
     void run();
     void determineArmArrangement(const QVector3D& world_target_pos);
-    void determineHandArrangmentOnLeapHands();
+    void determineHandArrangmentOnLeapHands(int armId);
 
 signals:
     void newPose(double, double, double);
@@ -106,7 +106,7 @@ private:
     double _speed;
     double *_joint_poses;
     size_t _jointNo;
-    size_t _linkNo;
+    //size_t _linkNo;
     tf::Vector3 _arm_reach_limit;
     tf::Vector3 _robot_pos;
     // --------------------------------------------------------------------

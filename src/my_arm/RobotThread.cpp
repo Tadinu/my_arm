@@ -9,7 +9,7 @@
 #include "KsGlobal.h"
 
 // ROBOT TO RUN
-#define CRUN_ROBOT (KsGlobal::VMY_ARM)
+#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
 
 // NODE --
 #define CMY_ARM_NODE_NAME ("robotArmController")
@@ -36,7 +36,7 @@ const tf::Vector3 CZ(0,0,1);
 
 const tf::Vector3 CZERO(0,0,0);
 
-const char* CMY_ARM_JOINTS[KsGlobal::VMY_ARM_JOINT_TOTAL] = {
+const char* CBRHAND_ARM_JOINTS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL] = {
     ("base_joint"),                // Revolute   Z : base_link <-> body1z
     ("j2"),                        // Continuous Y : body1     <-> body10
     ("j20"),                       // Fixed        : body10    <-> body2
@@ -56,7 +56,7 @@ const char* CMY_ARM_JOINTS[KsGlobal::VMY_ARM_JOINT_TOTAL] = {
     ("finger_3_dist_joint")
 };
 
-const char* CMY_ARM_LINKS[KsGlobal::VMY_ARM_JOINT_TOTAL+1] = {
+const char* CBRHAND_ARM_LINKS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1] = {
     CBASE_LINK,
     ("body2"),
     ("body20"),
@@ -75,6 +75,39 @@ const char* CMY_ARM_LINKS[KsGlobal::VMY_ARM_JOINT_TOTAL+1] = {
 
     ("finger_3_med_link"),
     ("finger_3_dist_link")
+};
+
+const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL] = {
+    ("base_joint"),                // Revolute   Z : base_link <-> body1z
+    ("j2"),                        // Continuous Y : body1     <-> body10
+    ("j20"),                       // Fixed        : body10    <-> body2
+    ("j3"),                        // Continuous Y : body2     <-> body20
+    ("j30"),                       // Fixed        : body20    <-> body3
+    ("j4"),                        // Revolute   Z : body3     <-> brHand
+
+    ("softHand_thumb_abd_joint"),
+    ("softHand_thumb_inner_joint"),
+    ("softHand_thumb_outer_joint"),
+
+    ("softHand_index_abd_joint"),
+    ("softHand_index_inner_joint"),
+    ("softHand_index_middle_joint"),
+    ("softHand_index_outer_joint"),
+
+    ("softHand_middle_abd_joint"),
+    ("softHand_middle_inner_joint"),
+    ("softHand_middle_middle_joint"),
+    ("softHand_middle_outer_joint"),
+
+    ("softHand_ring_abd_joint"),
+    ("softHand_ring_inner_joint"),
+    ("softHand_ring_middle_joint"),
+    ("softHand_ring_outer_joint"),
+
+    ("softHand_little_abd_joint"),
+    ("softHand_little_inner_joint"),
+    ("softHand_little_middle_joint"),
+    ("softHand_little_outer_joint")
 };
 
 const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
@@ -249,9 +282,9 @@ void RobotThread::runArmOperation(int armId)
     ros::Rate loop_rate(300);
 
     // Joint No
-    _jointNo = KsGlobal::VMY_ARM == armId ? KsGlobal::VMY_ARM_JOINT_TOTAL   :
-               KsGlobal::VJACO_ARM        ? KsGlobal::VJACO_ARM_JOINT_TOTAL : 0;
-    _linkNo = _jointNo + 1;
+    _jointNo = KsGlobal::VBRHAND_ARM         == armId ? KsGlobal::VBRHAND_ARM_JOINT_TOTAL         :
+               KsGlobal::VJACO_ARM           == armId ? KsGlobal::VJACO_ARM_JOINT_TOTAL           :
+               KsGlobal::VPISA_SOFT_HAND_ARM == armId ? KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL : 0;
     if(_jointNo <= 0) {
         ROS_ERROR_ONCE("The robot has no joint???");
         return;
@@ -322,7 +355,7 @@ void RobotThread::runArmOperation(int armId)
 
         // =====================================================================================
         // Listen for Leap Motion hand data
-        determineHandArrangmentOnLeapHands();
+        determineHandArrangmentOnLeapHands(armId);
 
         // =====================================================================================
         // Callbacks registered from Interactive Marker Server:
@@ -358,16 +391,16 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
     //
     static bool flag = false;
     switch(robotId) {
-        case KsGlobal::VMY_ARM:
-            for(size_t i = 0; i < _linkNo; i++) {
+        case KsGlobal::VBRHAND_ARM:
+            for(size_t i = 0; i < (KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1); i++) {
                 try {
-                    listener.waitForTransform(CBASE_LINK, CMY_ARM_LINKS[i],
+                    listener.waitForTransform(CBASE_LINK, CBRHAND_ARM_LINKS[i],
                                              ros::Time(0), ros::Duration(3.0)); // !!!
-                    listener.lookupTransform(CBASE_LINK, CMY_ARM_LINKS[i],
+                    listener.lookupTransform(CBASE_LINK, CBRHAND_ARM_LINKS[i],
                                              ros::Time(0), transform);
                 }
                 catch (tf::TransformException e) {
-                    ROS_ERROR("Error looking up transform of %s relative to base_link", CMY_ARM_LINKS[i]);
+                    ROS_ERROR("Error looking up transform of %s relative to base_link", CBRHAND_ARM_LINKS[i]);
                     ROS_ERROR("%s",e.what());
                     ros::Duration(1.0).sleep();
                     continue;
@@ -379,7 +412,7 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
                     _frame_trans[i] = transform;
                     //tf::Vector3 point(0,0,0);
                     //tf::Vector3 point_bl = transform * point;
-                    //ROS_INFO("%s: %f %f %f", CMY_ARM_LINKS[i], point_bl[0], point_bl[1], point_bl[2]);
+                    //ROS_INFO("%s: %f %f %f", CBRHAND_ARM_LINKS[i], point_bl[0], point_bl[1], point_bl[2]);
                 }
             }
         break;
@@ -418,7 +451,7 @@ void RobotThread::setRobotPos(const tf::Vector3 &pos)
 
 void RobotThread::resetRobotPosture()
 {
-    rotateJoint(KsGlobal::VMYARM_BASE_JOINT, 0, false);
+    rotateJoint(KsGlobal::VBRHAND_ARM_BASE_JOINT, 0, false);
     rotateJoint(KsGlobal::VJOINT2          , 0, false);
     rotateJoint(KsGlobal::VJOINT3          , 0, false);
 }
@@ -449,7 +482,7 @@ void RobotThread::publishRobotPose(int robotId,
     world_trans.header.stamp            = ros::Time::now();
     world_trans.transform.translation.x = current_robot_pos.x();
     world_trans.transform.translation.y = current_robot_pos.y();
-    world_trans.transform.translation.z = ((robotId == KsGlobal::VMY_ARM) ||
+    world_trans.transform.translation.z = ((robotId == KsGlobal::VBRHAND_ARM) ||
                                            (robotId == KsGlobal::VJACO_ARM)) ? 0 : current_robot_pos.z();
     world_trans.transform.rotation      = tf::createQuaternionMsgFromYaw(0.0f);
 
@@ -489,9 +522,11 @@ void RobotThread::publishJointState(int robotId,
     joint_state.position.resize(_jointNo);
 
     switch(robotId) {
-        case KsGlobal::VMY_ARM:
+        case KsGlobal::VBRHAND_ARM:
+        case KsGlobal::VPISA_SOFT_HAND_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
-                joint_state.name[i]     = CMY_ARM_JOINTS[i];
+                joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? CBRHAND_ARM_JOINTS[i]         :
+                                          (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? CPISA_SOFT_HAND_ARM_JOINTS[i] : "";
                 joint_state.position[i] = current_joint_poses[i];
             }
 
@@ -534,7 +569,7 @@ void RobotThread::publishJointState(int robotId,
         //
         case KsGlobal::VJACO_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
-                joint_state.name[i]     = CMY_ARM_JOINTS[i];
+                joint_state.name[i]     = CJACO_ARM_JOINTS[i];
                 joint_state.position[i] = _joint_poses[i];
             }
 
@@ -830,7 +865,7 @@ void RobotThread::determineArrangement_MyArm(tf::Vector3& target_pos) // as worl
     //    theta2 += M_PI/2;
 
     //
-    rotateJoint(KsGlobal::VMYARM_BASE_JOINT, theta1, false);
+    rotateJoint(KsGlobal::VBRHAND_ARM_BASE_JOINT, theta1, false);
     rotateJoint(KsGlobal::VJOINT2          , theta2, false);
     ROS_INFO("JOINT 2: %f (degree)", RAD_2_ANGLE(theta2));
     rotateJoint(KsGlobal::VJOINT3          , theta3, false);
@@ -841,29 +876,48 @@ void RobotThread::determineArrangement_JacoArm(tf::Vector3& target_pos)
 {}
 
 
-void RobotThread::determineHandArrangmentOnLeapHands()
+void RobotThread::determineHandArrangmentOnLeapHands(int armId)
 {
     // Take the first hand data for convenience:
     std::vector<std::vector<double>> jointValues = RobotLeapAdapter::getInstance()->getFingerJointValues(0);
-    if(jointValues.size() == 0)
+    if(jointValues.size() == 0) {
         return;
+    }
 
     //ROS_INFO("Fingers joints: %f %f %f", jointValues[0][0], jointValues[0][1], jointValues[0][2]);
     //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
     //ROS_INFO("Fingers joints: %f %f %f", jointValues[2][0], jointValues[2][1], jointValues[2][2]);
-    rotateJoint(KsGlobal::VFINGER_1_PROX_JOINT, jointValues[0][0], false);
-    rotateJoint(KsGlobal::VFINGER_1_MED_JOINT,  jointValues[0][1], false);
-    rotateJoint(KsGlobal::VFINGER_1_DIST_JOINT, jointValues[0][2], false);
+    switch(armId) {
+    case KsGlobal::VPISA_SOFT_HAND_ARM:
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_ABD_JOINT  , jointValues[0][0], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_INNER_JOINT, jointValues[0][1], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_OUTER_JOINT, jointValues[0][2], false);
 
-    rotateJoint(KsGlobal::VFINGER_2_PROX_JOINT, jointValues[1][0], false);
-    rotateJoint(KsGlobal::VFINGER_2_MED_JOINT,  jointValues[1][1], false);
-    rotateJoint(KsGlobal::VFINGER_2_DIST_JOINT, jointValues[1][2], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_ABD_JOINT      , jointValues[1][0], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_INNER_JOINT    , jointValues[1][1], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_MIDDLE_JOINT   , jointValues[1][2], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_OUTER_JOINT    , jointValues[1][3], false);
 
-    rotateJoint(KsGlobal::VFINGER_3_MED_JOINT,  jointValues[2][0], false);
-    rotateJoint(KsGlobal::VFINGER_3_DIST_JOINT, jointValues[2][1], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_ABD_JOINT      , jointValues[2][0], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_INNER_JOINT    , jointValues[2][1], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_MIDDLE_JOINT   , jointValues[2][2], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_OUTER_JOINT    , jointValues[2][3], false);
 
-    //
-    VLEAP_INSTANCE()->setFree(true);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_ABD_JOINT      , jointValues[3][0], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_INNER_JOINT    , jointValues[3][1], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_MIDDLE_JOINT   , jointValues[3][2], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_OUTER_JOINT    , jointValues[3][3], false);
+
+        rotateJoint(KsGlobal::VPISA_FINGER_4_ABD_JOINT      , jointValues[4][0], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_INNER_JOINT    , jointValues[4][1], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_MIDDLE_JOINT   , jointValues[4][2], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_OUTER_JOINT    , jointValues[4][3], false);
+        break;
+    case KsGlobal::VBRHAND_ARM:
+    case KsGlobal::VJACO_ARM:
+    default:
+        break;
+    }
 }
 
 // =========================================================================================

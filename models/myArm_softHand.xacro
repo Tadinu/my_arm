@@ -238,7 +238,7 @@
 <!---............................. JOINT 4 REVOLUTE Z ................................ -->
 <joint name="j4" type="revolute">
     <parent link="body4"/>
-    <child link="softHandBase"/>
+    <child link="softHandWrist"/>
     <origin xyz="0 ${axel_offset} ${radius_hor_3+length4}" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
     <limit effort="1000.0" lower="-2.96" upper="2.96" velocity="0.5"/>
@@ -247,7 +247,7 @@
 
 <!---............................. HAND .............................................. -->
 
-<link name="softHandBase">
+<link name="softHandWrist">
     <collision> <!-- collision -->
         <origin rpy="0 0 0" xyz="0 0 ${length5/2}"/>
         <geometry>
@@ -267,7 +267,7 @@
     </inertial>
 </link>
 
-<xacro:soft_hand name="softHand" parent="softHandBase"
+<xacro:soft_hand name="softHand" parent="softHandWrist"
                  withAdaptiveTransmission="true" useMimicTag="false" left="true">
   <origin xyz="0 0 ${length5/2}"
           rpy="0 0 0"/>

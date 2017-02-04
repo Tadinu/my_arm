@@ -65,16 +65,7 @@ std::vector<std::vector<double>> RobotLeapAdapter::getFingerJointValues(int hand
 
 void RobotLeapAdapter::emitFingerPosesChanged()
 {
-    QMutexLocker locker(_pMutex);
-    if(_isFree) {
-        ROS_INFO("RobotLeapAdapter::emitFingerPosesChanged()");
-        _isFree = false;
-        emit fingerPosesChanged();
-    }
+    ROS_INFO("RobotLeapAdapter::emitFingerPosesChanged()");
+    emit fingerPosesChanged();
 }
 
-void RobotLeapAdapter::setFree(bool isFree)
-{
-    QMutexLocker locker(_pMutex);
-    _isFree = isFree;
-}

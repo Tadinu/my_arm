@@ -20,8 +20,6 @@ public:
     std::vector<std::vector<double>> getFingerJointValues(int hand_id);
     void emitFingerPosesChanged();
 
-    void setFree(bool isFree);
-
 signals:
     void fingerPosesChanged();
 
@@ -34,7 +32,6 @@ private:
     Controller      _controller;
 
     QMutex* _pMutex;
-    bool _isFree;
 };
 
 #endif // ___ROBOT_LEAP_ADAPTER_H___

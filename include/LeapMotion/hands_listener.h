@@ -15,6 +15,9 @@
 using namespace Leap;
 using namespace std;
 
+#define CLEAP_HANDS_TOPIC      ("hands")
+#define CLEAP_HANDS_BONE_TOPIC ("hands_line")
+
 #include <functional>
 typedef std::function<void ()> VoidCallback;
 

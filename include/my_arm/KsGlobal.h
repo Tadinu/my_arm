@@ -238,8 +238,6 @@
 // ----------------------------------------------------------------------------------
 // ROS DEFINE
 #define ROBOT_LEAP_HANDS
-#define CLEAP_HANDS_TOPIC      ("hands")
-#define CLEAP_HANDS_BONE_TOPIC ("hands_line")
 // PACKAGE NAME --
 #define CROS_PACKAGE_NAME ("my_arm")
 
@@ -266,20 +264,22 @@ public:
     };
 
     enum VROBOT_TYPE {
-        VMY_ARM    = 0x01,
-        VJACO_ARM  = 0x02,
-        VSOFT_HAND = 0x03,
+        VBRHAND_ARM         = 0x01,
+        VJACO_ARM           = 0x02,
+        VPISA_SOFT_HAND_ARM = 0x03,
     };
 
-    enum VMY_ARM_JOINT {
+    // BRHAND ARM ----------------------------------------
+    //
+    enum VBRHAND_ARM_JOINT {
         // Arm --
         //
-        VMYARM_BASE_JOINT,    // Revolute Z
-        VJOINT2,              // Continuous Y
-        VJOINT20,             // Fixed - at Joint1 pos
-        VJOINT3,              // Continuous Y
-        VJOINT30,             // Fixed - at Joint2 pos
-        VJOINT4,              // Revolute Z
+        VBRHAND_ARM_BASE_JOINT,  // Revolute Z
+        VJOINT2,                 // Continuous Y
+        VJOINT20,                // Fixed - at Joint1 pos
+        VJOINT3,                 // Continuous Y
+        VJOINT30,                // Fixed - at Joint2 pos
+        VJOINT4,                 // Revolute Z
 
         // Fingers --
         //
@@ -294,9 +294,11 @@ public:
         VFINGER_3_MED_JOINT,
         VFINGER_3_DIST_JOINT,
 
-        VMY_ARM_JOINT_TOTAL
+        VBRHAND_ARM_JOINT_TOTAL
     };
 
+    // JACO ARM ---------------------------------------
+    //
     enum VJACO_ARM_JOINT {
         // Arm --
         //
@@ -339,6 +341,51 @@ public:
         VFINGERS_JOINT_5,     // Fixed
 
         VJACO_ARM_JOINT_TOTAL
+    };
+
+    // PISA SOFT HAND ------------------------------------
+    //
+    enum VPISA_SOFT_HAND_ARM_JOINT {
+        // Arm --
+        //
+        VPISA_SOFT_HAND_ARM_BASE_JOINT,  // Revolute Z
+        VPISA_SOFT_HAND_JOINT2,          // Continuous Y
+        VPISA_SOFT_HAND_JOINT20,         // Fixed - at Joint1 pos
+        VPISA_SOFT_HAND_JOINT3,          // Continuous Y
+        VPISA_SOFT_HAND_JOINT30,         // Fixed - at Joint2 pos
+        VPISA_SOFT_HAND_JOINT4,          // Revolute Z
+
+        // Fingers --
+        //
+        VPISA_FINGER_THUMB_ABD_JOINT,
+        VPISA_FINGER_THUMB_INNER_JOINT,
+        VPISA_FINGER_THUMB_OUTER_JOINT,
+
+        // Index
+        VPISA_FINGER_1_ABD_JOINT,
+        VPISA_FINGER_1_INNER_JOINT,
+        VPISA_FINGER_1_MIDDLE_JOINT,
+        VPISA_FINGER_1_OUTER_JOINT,
+
+        // Middle
+        VPISA_FINGER_2_ABD_JOINT,
+        VPISA_FINGER_2_INNER_JOINT,
+        VPISA_FINGER_2_MIDDLE_JOINT,
+        VPISA_FINGER_2_OUTER_JOINT,
+
+        // Ring
+        VPISA_FINGER_3_ABD_JOINT,
+        VPISA_FINGER_3_INNER_JOINT,
+        VPISA_FINGER_3_MIDDLE_JOINT,
+        VPISA_FINGER_3_OUTER_JOINT,
+
+        // Little
+        VPISA_FINGER_4_ABD_JOINT,
+        VPISA_FINGER_4_INNER_JOINT,
+        VPISA_FINGER_4_MIDDLE_JOINT,
+        VPISA_FINGER_4_OUTER_JOINT,
+
+        VPISA_SOFT_HAND_ARM_JOINT_TOTAL
     };
 
 public:

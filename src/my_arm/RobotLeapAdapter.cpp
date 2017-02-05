@@ -60,6 +60,7 @@ void RobotLeapAdapter::initLeapMotion(ros::NodeHandle* node_handle)
 
 std::vector<std::vector<double>> RobotLeapAdapter::getFingerJointValues(int hand_id)
 {
+    QMutexLocker lock(_pMutex);
     return _hands_listener->getFingerJointValues(hand_id);
 }
 

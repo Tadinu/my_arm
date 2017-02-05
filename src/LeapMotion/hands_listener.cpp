@@ -37,7 +37,9 @@ std::vector<std::vector<double>> HandsListener::getFingerJointValues(int hand_id
 
     for(int i = 0; i < fingerList.count(); i++) {
         std::vector<double> subFingerJointValues;
-        for(int j = 0; j < HandsListener::HAND_BONE_TOTAL-1; j++) {
+        subFingerJointValues.push_back(-_hands[hand_id].direction().
+                                       angleTo(fingerList[i].bone(Bone::TYPE_PROXIMAL).direction()));
+        for(int j = HandsListener::HAND_BONE_FIRST; j < HandsListener::HAND_BONE_TOTAL-1; j++) {
             // Note -Angle(Bone[j], Bone[j+1]);
             subFingerJointValues.push_back(-fingerList[i].bone((Bone::Type)(j)).direction().
                                            angleTo(fingerList[i].bone((Bone::Type)(j+1)).direction())

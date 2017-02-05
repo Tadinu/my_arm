@@ -350,40 +350,67 @@ public:
         //
         VPISA_SOFT_HAND_ARM_BASE_JOINT,  // Revolute Z
         VPISA_SOFT_HAND_JOINT2,          // Continuous Y
-        VPISA_SOFT_HAND_JOINT20,         // Fixed - at Joint1 pos
+        VPISA_SOFT_HAND_JOINT20,         // Fixed - at Joint2 pos
         VPISA_SOFT_HAND_JOINT3,          // Continuous Y
-        VPISA_SOFT_HAND_JOINT30,         // Fixed - at Joint2 pos
+        VPISA_SOFT_HAND_JOINT30,         // Fixed - at Joint3 pos
         VPISA_SOFT_HAND_JOINT4,          // Revolute Z
+
+        // Kuka Coupler --
+        //VPISA_SOFT_HAND_KUKA_COUPLER_JOINT,        // Fixed
+        //VPISA_SOFT_HAND_KUKA_COUPLER_BASE_JOINT,   // Fixed
+
+        // Clamp --
+        //VPISA_SOFT_HAND_CLAMP_JOINT,               // Fixed
+
+        // Palm --
+        //VPISA_SOFT_HAND_PALM_JOINT,                // Fixed
+
+        // Synergy --
+        VPISA_SOFT_HAND_SYNERGY_JOINT,             // Revolute
 
         // Fingers --
         //
         VPISA_FINGER_THUMB_ABD_JOINT,
         VPISA_FINGER_THUMB_INNER_JOINT,
+        VPISA_FINGER_THUMB_INNER_MIMIC_JOINT,
         VPISA_FINGER_THUMB_OUTER_JOINT,
+        VPISA_FINGER_THUMB_OUTER_MIMIC_JOINT,
 
         // Index
         VPISA_FINGER_1_ABD_JOINT,
         VPISA_FINGER_1_INNER_JOINT,
+        VPISA_FINGER_1_INNER_MIMIC_JOINT,
         VPISA_FINGER_1_MIDDLE_JOINT,
+        VPISA_FINGER_1_MIDDLE_MIMIC_JOINT,
         VPISA_FINGER_1_OUTER_JOINT,
+        VPISA_FINGER_1_OUTER_MIMIC_JOINT,
 
         // Middle
         VPISA_FINGER_2_ABD_JOINT,
         VPISA_FINGER_2_INNER_JOINT,
+        VPISA_FINGER_2_INNER_MIMIC_JOINT,
         VPISA_FINGER_2_MIDDLE_JOINT,
+        VPISA_FINGER_2_MIDDLE_MIMIC_JOINT,
         VPISA_FINGER_2_OUTER_JOINT,
+        VPISA_FINGER_2_OUTER_MIMIC_JOINT,
 
         // Ring
         VPISA_FINGER_3_ABD_JOINT,
         VPISA_FINGER_3_INNER_JOINT,
+        VPISA_FINGER_3_INNER_MIMIC_JOINT,
         VPISA_FINGER_3_MIDDLE_JOINT,
+        VPISA_FINGER_3_MIDDLE_MIMIC_JOINT,
         VPISA_FINGER_3_OUTER_JOINT,
+        VPISA_FINGER_3_OUTER_MIMIC_JOINT,
 
         // Little
         VPISA_FINGER_4_ABD_JOINT,
         VPISA_FINGER_4_INNER_JOINT,
+        VPISA_FINGER_4_INNER_MIMIC_JOINT,
         VPISA_FINGER_4_MIDDLE_JOINT,
+        VPISA_FINGER_4_MIDDLE_MIMIC_JOINT,
         VPISA_FINGER_4_OUTER_JOINT,
+        VPISA_FINGER_4_OUTER_MIMIC_JOINT,
 
         VPISA_SOFT_HAND_ARM_JOINT_TOTAL
     };

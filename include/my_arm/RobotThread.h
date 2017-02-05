@@ -64,6 +64,7 @@ public slots:
     void determineArmArrangement(const QVector3D& world_target_pos);
     void determineHandArrangmentOnLeapHands(int armId);
 
+    void leapCallback(const visualization_msgs::MarkerArray&);
 signals:
     void newPose(double, double, double);
     void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);

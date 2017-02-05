@@ -17,7 +17,7 @@
 // TOPIC --
 #define ROS_TOPIC(linkName) (std::string("//") + linkName)
 
-const double rad = M_PI/180;
+const double M_RAD  = M_PI/180;
 const double TWO_PI = 2 * M_PI;
 
 const double DELTA_ERR = 0.01;
@@ -85,29 +85,51 @@ const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL
     ("j30"),                       // Fixed        : body20    <-> body3
     ("j4"),                        // Revolute   Z : body3     <-> brHand
 
+    //("softHandWrist_softHand_kuka_coupler_joint"),
+    //("softHandWrist_softHand_kuka_coupler_base_joint"),
+    //
+    //("softHand_kuka_coupler_softHand_clamp_joint"),
+    //
+    //("softHand_palm_joint"),
+    ("softHand_synergy_joint"),
+
     ("softHand_thumb_abd_joint"),
     ("softHand_thumb_inner_joint"),
+    ("softHand_thumb_inner_joint_mimic"),
     ("softHand_thumb_outer_joint"),
+    ("softHand_thumb_outer_joint_mimic"),
 
     ("softHand_index_abd_joint"),
     ("softHand_index_inner_joint"),
+    ("softHand_index_inner_joint_mimic"),
     ("softHand_index_middle_joint"),
+    ("softHand_index_middle_joint_mimic"),
     ("softHand_index_outer_joint"),
+    ("softHand_index_outer_joint_mimic"),
 
     ("softHand_middle_abd_joint"),
     ("softHand_middle_inner_joint"),
+    ("softHand_middle_inner_joint_mimic"),
     ("softHand_middle_middle_joint"),
+    ("softHand_middle_middle_joint_mimic"),
     ("softHand_middle_outer_joint"),
+    ("softHand_middle_outer_joint_mimic"),
 
     ("softHand_ring_abd_joint"),
     ("softHand_ring_inner_joint"),
+    ("softHand_ring_inner_joint_mimic"),
     ("softHand_ring_middle_joint"),
+    ("softHand_ring_middle_joint_mimic"),
     ("softHand_ring_outer_joint"),
+    ("softHand_ring_outer_joint_mimic"),
 
     ("softHand_little_abd_joint"),
     ("softHand_little_inner_joint"),
+    ("softHand_little_inner_joint_mimic"),
     ("softHand_little_middle_joint"),
-    ("softHand_little_outer_joint")
+    ("softHand_little_middle_joint_mimic"),
+    ("softHand_little_outer_joint"),
+    ("softHand_little_outer_joint_mimic")
 };
 
 const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
@@ -150,7 +172,6 @@ RobotThread::RobotThread(int argc, char** pArgv, const char * topic)
               _robot_pos(tf::Vector3(0,0,0)),
               _pMutex(new QMutex(QMutex::Recursive))
 {/** Constructor for the robot thread **/
-
 }
 
 RobotThread::~RobotThread()
@@ -198,13 +219,10 @@ bool RobotThread::init()
     ros::init(_init_argc, _pInit_argv, "gui_command");
 
     if (!ros::master::check())
-        return false;//do not start without ros.
+        return false; //do not start without ros.
 
-    ros::start();
+    ros::start(); // Actually, no need to be called manually!
     ros::Time::init();
-    ros::NodeHandle nh;
-    _sim_velocity  = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 100);
-    _pose_listener = nh.subscribe(_topic, 10, &RobotThread::poseCallback, this);
 
     _pThread->start();
     return true;
@@ -250,6 +268,11 @@ void RobotThread::runArmOperation(int armId)
     ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME); // Name of the node specified in launch file
     ros::NodeHandle node_handle;
 
+#if 0
+    _sim_velocity  = node_handle.advertise<geometry_msgs::Twist>("/cmd_vel", 100);
+    _pose_listener = node_handle.subscribe(_topic, 10, &RobotThread::poseCallback, this);
+#endif
+
     // -------------------------------------------------------------------------------------------------------
     // MARKERS --
     ros::Publisher marker_pub = node_handle.advertise<visualization_msgs::Marker>(CRVIZ_MARKER_TOPIC_NAME, 1);
@@ -273,13 +296,14 @@ void RobotThread::runArmOperation(int armId)
 #ifdef ROBOT_LEAP_HANDS
     // LEAP HANDS --
     VLEAP_INSTANCE()->initLeapMotion(&node_handle);
+    ros::Subscriber _leap_listener = node_handle.subscribe(CLEAP_HANDS_TOPIC, 1, &RobotThread::leapCallback, this);
 #endif
 
     // =======================================================================================================
     // MAIN ROS SPINNING LOOP --
     //
 #endif  // ducta --
-    ros::Rate loop_rate(300);
+    ros::Rate loop_rate(1500);
 
     // Joint No
     _jointNo = KsGlobal::VBRHAND_ARM         == armId ? KsGlobal::VBRHAND_ARM_JOINT_TOTAL         :
@@ -339,6 +363,7 @@ void RobotThread::runArmOperation(int armId)
         //
         detectFrameTransforms(armId, trans_listener);
         determineRobotOperationLimit();
+
         // =====================================================================================
         // Publish Joint State
         publishJointState(armId, joint_pub, joint_state);
@@ -352,10 +377,6 @@ void RobotThread::runArmOperation(int armId)
 
         // Arrow Marker
         //publishStaticMarkers(marker_pub, VMARKER_INSTANCE()->getStaticMarker(VMarker::TARGET_BALL));
-
-        // =====================================================================================
-        // Listen for Leap Motion hand data
-        determineHandArrangmentOnLeapHands(armId);
 
         // =====================================================================================
         // Callbacks registered from Interactive Marker Server:
@@ -496,7 +517,7 @@ void RobotThread::publishJointState(int robotId,
 {
     QMutex * pMutex = new QMutex();
     pMutex->lock();
-    static double angle = 0, tilt = 0, tinc = rad, height=0, hinc=0.005;
+    static double angle = 0, tilt = 0, tinc = M_RAD, height=0, hinc=0.005;
     if(_jointNo <= 0) {
         V_UNLOCK_DELETE_PMUTEX(pMutex);
         return;
@@ -536,10 +557,10 @@ void RobotThread::publishJointState(int robotId,
 
             // JOINT STATE PARAMETERS PREPARATION ========================================
             // Create new robot state
-            tilt += tinc;
-            if (tilt<-.5 || tilt>0) tinc *= -1;
-            height += hinc;
-            if (height>.2 || height<0) hinc *= -1;
+            // tilt += tinc;
+            // if (tilt<-.5 || tilt>0) tinc *= -1;
+            // height += hinc;
+            // if (height>.2 || height<0) hinc *= -1;
 
             // !NOTE: THE PROBLEM IS WE MUST LET THE JOINT KEEP PUBLISHING ITS STATE INFO
             // Each time _joint_poses[i] is set to a new value,
@@ -547,18 +568,18 @@ void RobotThread::publishJointState(int robotId,
             for(size_t i = 0; i < _jointNo; i++) {
                 // 1-
                 if(current_joint_poses[i] != _joint_poses[i] &&
-                   qAbs(current_joint_poses[i] - _joint_poses[i]) <= rad) {
+                   qAbs(current_joint_poses[i] - _joint_poses[i]) <= M_RAD) {
                     //if(current_joint_poses[i] > M_PI) current_joint_poses[i] -= M_PI;
                     // Stop rotating, though still keep publishing its state with current angle!
                     current_joint_poses[i] = _joint_poses[i];
                 }
                 // 2.1-
                 else if(current_joint_poses[i] < _joint_poses[i]) {
-                    current_joint_poses[i] += rad;
+                    current_joint_poses[i] += M_RAD;
                 }
                 // 2.2-
                 else if(current_joint_poses[i] > _joint_poses[i]) {
-                    current_joint_poses[i] -= rad;
+                    current_joint_poses[i] -= M_RAD;
                 }
             }
             pMutex->unlock();
@@ -579,10 +600,10 @@ void RobotThread::publishJointState(int robotId,
 
             // JOINT STATE PARAMETERS PREPARATION ========================================
             // Create new robot state
-            tilt += tinc;
-            if (tilt<-.5 || tilt>0) tinc *= -1;
-            height += hinc;
-            if (height>.2 || height<0) hinc *= -1;
+            // tilt += tinc;
+            // if (tilt<-.5 || tilt>0) tinc *= -1;
+            // height += hinc;
+            // if (height>.2 || height<0) hinc *= -1;
 
             // !NOTE: THE PROBLEM IS WE MUST LET THE JOINT KEEP PUBLISHING ITS STATE INFO
             // Each time _joint_poses[i] is set to a new value,
@@ -591,18 +612,18 @@ void RobotThread::publishJointState(int robotId,
             for(size_t i = 0; i < _jointNo; i++) {
                 // 1-
                 if(current_joint_poses[i] != _joint_poses[i] &&
-                   qAbs(current_joint_poses[i] - _joint_poses[i]) <= rad) {
+                   qAbs(current_joint_poses[i] - _joint_poses[i]) <= M_RAD) {
                     //if(current_joint_poses[i] > M_PI) current_joint_poses[i] -= M_PI;
                     // Stop rotating, though still keep publishing its state with current angle!
                     current_joint_poses[i] = _joint_poses[i];
                 }
                 // 2.1-
                 else if(current_joint_poses[i] < _joint_poses[i]) {
-                    current_joint_poses[i] += rad;
+                    current_joint_poses[i] += M_RAD;
                 }
                 // 2.2-
                 else if(current_joint_poses[i] > _joint_poses[i]) {
-                    current_joint_poses[i] -= rad;
+                    current_joint_poses[i] -= M_RAD;
                 }
             }
             pMutex->unlock();
@@ -875,7 +896,6 @@ void RobotThread::determineArrangement_MyArm(tf::Vector3& target_pos) // as worl
 void RobotThread::determineArrangement_JacoArm(tf::Vector3& target_pos)
 {}
 
-
 void RobotThread::determineHandArrangmentOnLeapHands(int armId)
 {
     // Take the first hand data for convenience:
@@ -887,37 +907,68 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
     //ROS_INFO("Fingers joints: %f %f %f", jointValues[0][0], jointValues[0][1], jointValues[0][2]);
     //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
     //ROS_INFO("Fingers joints: %f %f %f", jointValues[2][0], jointValues[2][1], jointValues[2][2]);
+
     switch(armId) {
     case KsGlobal::VPISA_SOFT_HAND_ARM:
-        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_ABD_JOINT  , jointValues[0][0], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_INNER_JOINT, jointValues[0][1], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_OUTER_JOINT, jointValues[0][2], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_ABD_JOINT  , qAbs(jointValues[0][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_INNER_JOINT, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_OUTER_JOINT, qAbs(jointValues[0][2]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_1_ABD_JOINT      , jointValues[1][0], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_1_INNER_JOINT    , jointValues[1][1], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_1_MIDDLE_JOINT   , jointValues[1][2], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_1_OUTER_JOINT    , jointValues[1][3], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_ABD_JOINT      , qAbs(jointValues[1][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_INNER_JOINT    , qAbs(jointValues[1][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_INNER_MIMIC_JOINT , qAbs(jointValues[1][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_MIDDLE_JOINT   , qAbs(jointValues[1][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_MIDDLE_MIMIC_JOINT , qAbs(jointValues[1][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_OUTER_JOINT    , qAbs(jointValues[1][3]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_1_OUTER_MIMIC_JOINT  , qAbs(jointValues[1][3]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_2_ABD_JOINT      , jointValues[2][0], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_2_INNER_JOINT    , jointValues[2][1], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_2_MIDDLE_JOINT   , jointValues[2][2], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_2_OUTER_JOINT    , jointValues[2][3], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_ABD_JOINT      , qAbs(jointValues[2][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_INNER_JOINT    , qAbs(jointValues[2][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_INNER_MIMIC_JOINT , qAbs(jointValues[2][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_MIDDLE_JOINT   , qAbs(jointValues[2][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_MIDDLE_MIMIC_JOINT , qAbs(jointValues[2][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_OUTER_JOINT    , qAbs(jointValues[2][3]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_OUTER_MIMIC_JOINT  , qAbs(jointValues[2][3]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_3_ABD_JOINT      , jointValues[3][0], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_3_INNER_JOINT    , jointValues[3][1], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_3_MIDDLE_JOINT   , jointValues[3][2], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_3_OUTER_JOINT    , jointValues[3][3], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_ABD_JOINT      , qAbs(jointValues[3][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_INNER_JOINT    , qAbs(jointValues[3][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_INNER_MIMIC_JOINT , qAbs(jointValues[3][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_MIDDLE_JOINT   , qAbs(jointValues[3][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_MIDDLE_MIMIC_JOINT , qAbs(jointValues[3][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_OUTER_JOINT    , qAbs(jointValues[3][3]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_OUTER_MIMIC_JOINT  , qAbs(jointValues[3][3]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_4_ABD_JOINT      , jointValues[4][0], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_4_INNER_JOINT    , jointValues[4][1], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_4_MIDDLE_JOINT   , jointValues[4][2], false);
-        rotateJoint(KsGlobal::VPISA_FINGER_4_OUTER_JOINT    , jointValues[4][3], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_ABD_JOINT      , qAbs(jointValues[4][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_INNER_JOINT    , qAbs(jointValues[4][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_INNER_MIMIC_JOINT , qAbs(jointValues[4][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_MIDDLE_JOINT   , qAbs(jointValues[4][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_MIDDLE_MIMIC_JOINT , qAbs(jointValues[4][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_OUTER_JOINT    , qAbs(jointValues[4][3]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_OUTER_MIMIC_JOINT  , qAbs(jointValues[4][3]), false);
         break;
+
     case KsGlobal::VBRHAND_ARM:
+        rotateJoint(KsGlobal::VFINGER_1_PROX_JOINT , jointValues[1][0] + M_RAD * 20, false);
+        rotateJoint(KsGlobal::VFINGER_1_MED_JOINT  , jointValues[1][1] + M_RAD * 20, false);
+        rotateJoint(KsGlobal::VFINGER_1_DIST_JOINT , jointValues[1][2] + M_RAD * 20, false);
+
+        rotateJoint(KsGlobal::VFINGER_2_PROX_JOINT , jointValues[2][0], false);
+        rotateJoint(KsGlobal::VFINGER_2_MED_JOINT  , jointValues[2][1], false);
+        rotateJoint(KsGlobal::VFINGER_2_DIST_JOINT , jointValues[2][2], false);
+
+        rotateJoint(KsGlobal::VFINGER_3_MED_JOINT  , jointValues[0][1], false);
+        rotateJoint(KsGlobal::VFINGER_3_DIST_JOINT , jointValues[0][2], false);
+
+        break;
     case KsGlobal::VJACO_ARM:
     default:
         break;
     }
+}
+
+void RobotThread::leapCallback(const visualization_msgs::MarkerArray&)
+{
+    determineHandArrangmentOnLeapHands(CRUN_ROBOT);
 }
 
 // =========================================================================================

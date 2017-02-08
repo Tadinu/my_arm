@@ -355,6 +355,8 @@ public:
         VPISA_SOFT_HAND_JOINT30,         // Fixed - at Joint3 pos
         VPISA_SOFT_HAND_JOINT4,          // Revolute Z
 
+        // PACMAN VERION ALREADY INCLUDES THE COUPLER, CLAMP AND BASE
+        //
         // Kuka Coupler --
         //VPISA_SOFT_HAND_KUKA_COUPLER_JOINT,        // Fixed
         //VPISA_SOFT_HAND_KUKA_COUPLER_BASE_JOINT,   // Fixed

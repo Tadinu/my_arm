@@ -34,7 +34,7 @@
 <xacro:property name="length4"      value="${0.3 * scale}"   /> <!-- body 4 -->
 <xacro:property name="radius4"      value="${0.1 * scale}"   />
 
-<xacro:property name="length5"      value="${0.05 * scale}"  /> <!-- body 5 -->
+<xacro:property name="length5"      value="${0.03 * scale}"  /> <!-- body 5 -->
 <xacro:property name="radius5"      value="${0.05 * scale}"  />
 
 <xacro:property name="damping"      value="1" />             <!-- Damping -->
@@ -269,7 +269,7 @@
 
 <xacro:soft_hand name="softHand" parent="softHandWrist"
                  withAdaptiveTransmission="true" useMimicTag="false" left="true">
-  <origin xyz="0 0 ${length5/2}"
+  <origin xyz="0 0 0"
           rpy="0 0 0"/>
 </xacro:soft_hand>
 </robot>

@@ -25,7 +25,7 @@
 	<xacro:property name="outer_ub" value="45" />
 	<xacro:property name="velocity" value="100" />
 	<xacro:property name="effort" value="100" />
-	<xacro:property name="damping" value="0.0" />
+    <xacro:property name="damping" value="10.0" />
 	<xacro:property name="friction" value="0.0" />
 
 	<!-- synergy vector -->
@@ -423,30 +423,15 @@
 
 		<!-- PACMAN VERION ALREADY INCLUDES THE COUPLER, CLAMP AND BASE -->
 
-		<!-- KUKA_COUPLER -->
-		<xacro:kuka_coupler parent="${parent}" name="${name}_kuka_coupler">
-			<xacro:insert_block name="origin"/>
-		</xacro:kuka_coupler>
-
-		<!-- CLAMP -->
-		<xacro:clamp parent="${name}_kuka_coupler" name="${name}_clamp">
-			<origin xyz="0 0 0.01" rpy="0 0 0"/>
-		</xacro:clamp>
-
-		<!-- SOFT HAND BASE -->
-		<xacro:softhand_base parent="${name}_clamp" name="${name}_softhand_base" left="${left}">
-			<origin xyz="0 0 0.004" rpy="0 0 0"/>
-		</xacro:softhand_base>
-
 		<!-- PALM -->
 		<joint name="${name}_palm_joint" type="fixed">
 			<xacro:if value="${left}">
-				<origin xyz="0.002 -0.00695 0.0535" rpy="0 0 0"/>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
 			</xacro:if>
 			<xacro:unless value="${left}">
-				<origin xyz="0.002 0.00695 0.0535" rpy="0 0 0"/>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
 			</xacro:unless>
-			<parent link="${name}_softhand_base" />
+            <parent link="${parent}" />
 			<child link="${name}_palm_link" />
 		</joint>
 

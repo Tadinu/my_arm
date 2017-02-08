@@ -85,12 +85,15 @@ const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL
     ("j30"),                       // Fixed        : body20    <-> body3
     ("j4"),                        // Revolute   Z : body3     <-> brHand
 
+    // PACMAN VERION ALREADY INCLUDES THE COUPLER, CLAMP AND BASE
+    //
     //("softHandWrist_softHand_kuka_coupler_joint"),
     //("softHandWrist_softHand_kuka_coupler_base_joint"),
     //
     //("softHand_kuka_coupler_softHand_clamp_joint"),
     //
     //("softHand_palm_joint"),
+
     ("softHand_synergy_joint"),
 
     ("softHand_thumb_abd_joint"),

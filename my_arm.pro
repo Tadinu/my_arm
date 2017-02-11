@@ -172,7 +172,10 @@ DISTFILES += \
     meshes/pisa_iit_soft_hand/accesories/kuka_coupler.stl \
     meshes/pisa_iit_soft_hand/accesories/softhand_base_left.stl \
     meshes/pisa_iit_soft_hand/accesories/softhand_base_right.stl \
-    launch/my_arm_pisa_iit_soft_hand.launch
+    launch/my_arm_pisa_iit_soft_hand.launch \
+    models/mySoftHand.xacro \
+    launch/my_soft_hand.launch \
+    launch/my_shadow_robot_hand.launch
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

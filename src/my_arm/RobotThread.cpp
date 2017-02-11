@@ -9,7 +9,7 @@
 #include "KsGlobal.h"
 
 // ROBOT TO RUN
-#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
+#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
 
 // NODE --
 #define CMY_ARM_NODE_NAME ("robotArmController")
@@ -78,13 +78,14 @@ const char* CBRHAND_ARM_LINKS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1] = {
 };
 
 const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL] = {
+#ifdef USING_PISA_SOFT_HAND_ONLY
     ("base_joint"),                // Revolute   Z : base_link <-> body1z
     ("j2"),                        // Continuous Y : body1     <-> body10
     ("j20"),                       // Fixed        : body10    <-> body2
     ("j3"),                        // Continuous Y : body2     <-> body20
     ("j30"),                       // Fixed        : body20    <-> body3
     ("j4"),                        // Revolute   Z : body3     <-> brHand
-
+#endif
     // PACMAN VERION ALREADY INCLUDES THE COUPLER, CLAMP AND BASE
     //
     //("softHandWrist_softHand_kuka_coupler_joint"),
@@ -162,6 +163,11 @@ const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
     "jaco_finger_mount_pinkie_fixed" // Fixed
     "jaco_finger_joint_4", // Revolute
     "jaco_finger_joint_5", // Fixed
+};
+
+const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL+1] = {
+    CBASE_LINK,
+    ""
 };
 
 RobotThread::RobotThread(int argc, char** pArgv, const char * topic)
@@ -311,7 +317,8 @@ void RobotThread::runArmOperation(int armId)
     // Joint No
     _jointNo = KsGlobal::VBRHAND_ARM         == armId ? KsGlobal::VBRHAND_ARM_JOINT_TOTAL         :
                KsGlobal::VJACO_ARM           == armId ? KsGlobal::VJACO_ARM_JOINT_TOTAL           :
-               KsGlobal::VPISA_SOFT_HAND_ARM == armId ? KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL : 0;
+               KsGlobal::VPISA_SOFT_HAND_ARM == armId ? KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL :
+               KsGlobal::VSHADOW_HAND_ARM    == armId ? KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL    : 0;
     if(_jointNo <= 0) {
         ROS_ERROR_ONCE("The robot has no joint???");
         return;
@@ -551,6 +558,7 @@ void RobotThread::publishJointState(int robotId,
             for(size_t i = 0; i < _jointNo; i++) {
                 joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? CBRHAND_ARM_JOINTS[i]         :
                                           (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? CPISA_SOFT_HAND_ARM_JOINTS[i] : "";
+                                          (KsGlobal::VSHADOW_HAND_ARM    == robotId) ? CSHADOWHAND_ARM_JOINTS[i]     : "";
                 joint_state.position[i] = current_joint_poses[i];
             }
 

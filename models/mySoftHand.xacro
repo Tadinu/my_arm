@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<robot name="robotArm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<xacro:include filename="$(find my_arm)/models/pisa_iit_soft_hand/soft_hand.urdf.xacro"/>
+
+<!-- Formula according to https://en.wikipedia.org/wiki/List_of_moment_of_inertia_tensors for cylinder -->
+<xacro:macro name="cyl_inertia" params="mass r h ">
+    <mass value="${mass}"/>
+    <inertia ixx="${0.083333 * mass * (3*r*r + h*h)}" ixy="0" ixz="0"
+             iyy="${0.083333 * mass * (3*r*r + h*h)}" iyz="0"
+             izz="${0.5*mass*r*r}" />
+</xacro:macro>
+
+<!-- Constants for robot dimensions -->
+<xacro:property name="PI"           value="3.1415926535897931"/>
+<xacro:property name="scale"        value="1.0" /> <!-- scale -->
+
+<xacro:property name="mass"         value="${1 * scale}"     /> <!-- arbitrary value for mass -->
+<xacro:property name="mass_divider" value="1.0"              /> <!-- mass divider -->
+<xacro:property name="radius_hor_2" value="${1 * radius3}"   />
+<xacro:property name="radius_hor_3" value="${1 * radius4}"   />
+
+<xacro:property name="baseLength"   value="${0 * scale}"   /> <!-- base_link -->
+<xacro:property name="base_radius"  value="${radius2}"       />
+
+<xacro:property name="length2"      value="${0.5 * scale}"   /> <!-- body 2 -->
+<xacro:property name="radius2"      value="${0.1 * scale}"   />
+
+<xacro:property name="length20"     value="${2*radius2}"     /> <!-- body 20 -->
+<xacro:property name="length3"      value="${0.5 * scale}"   /> <!-- body 3 -->
+<xacro:property name="radius3"      value="${0.1 * scale}"   />
+
+<xacro:property name="length30"     value="${2*radius2}"     /> <!-- body 30 -->
+<xacro:property name="length4"      value="${0.3 * scale}"   /> <!-- body 4 -->
+<xacro:property name="radius4"      value="${0.1 * scale}"   />
+
+<xacro:property name="length5"      value="${0.03 * scale}"  /> <!-- body 5 -->
+<xacro:property name="radius5"      value="${0.05 * scale}"  />
+
+<xacro:property name="damping"      value="1" />             <!-- Damping -->
+<xacro:property name="axel_offset"  value="0" />             <!-- Space btw top of beam and the each joint -->
+
+<!-- Import all Gazebo-customization elements, including Gazebo colors -->
+<xacro:include filename="$(find my_arm)/models/myArm2.gazebo" />
+<!-- Import Rviz colors -->
+<xacro:include filename="$(find my_arm)/models/materials.xacro" />
+
+<!---............................. Link Definitions ................................-->
+<!--
+<link name="root"/>
+
+<joint name="root_joint" type="fixed">
+    <parent link="root"/>
+    <child link="base_link"/>
+</joint>
+-->
+
+<!---............................. BASE LINK WHITE ................................-->
+<link name="base_link">
+    <collision> <!-- collision -->
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${baseLength}" radius="${base_radius}"/>
+        </geometry>
+    </collision>
+    <visual>    <!-- visual -->
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="${baseLength}" radius="${base_radius}"/>
+        </geometry>
+        <material name ="white"/>
+    </visual>
+    <!--
+    <inertial>  The root link base_link has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <xacro:cyl_inertia mass="${mass/mass_divider}" h="${baseLength}" r="${base_radius}"/>
+    </inertial>
+    -->
+</link>
+
+<xacro:soft_hand name="softHand" parent="base_link"
+                 withAdaptiveTransmission="true" useMimicTag="false" left="true">
+  <origin xyz="0 0 0"
+          rpy="0 0 0"/>
+</xacro:soft_hand>
+</robot>

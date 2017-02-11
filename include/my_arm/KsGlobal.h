@@ -252,6 +252,8 @@
 #define VLEAP_INSTANCE() RobotLeapAdapter::getInstance()
 #define CLEAP_BASE_FRAME (CWORLD_FRAME)
 
+#define USING_PISA_SOFT_HAND_ONLY
+
 class KsGlobal : public QObject
 {
     Q_OBJECT
@@ -267,6 +269,7 @@ public:
         VBRHAND_ARM         = 0x01,
         VJACO_ARM           = 0x02,
         VPISA_SOFT_HAND_ARM = 0x03,
+        VSHADOW_HAND_ARM    = 0x04
     };
 
     // BRHAND ARM ----------------------------------------
@@ -346,6 +349,7 @@ public:
     // PISA SOFT HAND ------------------------------------
     //
     enum VPISA_SOFT_HAND_ARM_JOINT {
+#ifdef USING_PISA_SOFT_HAND_ONLY
         // Arm --
         //
         VPISA_SOFT_HAND_ARM_BASE_JOINT,  // Revolute Z
@@ -354,7 +358,7 @@ public:
         VPISA_SOFT_HAND_JOINT3,          // Continuous Y
         VPISA_SOFT_HAND_JOINT30,         // Fixed - at Joint3 pos
         VPISA_SOFT_HAND_JOINT4,          // Revolute Z
-
+#endif
         // PACMAN VERION ALREADY INCLUDES THE COUPLER, CLAMP AND BASE
         //
         // Kuka Coupler --
@@ -415,6 +419,13 @@ public:
         VPISA_FINGER_4_OUTER_MIMIC_JOINT,
 
         VPISA_SOFT_HAND_ARM_JOINT_TOTAL
+    };
+
+    // PISA SOFT HAND ------------------------------------
+    //
+    enum VSHADOW_HAND_ARM_JOINT {
+        VSHADOW_HAND_ARM_BASE_JOINT,
+        VSHADOW_HAND_ARM_JOINT_TOTAL
     };
 
 public:

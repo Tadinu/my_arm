@@ -10,6 +10,7 @@
 
 // ROBOT TO RUN
 #define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
+//#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
 
 // NODE --
 #define CMY_ARM_NODE_NAME ("robotArmController")
@@ -78,7 +79,7 @@ const char* CBRHAND_ARM_LINKS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1] = {
 };
 
 const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL] = {
-#ifdef USING_PISA_SOFT_HAND_ONLY
+#ifndef USING_PISA_SOFT_HAND_ONLY
     ("base_joint"),                // Revolute   Z : base_link <-> body1z
     ("j2"),                        // Continuous Y : body1     <-> body10
     ("j20"),                       // Fixed        : body10    <-> body2
@@ -93,7 +94,8 @@ const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL
     //
     //("softHand_kuka_coupler_softHand_clamp_joint"),
     //
-    //("softHand_palm_joint"),
+
+    ("softHand_palm_joint"),
 
     ("softHand_synergy_joint"),
 
@@ -165,9 +167,46 @@ const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
     "jaco_finger_joint_5", // Fixed
 };
 
-const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL+1] = {
-    CBASE_LINK,
-    ""
+const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL] = {
+    "rh_world_joint",
+    // Forearm
+    // Wrist
+    "rh_WRJ2",                                // Revolute
+    // Palm
+    "rh_WRJ1",                                // Revolute
+
+    // Fingers
+    // Thumb
+    "rh_THJ5",                                // Thumb base, revolute
+    "rh_THJ4",                                // Thumb proximal, revolute
+    "rh_THJ3",                                // Thumb hub, revolute
+    "rh_THJ2",                                // Thumb middle, revolute
+    "rh_THJ1",                                // Thumb distal, revolute
+    "rh_thtip",                               // Thumb tip
+
+    // Index
+    "rh_FFJ4",                                // knuckle, Revolute
+    "rh_FFJ3",                                // Proximal, Revolute
+    "rh_FFJ2",                                // Standard Middle , Revolute
+    "rh_FFJ1",                                // Distal , Revolute
+
+    // Middle
+    "rh_MFJ4",                                // knuckle, Revolute
+    "rh_MFJ3",                                // Proximal, Revolute
+    "rh_MFJ2",                                // Standard Middle , Revolute
+    "rh_MFJ1",                                // Distal , Revolute
+
+    // Ring
+    "rh_RFJ4",                                // knuckle, Revolute
+    "rh_RFJ3",                                // Proximal, Revolute
+    "rh_RFJ2",                                // Standard Middle , Revolute
+    "rh_RFJ1",                                // Distal , Revolute
+
+    // Little Finger (Pinkie)
+    "rh_LFJ5",                                // lfmetacarpal, Revolute
+    "rh_LFJ3",                                // Proximal, Revolute
+    "rh_LFJ2",                                // Standard Middle , Revolute
+    "rh_LFJ1",                                // Distal , Revolute
 };
 
 RobotThread::RobotThread(int argc, char** pArgv, const char * topic)
@@ -312,7 +351,7 @@ void RobotThread::runArmOperation(int armId)
     // MAIN ROS SPINNING LOOP --
     //
 #endif  // ducta --
-    ros::Rate loop_rate(1500);
+    ros::Rate loop_rate(300);
 
     // Joint No
     _jointNo = KsGlobal::VBRHAND_ARM         == armId ? KsGlobal::VBRHAND_ARM_JOINT_TOTAL         :
@@ -555,6 +594,7 @@ void RobotThread::publishJointState(int robotId,
     switch(robotId) {
         case KsGlobal::VBRHAND_ARM:
         case KsGlobal::VPISA_SOFT_HAND_ARM:
+        case KsGlobal::VSHADOW_HAND_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
                 joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? CBRHAND_ARM_JOINTS[i]         :
                                           (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? CPISA_SOFT_HAND_ARM_JOINTS[i] : "";
@@ -921,11 +961,16 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
 
     switch(armId) {
     case KsGlobal::VPISA_SOFT_HAND_ARM:
-        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_ABD_JOINT  , qAbs(jointValues[0][0]), false);
-        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_INNER_JOINT, qAbs(jointValues[0][1]), false);
-        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_OUTER_JOINT, qAbs(jointValues[0][2]), false);
+        rotateJoint(KsGlobal::VPISA_SOFT_HAND_SYNERGY_JOINT , 0, false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_1_ABD_JOINT      , qAbs(jointValues[1][0]), false);
+        //ROS_INFO("VAL: %f", jointValues[1][0]);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_ABD_JOINT  , jointValues[0][0], false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_INNER_JOINT, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_INNER_MIMIC_JOINT, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_OUTER_JOINT, qAbs(jointValues[0][2]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_THUMB_OUTER_MIMIC_JOINT, qAbs(jointValues[0][2]), false);
+
+        rotateJoint(KsGlobal::VPISA_FINGER_1_ABD_JOINT      , jointValues[1][0], false);
         rotateJoint(KsGlobal::VPISA_FINGER_1_INNER_JOINT    , qAbs(jointValues[1][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_1_INNER_MIMIC_JOINT , qAbs(jointValues[1][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_1_MIDDLE_JOINT   , qAbs(jointValues[1][2]), false);
@@ -933,7 +978,7 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
         rotateJoint(KsGlobal::VPISA_FINGER_1_OUTER_JOINT    , qAbs(jointValues[1][3]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_1_OUTER_MIMIC_JOINT  , qAbs(jointValues[1][3]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_2_ABD_JOINT      , qAbs(jointValues[2][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_2_ABD_JOINT      , jointValues[2][0], false);
         rotateJoint(KsGlobal::VPISA_FINGER_2_INNER_JOINT    , qAbs(jointValues[2][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_2_INNER_MIMIC_JOINT , qAbs(jointValues[2][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_2_MIDDLE_JOINT   , qAbs(jointValues[2][2]), false);
@@ -941,7 +986,7 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
         rotateJoint(KsGlobal::VPISA_FINGER_2_OUTER_JOINT    , qAbs(jointValues[2][3]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_2_OUTER_MIMIC_JOINT  , qAbs(jointValues[2][3]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_3_ABD_JOINT      , qAbs(jointValues[3][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_3_ABD_JOINT      , jointValues[3][0], false);
         rotateJoint(KsGlobal::VPISA_FINGER_3_INNER_JOINT    , qAbs(jointValues[3][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_3_INNER_MIMIC_JOINT , qAbs(jointValues[3][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_3_MIDDLE_JOINT   , qAbs(jointValues[3][2]), false);
@@ -949,13 +994,45 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
         rotateJoint(KsGlobal::VPISA_FINGER_3_OUTER_JOINT    , qAbs(jointValues[3][3]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_3_OUTER_MIMIC_JOINT  , qAbs(jointValues[3][3]), false);
 
-        rotateJoint(KsGlobal::VPISA_FINGER_4_ABD_JOINT      , qAbs(jointValues[4][0]), false);
+        rotateJoint(KsGlobal::VPISA_FINGER_4_ABD_JOINT      , jointValues[4][0], false);
         rotateJoint(KsGlobal::VPISA_FINGER_4_INNER_JOINT    , qAbs(jointValues[4][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_4_INNER_MIMIC_JOINT , qAbs(jointValues[4][1]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_4_MIDDLE_JOINT   , qAbs(jointValues[4][2]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_4_MIDDLE_MIMIC_JOINT , qAbs(jointValues[4][2]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_4_OUTER_JOINT    , qAbs(jointValues[4][3]), false);
         rotateJoint(KsGlobal::VPISA_FINGER_4_OUTER_MIMIC_JOINT  , qAbs(jointValues[4][3]), false);
+        break;
+
+    case KsGlobal::VSHADOW_HAND_ARM:
+        rotateJoint(KsGlobal::VSHADOW_HAND_WRJ2 , 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_WRJ1 , 0, false);
+
+        rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ5, jointValues[0][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ3, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ2, qAbs(jointValues[0][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ1, qAbs(jointValues[0][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_TIP, qAbs(jointValues[0][2]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_FINGER_1_J4, jointValues[1][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_1_J3, qAbs(jointValues[1][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_1_J2, qAbs(jointValues[1][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_1_J1, qAbs(jointValues[1][3]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_FINGER_2_J4, jointValues[2][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_2_J3, qAbs(jointValues[2][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_2_J2, qAbs(jointValues[2][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_2_J1, qAbs(jointValues[2][3]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_FINGER_3_J4, jointValues[3][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_3_J3, qAbs(jointValues[3][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_3_J2, qAbs(jointValues[3][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_3_J1, qAbs(jointValues[3][3]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_FINGER_4_LFJ5, jointValues[4][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_4_J3, qAbs(jointValues[4][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]), false);
         break;
 
     case KsGlobal::VBRHAND_ARM:

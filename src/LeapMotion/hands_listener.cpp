@@ -27,20 +27,71 @@ FingerList HandsListener::getFingerList(int hand_id)
 
 std::vector<std::vector<double>> HandsListener::getFingerJointValues(int hand_id)
 {
+    std::lock_guard<std::mutex> lock(_mutex);
+
     std::vector<std::vector<double>> fingerJointValues;
     if(hand_id < 0 || hand_id >= _hands.count()) {
         return fingerJointValues;
     }
 
     // -------------------------------------------------------------------------------------------
+    Vector palmNormal =_hands[hand_id].palmNormal();
     FingerList fingerList = getFingerList(hand_id);
+    static std::vector<Vector> abdJointNormalVectors;
+    static std::vector<double> proximalJointValues;
+    proximalJointValues.reserve(fingerList.count());
+    abdJointNormalVectors.reserve(fingerList.count());
 
     for(int i = 0; i < fingerList.count(); i++) {
         std::vector<double> subFingerJointValues;
-        subFingerJointValues.push_back(-_hands[hand_id].direction().
-                                       angleTo(fingerList[i].bone(Bone::TYPE_PROXIMAL).direction()));
+        //
+        // ABD JOINT (Finger root)
+        // !NOTE: THUMB DOES NOT HAVE DISTAL BONE!!! BUT LEAP MOTION DO THE INVERSE, IGNORING METACARPAL INSTEAD OF DISTAL FOR THUMB!
+        Vector metacarpalLinkVector = fingerList[i].bone(i == 0 ? Bone::TYPE_PROXIMAL     : Bone::TYPE_METACARPAL).
+                                                    direction();
+        Vector proximalLinkVector   = fingerList[i].bone(i == 0 ? Bone::TYPE_INTERMEDIATE : Bone::TYPE_PROXIMAL).
+                                                    direction();
+        double proximalJointValue   = proximalLinkVector.angleTo(metacarpalLinkVector);
+
+
+        proximalJointValues[i]      = proximalJointValue;
+        // ---------------------------------------------------------------------------------
+        if(i == 0) {
+            subFingerJointValues.push_back(metacarpalLinkVector.
+                                           angleTo(fingerList[1].bone(Bone::TYPE_METACARPAL).direction()));
+
+            abdJointNormalVectors[i] = metacarpalLinkVector;
+        }
+        else {
+            Vector tempVector1 = (i < 4) ? (fingerList[i+1].bone(Bone::TYPE_METACARPAL).nextJoint() - fingerList[i].bone(Bone::TYPE_METACARPAL).nextJoint()):
+                                           (fingerList[i-1].bone(Bone::TYPE_METACARPAL).nextJoint() - fingerList[i].bone(Bone::TYPE_METACARPAL).nextJoint());
+
+            Matrix rotationMatrix(tempVector1, proximalJointValue);
+            Vector tempVector2 = rotationMatrix.transformDirection(metacarpalLinkVector);
+
+            static double metacarpalJointValue = 0;
+            double newMetacarpalJointValue = tempVector2.angleTo(proximalLinkVector);
+            if(newMetacarpalJointValue < M_PI/10) {
+                metacarpalJointValue = newMetacarpalJointValue;
+                //
+                //if(std::abs(proximalJointValue - proximalJointValues[i]) <= M_PI/30) {
+                //
+                bool test = (tempVector2.cross(proximalLinkVector).normalized().
+                            dot(abdJointNormalVectors[i]) > 0);
+                metacarpalJointValue *= (test ? 1 : -1);
+                //
+                abdJointNormalVectors[i] = tempVector2.cross(proximalLinkVector).normalized();
+                //}
+            }
+            subFingerJointValues.push_back(metacarpalJointValue);
+        }
+
+        // FINGER JOINTS
         for(int j = HandsListener::HAND_BONE_FIRST; j < HandsListener::HAND_BONE_TOTAL-1; j++) {
             // Note -Angle(Bone[j], Bone[j+1]);
+            if(i == 0 && j == HandsListener::HAND_BONE_METACARPAL) {
+                continue; // LEAP MOTION IGNORES METACARPAL INSTEAD OF DISTAL FOR THUMB!
+            }
             subFingerJointValues.push_back(-fingerList[i].bone((Bone::Type)(j)).direction().
                                            angleTo(fingerList[i].bone((Bone::Type)(j+1)).direction())
                                           );
@@ -76,6 +127,8 @@ void HandsListener::onExit(const Controller& controller) {
 }
 
 void HandsListener::onFrame(const Controller& controller) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    //
     // Get the most recent frame and report some basic information
     const Frame frame = controller.frame();
     //ROS_INFO("flags = %i", (int) controller.policyFlags());
@@ -115,22 +168,23 @@ void HandsListener::onFrame(const Controller& controller) {
             const Finger finger = *fl;
 
             // Get finger bones
-            for (int b = 0; b < 4; ++b) {
+            for (int b = 0; b < 4; b++) {
                 Bone::Type boneType = static_cast<Bone::Type>(b);
                 Bone bone = finger.bone(boneType);
 
                 geometry_msgs::Point point;
-                point.x = -bone.prevJoint().x/100;
-                point.y = bone.prevJoint().z/100;
-                point.z = bone.prevJoint().y/100;
-                marker_msg.points.push_back(point);
-
+                if(b == 0) {
+                    point.x = joint_msg.pose.position.x =  -bone.prevJoint().x/100;
+                    point.y = joint_msg.pose.position.y = bone.prevJoint().z/100; // !NOTE: We interchange z & y here to make hand directed upward!
+                    point.z = joint_msg.pose.position.z = bone.prevJoint().y/100;
+                    marker_array_msg.markers.push_back(joint_msg);
+                    marker_msg.points.push_back(point);
+                }
+                joint_msg.id++;
                 point.x = joint_msg.pose.position.x =  -bone.nextJoint().x/100;
-                point.y = joint_msg.pose.position.y = bone.nextJoint().z/100;
+                point.y = joint_msg.pose.position.y = bone.nextJoint().z/100;     // !NOTE: We interchange z & y here to make hand directed upward!
                 point.z = joint_msg.pose.position.z = bone.nextJoint().y/100;
                 marker_msg.points.push_back(point);
-
-                joint_msg.id = joint_msg.id+1;
                 marker_array_msg.markers.push_back(joint_msg);
 
                 std_msgs::ColorRGBA color;

@@ -252,7 +252,7 @@
 #define VLEAP_INSTANCE() RobotLeapAdapter::getInstance()
 #define CLEAP_BASE_FRAME (CWORLD_FRAME)
 
-#define USING_PISA_SOFT_HAND_ONLY
+//#define USING_PISA_SOFT_HAND_ONLY
 
 class KsGlobal : public QObject
 {
@@ -349,7 +349,7 @@ public:
     // PISA SOFT HAND ------------------------------------
     //
     enum VPISA_SOFT_HAND_ARM_JOINT {
-#ifdef USING_PISA_SOFT_HAND_ONLY
+#ifndef USING_PISA_SOFT_HAND_ONLY
         // Arm --
         //
         VPISA_SOFT_HAND_ARM_BASE_JOINT,  // Revolute Z
@@ -369,13 +369,14 @@ public:
         //VPISA_SOFT_HAND_CLAMP_JOINT,               // Fixed
 
         // Palm --
-        //VPISA_SOFT_HAND_PALM_JOINT,                // Fixed
+        VPISA_SOFT_HAND_PALM_JOINT,                  // Fixed
 
         // Synergy --
-        VPISA_SOFT_HAND_SYNERGY_JOINT,             // Revolute
+        VPISA_SOFT_HAND_SYNERGY_JOINT,               // Revolute
 
         // Fingers --
         //
+        // Thumb
         VPISA_FINGER_THUMB_ABD_JOINT,
         VPISA_FINGER_THUMB_INNER_JOINT,
         VPISA_FINGER_THUMB_INNER_MIMIC_JOINT,
@@ -424,7 +425,47 @@ public:
     // PISA SOFT HAND ------------------------------------
     //
     enum VSHADOW_HAND_ARM_JOINT {
-        VSHADOW_HAND_ARM_BASE_JOINT,
+        VSHADOW_HAND_ARM_BASE_JOINT,                      // "World Joint"
+
+        // Forearm
+        // Wrist
+        VSHADOW_HAND_WRJ2,                                // Revolute
+        // Palm
+        VSHADOW_HAND_WRJ1,                                // Revolute
+
+        // Fingers
+        // Thumb
+        VSHADOW_FINGER_THUMB_THJ5,                        // Thumb base, revolute
+        VSHADOW_FINGER_THUMB_THJ4,                        // Thumb proximal, revolute
+        VSHADOW_FINGER_THUMB_THJ3,                        // Thumb hub, revolute
+        VSHADOW_FINGER_THUMB_THJ2,                        // Thumb middle, revolute
+        VSHADOW_FINGER_THUMB_THJ1,                        // Thumb distal, revolute
+        VSHADOW_FINGER_THUMB_TIP,                         // Thumb tip
+
+        // Index
+        VSHADOW_FINGER_1_J4,                              // knuckle, Revolute
+        VSHADOW_FINGER_1_J3,                              // Proximal, Revolute
+        VSHADOW_FINGER_1_J2,                              // Standard Middle , Revolute
+        VSHADOW_FINGER_1_J1,                              // Distal , Revolute
+
+        // Middle
+        VSHADOW_FINGER_2_J4,                              // knuckle, Revolute
+        VSHADOW_FINGER_2_J3,                              // Proximal, Revolute
+        VSHADOW_FINGER_2_J2,                              // Standard Middle , Revolute
+        VSHADOW_FINGER_2_J1,                              // Distal , Revolute
+
+        // Ring
+        VSHADOW_FINGER_3_J4,                              // knuckle, Revolute
+        VSHADOW_FINGER_3_J3,                              // Proximal, Revolute
+        VSHADOW_FINGER_3_J2,                              // Standard Middle , Revolute
+        VSHADOW_FINGER_3_J1,                              // Distal , Revolute
+
+        // Little Finger (Pinkie)
+        VSHADOW_FINGER_4_LFJ5,                            // lfmetacarpal, Revolute
+        VSHADOW_FINGER_4_J3,                              // Proximal, Revolute
+        VSHADOW_FINGER_4_J2,                              // Standard Middle , Revolute
+        VSHADOW_FINGER_4_J1,                              // Distal , Revolute
+
         VSHADOW_HAND_ARM_JOINT_TOTAL
     };
 

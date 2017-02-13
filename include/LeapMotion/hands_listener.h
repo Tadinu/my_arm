@@ -11,6 +11,7 @@
 #include <vector>
 #include <sstream>
 #include <thread>
+#include <mutex>
 
 using namespace Leap;
 using namespace std;
@@ -71,6 +72,7 @@ private:
     ros::Publisher _pub_bone_only;
 
     HandList _hands;
+    std::mutex _mutex;
 };
 
 #endif // HANDS_LISTENER_H

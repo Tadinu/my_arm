@@ -51,15 +51,17 @@
         </node>
 
         <!-- send fake joint values -->
+        <!--
         <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" >
             <param name="use_gui" value="TRUE"/>
         </node>
+        -->
         <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
     </group>
 
     <!-- REAL ROBOTS -->
+    <!-- the path to the mapping files -->
     <group unless="$(arg sim)">
-        <!-- the path to the mapping files -->
         <arg name="mapping_path" default="$(find sr_edc_launch)/mappings/default_mappings/rh_E_v3.yaml"/>
         <include file="$(find sr_edc_launch)/sr_edc.launch">
             <arg name="debug" value="$(arg debug)"/>
@@ -73,6 +75,7 @@
     </group>
 
     <!-- MOVEIT -->
+    <!--
     <group if="$(arg use_moveit)">
         <include file="$(find sr_moveit_hand_config)/launch/moveit_planning_and_execution.launch">
             <arg name="load_robot_description" value="false"/>
@@ -80,6 +83,7 @@
         </include>
         <include file="$(find sr_moveit_hand_config)/launch/default_warehouse_db.launch"/>
     </group>
+    -->
 
     <!-- Trajectory controller -->
     <group if="$(arg hand_ctrl)">

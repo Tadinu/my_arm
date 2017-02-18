@@ -97,6 +97,8 @@ private:
     char** _pInit_argv;
     const char * _topic;
 
+    int _robotId;
+
     //tf::transformStampedMsgToTF(...);
     //tf::transformStampedTFToMsg();
     //tf::transformTFToMsg();

@@ -425,7 +425,7 @@ public:
     // PISA SOFT HAND ------------------------------------
     //
     enum VSHADOW_HAND_ARM_JOINT {
-        VSHADOW_HAND_ARM_BASE_JOINT,                      // "World Joint"
+        VSHADOW_HAND_ARM_BASE_JOINT,                      // "Root World Joint"
 
         // Forearm
         // Wrist
@@ -462,6 +462,7 @@ public:
 
         // Little Finger (Pinkie)
         VSHADOW_FINGER_4_LFJ5,                            // lfmetacarpal, Revolute
+        VSHADOW_FINGER_4_LFJ4,                            // knuckle, Revolute
         VSHADOW_FINGER_4_J3,                              // Proximal, Revolute
         VSHADOW_FINGER_4_J2,                              // Standard Middle , Revolute
         VSHADOW_FINGER_4_J1,                              // Distal , Revolute

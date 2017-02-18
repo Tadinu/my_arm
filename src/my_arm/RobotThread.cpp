@@ -168,7 +168,7 @@ const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
 };
 
 const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL] = {
-    "rh_world_joint",
+    "rh_world_joint",                         // Fixed
     // Forearm
     // Wrist
     "rh_WRJ2",                                // Revolute
@@ -204,15 +204,17 @@ const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL] = {
 
     // Little Finger (Pinkie)
     "rh_LFJ5",                                // lfmetacarpal, Revolute
+    "rh_LFJ4",                                // knuckle, Revolute
     "rh_LFJ3",                                // Proximal, Revolute
     "rh_LFJ2",                                // Standard Middle , Revolute
-    "rh_LFJ1",                                // Distal , Revolute
+    "rh_LFJ1"                                 // Distal , Revolute
 };
 
 RobotThread::RobotThread(int argc, char** pArgv, const char * topic)
             : _init_argc(argc),
               _pInit_argv(pArgv),
               _topic(topic),
+              _robotId(CRUN_ROBOT),
               _jointNo(0),
               _joint_poses(nullptr),
               _frame_trans(nullptr),
@@ -365,11 +367,13 @@ void RobotThread::runArmOperation(int armId)
 
     // -------------------------------------------------------------------------------------------------------
     // ROBOT --
+    const char* base_link_name = KsGlobal::VSHADOW_HAND_ARM    == armId ? "rh_forearm" :
+                                                                          CBASE_LINK;
     //
     // message declarations
     sensor_msgs::JointState joint_state;
     _world_trans.header.frame_id = CWORLD_FRAME;
-    _world_trans.child_frame_id  = CBASE_LINK;
+    _world_trans.child_frame_id  = base_link_name;
 
     ros::Publisher joint_pub = node_handle.advertise<sensor_msgs::JointState>("joint_states", 1);
     tf::TransformBroadcaster trans_broadcaster;
@@ -458,15 +462,17 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
     QMutex * pMutex = new QMutex();
     pMutex->lock();
     tf::StampedTransform transform;
+    const char* base_link_name = KsGlobal::VSHADOW_HAND_ARM == robotId ? "rh_forearm" :
+                                                                         CBASE_LINK;
     //
     static bool flag = false;
     switch(robotId) {
         case KsGlobal::VBRHAND_ARM:
             for(size_t i = 0; i < (KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1); i++) {
                 try {
-                    listener.waitForTransform(CBASE_LINK, CBRHAND_ARM_LINKS[i],
+                    listener.waitForTransform(base_link_name, CBRHAND_ARM_LINKS[i],
                                              ros::Time(0), ros::Duration(3.0)); // !!!
-                    listener.lookupTransform(CBASE_LINK, CBRHAND_ARM_LINKS[i],
+                    listener.lookupTransform(base_link_name, CBRHAND_ARM_LINKS[i],
                                              ros::Time(0), transform);
                 }
                 catch (tf::TransformException e) {
@@ -597,7 +603,7 @@ void RobotThread::publishJointState(int robotId,
         case KsGlobal::VSHADOW_HAND_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
                 joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? CBRHAND_ARM_JOINTS[i]         :
-                                          (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? CPISA_SOFT_HAND_ARM_JOINTS[i] : "";
+                                          (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? CPISA_SOFT_HAND_ARM_JOINTS[i] :
                                           (KsGlobal::VSHADOW_HAND_ARM    == robotId) ? CSHADOWHAND_ARM_JOINTS[i]     : "";
                 joint_state.position[i] = current_joint_poses[i];
             }
@@ -816,6 +822,12 @@ tf::Vector3 RobotThread::determineEndTipLocalPos()
 //
 void RobotThread::determineArmArrangement(const QVector3D& world_target_pos)
 {
+    if(_robotId != KsGlobal::VBRHAND_ARM &&
+       _robotId != KsGlobal::VPISA_SOFT_HAND_ARM) {
+        return;
+    }
+    // --------------------------------------------
+    //
     tf::Vector3 tf_world_target_pos = V_QVECTOR3D_2TF(world_target_pos); //VMARKER_INSTANCE()->getInteractiveMarkerPos()
     // Localize the target pos relative to base joint first (Base Joint == Robot Root Pos)
     //
@@ -845,6 +857,11 @@ void RobotThread::determineArrangement_MyArm(tf::Vector3& target_pos) // as worl
 {
     QMutex pMutex;
     QMutexLocker locker(&pMutex);
+    // -------------------------------------------------------------------------------------------
+    if(_robotId != KsGlobal::VBRHAND_ARM &&
+       _robotId != KsGlobal::VPISA_SOFT_HAND_ARM) {
+        return;
+    }
     //double dis = tf_target_pos.distance2(VMARKER_INSTANCE()->getInteractiveMarkerPos());
     //ROS_INFO("DIFF: %f", dis);
     //
@@ -1004,8 +1021,9 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
         break;
 
     case KsGlobal::VSHADOW_HAND_ARM:
-        rotateJoint(KsGlobal::VSHADOW_HAND_WRJ2 , 0, false);
-        rotateJoint(KsGlobal::VSHADOW_HAND_WRJ1 , 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_ARM_BASE_JOINT, 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_WRJ2, 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_WRJ1, 0, false);
 
         rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ5, jointValues[0][0], false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]), false);
@@ -1024,12 +1042,13 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
         rotateJoint(KsGlobal::VSHADOW_FINGER_2_J2, qAbs(jointValues[2][2]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_2_J1, qAbs(jointValues[2][3]), false);
 
-        rotateJoint(KsGlobal::VSHADOW_FINGER_3_J4, jointValues[3][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_3_J4, -jointValues[3][0], false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_3_J3, qAbs(jointValues[3][1]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_3_J2, qAbs(jointValues[3][2]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_3_J1, qAbs(jointValues[3][3]), false);
 
-        rotateJoint(KsGlobal::VSHADOW_FINGER_4_LFJ5, jointValues[4][0], false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_4_LFJ5, qAbs(jointValues[4][0]), false);
+        rotateJoint(KsGlobal::VSHADOW_FINGER_4_LFJ4, -jointValues[4][0], false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_4_J3, qAbs(jointValues[4][1]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]), false);

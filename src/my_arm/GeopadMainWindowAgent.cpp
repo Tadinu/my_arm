@@ -118,7 +118,7 @@ void GeopadMainWindowAgent::updateJointPosInfo(int jointId, const QVector3D& joi
 
 void GeopadMainWindowAgent::setRobotJointPos(int elementId, double pos)
 {
-     _robotThread.rotateJoint(elementId, pos);
+     //_robotThread.rotateJoint(elementId, pos);
 }
 
 void GeopadMainWindowAgent::moveTarget(const QVector3D& distance)

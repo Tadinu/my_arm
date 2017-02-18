@@ -58,6 +58,8 @@
   <build_depend>interactive_markers</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>tf</build_depend>
+  <build_depend>urdf</build_depend>
+  <build_depend>xacro</build_depend>
 
   <!-- 3rd Build Denpendencies -->
     <build_depend>gazebo_ros</build_depend>
@@ -89,6 +91,7 @@
   <run_depend>interactive_markers</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>tf</run_depend>
+  <run_depend>urdf</run_depend>
   <run_depend>xacro</run_depend>
 
   <!-- 3rd Run Denpendencies -->
@@ -98,6 +101,8 @@
 
   <run_depend>joint_state_controller</run_depend>
   <run_depend>robot_state_publisher</run_depend>
+  <run_depend>position_controllers</run_depend>
+  <run_depend>joint_trajectory_controller</run_depend>
 
   <!-- Run: Leap Motion -->
     <run_depend>camera_calibration_parsers</run_depend>

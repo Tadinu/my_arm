@@ -64,6 +64,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
+#include "pcl_conversions/pcl_conversions.h"
 
 #include <body_msgs/Skeletons.h>
 
@@ -253,7 +254,7 @@ void getHandCloud(body_msgs::Hand &hand, sensor_msgs::PointCloud2 &fullcloud){
    getSubCloud(cloudin,inds,handcloud);
 
    //convert the cloud back to a message
-   pcl::toROSMsg(handcloud,hand.handcloud);
+   pcl::toROSMsg(handcloud, hand.handcloud);
    PointConversion(handpos,hand.palm.translation);
 
    //add other hand message stuff:
@@ -380,7 +381,7 @@ public:
 
 
 
-
+#if 0
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "hand_detector");
@@ -389,3 +390,4 @@ int main(int argc, char **argv)
   ros::spin();
   return 0;
 }
+#endif

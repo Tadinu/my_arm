@@ -68,6 +68,7 @@
 
 #include <body_msgs/Hands.h>
 
+#include <pcl_conversions/pcl_conversions.h>
 
 float gdist(pcl::PointXYZ pt, const Eigen::Vector4f &v){
    return sqrt((pt.x-v(0))*(pt.x-v(0))+(pt.y-v(1))*(pt.y-v(1))+(pt.z-v(2))*(pt.z-v(2))); //
@@ -166,7 +167,7 @@ public:
         distfromsensor=centroid.norm();  //because we are in the sensor's frame
         thumb=-1;
         handmsg.thumb=thumb;
-        handmsg.stamp=cloud.header.stamp;
+        handmsg.stamp=ros::Time((double)cloud.header.stamp);
         digits=pcl::PointCloud<pcl::PointXYZ>();
         palm=pcl::PointCloud<pcl::PointXYZ>();
         arm=_arm;
@@ -177,6 +178,7 @@ public:
     void Init(const body_msgs::Hand &_handmsg){
        handmsg=_handmsg;
 
+       // PCL_DEPRECATED ("pcl::fromROSMsg is deprecated, please use fromPCLPointCloud2 instead.")
        pcl::fromROSMsg(_handmsg.handcloud,full);
         pcl::compute3DCentroid (full, centroid);
         distfromsensor=centroid.norm();  //because we are in the sensor's frame
@@ -487,7 +489,7 @@ public:
 
 
 
-
+#if 0
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "finger_detector");
@@ -496,3 +498,4 @@ int main(int argc, char **argv)
   ros::spin();
   return 0;
 }
+#endif

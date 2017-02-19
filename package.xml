@@ -75,6 +75,13 @@
     <build_depend>message_generation</build_depend>
     <build_depend>message_runtime</build_depend>
 
+    <!-- Build: Realsense  -->
+    <build_depend>librealsense</build_depend>
+    <build_depend>realsense_camera</build_depend>
+    <build_depend>cv_bridge</build_depend>
+    <build_depend>pcl_ros</build_depend>
+    <build_depend>dynamic_reconfigure</build_depend>
+
     <!-- Build: Graspit -->
     <build_depend>graspit</build_depend>
     <!-- <build_depend>graspit_ros_planning_msgs</build_depend> -->
@@ -104,13 +111,20 @@
   <run_depend>position_controllers</run_depend>
   <run_depend>joint_trajectory_controller</run_depend>
 
-  <!-- Run: Leap Motion -->
+    <!-- Run: Leap Motion -->
     <run_depend>camera_calibration_parsers</run_depend>
     <run_depend>camera_info_manager</run_depend>
     <run_depend>image_transport</run_depend>
     <run_depend>message_runtime</run_depend>
 
-  <!-- Run: Graspit -->
+    <!-- Build: Realsense  -->
+    <run_depend>librealsense</run_depend>
+    <run_depend>realsense_camera</run_depend>
+    <run_depend>cv_bridge</run_depend>
+    <run_depend>pcl_ros</run_depend>
+    <run_depend>dynamic_reconfigure</run_depend>
+
+    <!-- Run: Graspit -->
     <run_depend>graspit</run_depend>
     <!-- <run_depend>graspit_ros_planning_msgs</run_depend> -->
 

@@ -238,6 +238,8 @@
 // ----------------------------------------------------------------------------------
 // ROS DEFINE
 #define ROBOT_LEAP_HANDS
+//#define ROBOT_REAL_SENSE_HANDS
+
 // PACKAGE NAME --
 #define CROS_PACKAGE_NAME ("my_arm")
 
@@ -249,7 +251,11 @@
 
 #define VMARKER_INSTANCE() VMarker::getInstance()
 
+#ifdef ROBOT_LEAP_HANDS
 #define VLEAP_INSTANCE() RobotLeapAdapter::getInstance()
+#elif defined ROBOT_REAL_SENSE_HANDS
+#define VREAL_SENSE_INSTANCE() RobotRealSenseAdapter::getInstance()
+#endif
 #define CLEAP_BASE_FRAME (CWORLD_FRAME)
 
 //#define USING_PISA_SOFT_HAND_ONLY

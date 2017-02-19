@@ -16,9 +16,20 @@ SOURCES += main.cpp \
     src/LeapMotion/hands_listener.cpp \
     src/LeapMotion/camera_listener.cpp \
     src/my_arm/RobotLeapAdapter.cpp \
-    src/kinect/hand_interaction/analyze_hands.cpp \
-    src/kinect/hand_interaction/detect_hands_wskel.cpp \
-    src/kinect/hand_interaction/detect_hands.cpp
+    src/Kinect/hand_interaction/analyze_hands.cpp \
+    src/Kinect/hand_interaction/detect_hands_wskel.cpp \
+    src/Kinect/hand_interaction/detect_hands.cpp \
+    src/my_arm/RobotRealSenseAdapter.cpp \
+    src/RealSense/camera/f200_nodelet.cpp \
+    src/RealSense/camera/sr300_nodelet.cpp \
+    src/RealSense/camera/r200_nodelet.cpp \
+    src/RealSense/camera/zr300_nodelet.cpp \
+    src/RealSense/camera/base_nodelet.cpp \
+    src/RealSense/hands_publisher.cpp \
+    src/Kinect/pcl_tools/bag_to_pcd.cpp \
+    src/Kinect/pcl_tools/pcl_utils.cpp \
+    src/Kinect/pcl_tools/segfast.cpp \
+    src/my_arm/RobotKinectAdapter.cpp
 
 RESOURCES += qml.qrc
 
@@ -31,7 +42,11 @@ QML_DESIGNER_IMPORT_PATH =
 INCLUDEPATH+= ./include        \
               ./include/my_arm \
               /opt/ros/kinetic/include \
-              /home/brhm/LeapSDK/include
+              /home/brhm/LeapSDK/include \
+              ./include/Kinect    \
+              /usr/include/pcl-1.7 \
+              ./include/RealSense \
+              ./include/RealSense/pxc
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -273,7 +288,11 @@ DISTFILES += \
     models/shadow_hand/robots/shadowhand_muscle_biotac.urdf.xacro \
     models/shadow_hand/materials.urdf.xacro \
     config/moveit.rviz \
-    models/shadow_hand/other/gazebo/gazebo.urdf.xacro
+    models/shadow_hand/other/gazebo/gazebo.urdf.xacro \
+    msg/Kinect/body_msgs/Hand.msg \
+    msg/Kinect/body_msgs/Skeleton.msg \
+    msg/Kinect/body_msgs/SkeletonJoint.msg \
+    msg/Kinect/body_msgs/Skeletons.msg
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -288,4 +307,117 @@ HEADERS += \
     include/my_arm/rviz/VMarker.h \
     include/LeapMotion/camera_listener.h \
     include/LeapMotion/hands_listener.h \
-    include/my_arm/RobotLeapAdapter.h
+    include/my_arm/RobotLeapAdapter.h \
+    include/my_arm/RobotRealSenseAdapter.h \
+    include/RealSense/camera/f200_nodelet.h \
+    include/RealSense/camera/sr300_nodelet.h \
+    include/RealSense/camera/r200_nodelet.h \
+    include/RealSense/camera/zr300_nodelet.h \
+    include/RealSense/camera/constants.h \
+    include/RealSense/camera/base_nodelet.h \
+    include/RealSense/pxc/pxc3dscan.h \
+    include/RealSense/pxc/pxc3dseg.h \
+    include/RealSense/pxc/pxcaddref.h \
+    include/RealSense/pxc/pxcaudio.h \
+    include/RealSense/pxc/pxcaudiosource.h \
+    include/RealSense/pxc/pxcbase.h \
+    include/RealSense/pxc/pxcblobconfiguration.h \
+    include/RealSense/pxc/pxcblobdata.h \
+    include/RealSense/pxc/pxcblobmodule.h \
+    include/RealSense/pxc/pxccalibration.h \
+    include/RealSense/pxc/pxccapture.h \
+    include/RealSense/pxc/pxccapturemanager.h \
+    include/RealSense/pxc/pxccursorconfiguration.h \
+    include/RealSense/pxc/pxccursordata.h \
+    include/RealSense/pxc/pxcdefs.h \
+    include/RealSense/pxc/pxcenhancedphoto.h \
+    include/RealSense/pxc/pxcenhancedvideo.h \
+    include/RealSense/pxc/pxcfaceconfiguration.h \
+    include/RealSense/pxc/pxcfacedata.h \
+    include/RealSense/pxc/pxcfacemodule.h \
+    include/RealSense/pxc/pxchandconfiguration.h \
+    include/RealSense/pxc/pxchandcursormodule.h \
+    include/RealSense/pxc/pxchanddata.h \
+    include/RealSense/pxc/pxchandmodule.h \
+    include/RealSense/pxc/pxcimage.h \
+    include/RealSense/pxc/pxcmetadata.h \
+    include/RealSense/pxc/pxcobjectrecognitionconfiguration.h \
+    include/RealSense/pxc/pxcobjectrecognitiondata.h \
+    include/RealSense/pxc/pxcobjectrecognitionmodule.h \
+    include/RealSense/pxc/pxcpersontrackingconfiguration.h \
+    include/RealSense/pxc/pxcpersontrackingdata.h \
+    include/RealSense/pxc/pxcpersontrackingmodule.h \
+    include/RealSense/pxc/pxcphoto.h \
+    include/RealSense/pxc/pxcplatformcameracontrol.h \
+    include/RealSense/pxc/pxcpowerstate.h \
+    include/RealSense/pxc/pxcprojection.h \
+    include/RealSense/pxc/pxcsceneperception.h \
+    include/RealSense/pxc/pxcsensemanager.h \
+    include/RealSense/pxc/pxcsession.h \
+    include/RealSense/pxc/pxcspeechrecognition.h \
+    include/RealSense/pxc/pxcspeechsynthesis.h \
+    include/RealSense/pxc/pxcstatus.h \
+    include/RealSense/pxc/pxcsyncpoint.h \
+    include/RealSense/pxc/pxctouchlesscontroller.h \
+    include/RealSense/pxc/pxctracker.h \
+    include/RealSense/pxc/pxctrackerutils.h \
+    include/RealSense/pxc/pxcversion.h \
+    include/RealSense/pxc/pxcvideomodule.h \
+    include/RealSense/pxc/service/pxcloggingservice.h \
+    include/RealSense/pxc/service/pxcpowerstateserviceclient.h \
+    include/RealSense/pxc/service/pxcschedulerservice.h \
+    include/RealSense/pxc/service/pxcserializableservice.h \
+    include/RealSense/pxc/service/pxcsessionservice.h \
+    include/RealSense/pxc/service/pxcsmartasyncimpl.h \
+    include/RealSense/pxc/service/pxcsyncpointservice.h \
+    include/RealSense/pxc/utilities/pxcpointconverter.h \
+    include/RealSense/pxc/utilities/pxcrotation.h \
+    include/RealSense/pxc/utilities/pxcsmoother.h \
+    include/RealSense/Service/LoggingService.h \
+    include/RealSense/Service/PowerStateServiceClient.h \
+    include/RealSense/Service/SampleReaderService.h \
+    include/RealSense/Service/SenseManagerService.h \
+    include/RealSense/Service/SerializableService.h \
+    include/RealSense/Service/SessionService.h \
+    include/RealSense/Service/VideoModuleImpl.h \
+    include/RealSense/Utility/PointConverter.h \
+    include/RealSense/Utility/Rotation.h \
+    include/RealSense/Utility/Smoother.h \
+    include/RealSense/Base.h \
+    include/RealSense/Calibration.h \
+    include/RealSense/Capture.h \
+    include/RealSense/CaptureManager.h \
+    include/RealSense/Image.h \
+    include/RealSense/Metadata.h \
+    include/RealSense/PlatformCameraControl.h \
+    include/RealSense/Playback.h \
+    include/RealSense/PowerState.h \
+    include/RealSense/Projection.h \
+    include/RealSense/Recording.h \
+    include/RealSense/Reference.h \
+    include/RealSense/Sample.h \
+    include/RealSense/SampleReader.h \
+    include/RealSense/SenseManager.h \
+    include/RealSense/Session.h \
+    include/RealSense/Status.h \
+    include/RealSense/Type.h \
+    include/RealSense/VideoModule.h \
+    include/RealSense/VideoModuleCommon.h \
+    src/Kinect/pcl_tools/printing_tools.h \
+    include/Kinect/body_msgs/Hand.h \
+    include/Kinect/body_msgs/Hands.h \
+    include/Kinect/body_msgs/Skeleton.h \
+    include/Kinect/body_msgs/SkeletonJoint.h \
+    include/Kinect/body_msgs/Skeletons.h \
+    include/Kinect/geometric_shapes_msgs/Shape.h \
+    include/Kinect/mapping_msgs/AttachedCollisionObject.h \
+    include/Kinect/mapping_msgs/CollisionMap.h \
+    include/Kinect/mapping_msgs/CollisionObject.h \
+    include/Kinect/mapping_msgs/CollisionObjectOperation.h \
+    include/Kinect/mapping_msgs/OrientedBoundingBox.h \
+    include/Kinect/mapping_msgs/PolygonalMap.h \
+    include/Kinect/nnn/nnn.hpp \
+    include/Kinect/pcl_tools/clusterevaluation.hpp \
+    include/Kinect/pcl_tools/pcl_utils.h \
+    include/Kinect/pcl_tools/segfast.hpp \
+    include/my_arm/RobotKinectAdapter.h

@@ -64,6 +64,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
+#include <pcl_conversions/pcl_conversions.h>
 
 class TimeEvaluator{
    timeval tmark;
@@ -351,7 +352,7 @@ public:
   void makeHand(pcl::PointCloud<pcl::PointXYZ> &cloud,Eigen::Vector4f &_arm,  body_msgs::Hand &handmsg){
     Eigen::Vector4f centroid;
     handmsg.thumb=-1; //because we have not processed the hand...
-    handmsg.stamp=cloud.header.stamp;
+    handmsg.stamp=ros::Time((double)cloud.header.stamp);
     pcl::compute3DCentroid (cloud, centroid);
     handmsg.arm=eigenToMsgPoint(_arm);
     handmsg.state="unprocessed";
@@ -359,7 +360,9 @@ public:
     handmsg.palm.translation.y=centroid(1);
     handmsg.palm.translation.z=centroid(2);
     pcl::toROSMsg(cloud,handmsg.handcloud);
-    handmsg.handcloud.header=cloud.header;
+    handmsg.handcloud.header.seq      = cloud.header.seq;
+    handmsg.handcloud.header.stamp    = ros::Time((double)cloud.header.stamp);
+    handmsg.handcloud.header.frame_id = cloud.header.frame_id;
     //TODO: do tracking seq
   }
 
@@ -415,7 +418,7 @@ public:
 
 
 
-
+#if 0
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "hand_detector");
@@ -424,3 +427,4 @@ int main(int argc, char **argv)
   ros::spin();
   return 0;
 }
+#endif

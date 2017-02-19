@@ -347,6 +347,10 @@ void RobotThread::runArmOperation(int armId)
     // LEAP HANDS --
     VLEAP_INSTANCE()->initLeapMotion(&node_handle);
     ros::Subscriber _leap_listener = node_handle.subscribe(CLEAP_HANDS_TOPIC, 1, &RobotThread::leapCallback, this);
+#elif defined ROBOT_REAL_SENSE_HANDS
+    // REAL SENSE HANDS --
+    VREAL_SENSE_INSTANCE()->initRealSense(&node_handle);
+    ros::Subscriber _real_sense_listener = node_handle.subscribe(CREAL_SENSE_HANDS_TOPIC, 1, &RobotThread::realSenseCallback, this);
 #endif
 
     // =======================================================================================================
@@ -1074,6 +1078,11 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
 }
 
 void RobotThread::leapCallback(const visualization_msgs::MarkerArray&)
+{
+    determineHandArrangmentOnLeapHands(CRUN_ROBOT);
+}
+
+void RobotThread::realSenseCallback(const visualization_msgs::MarkerArray&)
 {
     determineHandArrangmentOnLeapHands(CRUN_ROBOT);
 }

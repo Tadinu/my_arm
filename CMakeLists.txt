@@ -1,3 +1,5 @@
+## http://wiki.ros.org/catkin/CMakeLists.txt
+##
 cmake_minimum_required(VERSION 2.8.3)
 project(my_arm)
 
@@ -24,6 +26,9 @@ set(CMAKE_AUTOMOC ON)
 
 set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
 
+##TEST VAR
+##message("CATKIN DIRS " $ENV{librealsense_INCLUDE_DIRS} $ENV{librealsense_LIBRARY_DIRS})
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -42,12 +47,21 @@ find_package(catkin REQUIRED COMPONENTS
   ## Gazebo --
   gazebo_ros
 
+  ## Kinect --
+  pcl_ros
+
   ## Leap Motion --
   camera_calibration_parsers
   camera_info_manager
   image_transport
   message_generation
   message_runtime
+
+  ## Realsense --
+  librealsense
+  realsense_camera
+  cv_bridge
+  dynamic_reconfigure
 
   ## OpenMP --
   #OpenMP
@@ -184,7 +198,8 @@ catkin_package(
       geometry_msgs
       image_transport
       message_runtime
-
+      librealsense
+      realsense_camera
       ##graspit_ros_planning_msgs
 )
 
@@ -202,6 +217,8 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/RobotThread.h
                         include/my_arm/rviz/VMarker.h
                         include/my_arm/RobotLeapAdapter.h
+                        include/my_arm/RobotRealSenseAdapter.h
+                        include/my_arm/RobotKinectAdapter.h
                         )
 
 ## Specify additional locations of header files
@@ -209,7 +226,14 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
 # include_directories(include)
 
 ## my_arm & ROS catkin --
-include_directories(include include/my_arm include/LeapMotion
+include_directories(include
+                    include/my_arm
+                    include/Kinect
+                    include/LeapMotion
+                    include/RealSense
+                    include/RealSense/camera
+                    include/RealSense/pxc
+
                     ${catkin_INCLUDE_DIRS})
 
 ## Gazebo --
@@ -223,10 +247,16 @@ include_directories(${Qt5Qml_INCLUDE_DIRS})
 include_directories(${Qt5Quick_INCLUDE_DIRS})
 include_directories(${Qt5Network_INCLUDE_DIRS})
 
+## Kinect --
+include_directories(/usr/include/pcl-1.7)
+
 ## Leap Motion --
 include_directories(
     if($ENV{LEAP_SDK} $ENV{LEAP_SDK}/include)
 )
+
+## Real Sense --
+# librealsense & realsense_camera are already installed as catkin packages in ROS!
 
 ## Graspit include files should now come directly from the graspit package
 set(GRASPIT_ROOT $ENV{GRASPIT})
@@ -247,6 +277,8 @@ include_directories(${GRASPIT_ROOT}/include)
 # rosbuild_add_executable(capri src/sensor.cpp)
 # target_link_libraries(capri boost_filesystem boost_system OpenNI2)
 
+
+## OpenCV2 --
 
 ## Declare a C++ library
 # add_library(myArm
@@ -271,10 +303,46 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotThread.cpp
                                   src/my_arm/rviz/VMarker.cpp
                                   src/my_arm/RobotLeapAdapter.cpp
+                                  src/my_arm/RobotRealSenseAdapter.cpp
+                                  src/my_arm/RobotKinectAdapter.cpp
 
+                                  ## Kinect --
+                                  src/Kinect/hand_interaction/analyze_hands.cpp
+                                  ##src/Kinect/hand_interaction/detect_hands.cpp
+                                  ##src/Kinect/hand_interaction/detect_hands_wskel.cpp
+
+                                  ## LeapMotion --
                                   src/LeapMotion/hands_listener.cpp
                                   src/LeapMotion/camera_listener.cpp
 
+                                  ## RealSense --
+                                  ##include/RealSense/Base.h
+                                  ##include/RealSense/Calibration.h
+                                  ##include/RealSense/Capture.h
+                                  ##include/RealSense/CaptureManager.h
+                                  ##include/RealSense/hands_publisher.h
+                                  ##include/RealSense/Image.h
+                                  ##include/RealSense/Metadata.h
+                                  ##include/RealSense/PlatformCameraControl.h
+                                  ##include/RealSense/Playback.h
+                                  ##include/RealSense/PowerState.h
+                                  ##include/RealSense/Projection.h
+                                  ##include/RealSense/Recording.h
+                                  ##include/RealSense/Reference.h
+                                  ##include/RealSense/Sample.h
+                                  ##include/RealSense/SampleReader.h
+                                  ##include/RealSense/SenseManager.h
+                                  ##include/RealSense/Session.h
+                                  ##include/RealSense/Status.h
+                                  ##include/RealSense/Type.h
+                                  ##include/RealSense/VideoModuleCommon.h
+                                  ##include/RealSense/VideoModule.h
+                                  ##
+                                  ##src/RealSense/hands_publisher.cpp
+                                  src/RealSense/camera/base_nodelet.cpp
+                                  src/RealSense/camera/sr300_nodelet.cpp
+
+                                  ## QT moc & Resource --
                                   ${QT_RESOURCES_CPP}
                                   ${QT_MOC_HPP})
 
@@ -282,6 +350,7 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
 ## same as for the library above
 # add_dependencies(myArm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+## http://wiki.ros.org/catkin/CMakeLists.txt
 ## Specify libraries to link a library or executable target against
 target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          Qt5::Core
@@ -310,11 +379,23 @@ if(Boost_FOUND)
 endif()
 # BOOST --
 
+# KINECT ++
+## libpcl is installed as a standalone library in Ubuntu
+# KINECT --
+
 # LEAP MOTION ++
 if(DEFINED ENV{LEAP_SDK})
+    message("Linking libLeap...")
     target_link_libraries(robotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
 endif()
 # LEAP MOTION --
+
+# REAL SENSE ++
+if(librealsense_FOUND)
+    message("Linking librealsense...")
+    target_link_libraries(robotArmController ${librealsense_LIBRARIES})
+endif()
+# REAL SENSE --
 
 #############
 ## Install ##

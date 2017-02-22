@@ -3,10 +3,47 @@
 xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
 xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
 
-  <gazebo>
-    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
-      <robotSimType>sr_gazebo_sim/SrGazeboHWSim</robotSimType>
-    </plugin>
-  </gazebo>
+    <gazebo>
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+            <robotSimType>sr_gazebo_sim/SrGazeboHWSim</robotSimType>
+        </plugin>
+        <plugin name="gazebo_my_arm_control" filename="libgazeboRobotArmController.so">
+            <robotNamespace></robotNamespace>
+            <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
+            <jointName>rh_world_joint,
+                       rh_WRJ2,
+                       rh_WRJ1,
 
+                       rh_THJ5,
+                       rh_THJ4,
+                       rh_THJ3,
+                       rh_THJ2,
+                       rh_THJ1,
+                       rh_THtip,
+
+                       rh_FFJ4,
+                       rh_FFJ3,
+                       rh_FFJ2,
+                       rh_FFJ1,
+
+                       rh_MFJ4,
+                       rh_MFJ3,
+                       rh_MFJ2,
+                       rh_MFJ1,
+
+                       rh_RFJ4,
+                       rh_RFJ3,
+                       rh_RFJ2,
+                       rh_RFJ1,
+
+                       rh_LFJ5,
+                       rh_LFJ4,
+                       rh_LFJ3,
+                       rh_LFJ2,
+                       rh_LFJ1
+            </jointName>
+            <updateRate>100.0</updateRate>
+            <alwaysOn>true</alwaysOn>
+        </plugin>
+    </gazebo>
 </robot>

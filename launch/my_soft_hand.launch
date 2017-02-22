@@ -10,5 +10,7 @@
     -->
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" />
     <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
-
+    <!--
+    <node name="robotArmControllerPy" pkg="my_arm" type="$(find my_arm)/src/my_arm/my_arm_controller_py/main.py" output="screen" />
+    -->
 </launch>

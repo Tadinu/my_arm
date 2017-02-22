@@ -12,7 +12,7 @@ SOURCES += main.cpp \
     src/my_arm/KsGlobal.cpp \
     src/my_arm/K3DMaskedMouseArea.cpp \
     src/my_arm/RobotArmControllerMain.cpp \
-    src/my_arm/rviz/VMarker.cpp \
+    src/Rviz/VMarker.cpp \
     src/LeapMotion/hands_listener.cpp \
     src/LeapMotion/camera_listener.cpp \
     src/my_arm/RobotLeapAdapter.cpp \
@@ -29,7 +29,8 @@ SOURCES += main.cpp \
     src/Kinect/pcl_tools/bag_to_pcd.cpp \
     src/Kinect/pcl_tools/pcl_utils.cpp \
     src/Kinect/pcl_tools/segfast.cpp \
-    src/my_arm/RobotKinectAdapter.cpp
+    src/my_arm/RobotKinectAdapter.cpp \
+    src/Gazebo/gazebo_my_arm_commander_plugin.cpp
 
 RESOURCES += qml.qrc
 
@@ -39,12 +40,17 @@ QML_IMPORT_PATH =
 # Additional import path used to resolve QML modules just for Qt Quick Designer
 QML_DESIGNER_IMPORT_PATH =
 
-INCLUDEPATH+= ./include        \
-              ./include/my_arm \
+INCLUDEPATH+= /usr/include \
               /opt/ros/kinetic/include \
+              /usr/include/gazebo-7 \
+              \
+              ./include        \
+              ./include/my_arm \
+              \
               /home/brhm/LeapSDK/include \
               ./include/Kinect    \
               /usr/include/pcl-1.7 \
+              \
               ./include/RealSense \
               ./include/RealSense/pxc
 
@@ -81,7 +87,6 @@ DISTFILES += \
     worlds/robotArm.world \
     launch/my_arm_world.launch \
     models/materials.xacro \
-    models/myArm2.gazebo \
     models/jaco_joint_control_vel.xacro \
     models/jaco_joint_control.xacro \
     models/jaco_robot_multi.urdf.xacro \
@@ -292,7 +297,10 @@ DISTFILES += \
     msg/Kinect/body_msgs/Hand.msg \
     msg/Kinect/body_msgs/Skeleton.msg \
     msg/Kinect/body_msgs/SkeletonJoint.msg \
-    msg/Kinect/body_msgs/Skeletons.msg
+    msg/Kinect/body_msgs/Skeletons.msg \
+    models/myArm.gazebo \
+    worlds/shadowhand.world \
+    src/my_arm/my_arm_controller_py/main.py
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -304,11 +312,12 @@ HEADERS += \
     include/my_arm/K3DMaskedMouseArea.h \
     include/my_arm/KsGlobal.h \
     include/my_arm/RobotArmControllerMain.h \
-    include/my_arm/rviz/VMarker.h \
+    include/Rviz/VMarker.h \
     include/LeapMotion/camera_listener.h \
     include/LeapMotion/hands_listener.h \
     include/my_arm/RobotLeapAdapter.h \
     include/my_arm/RobotRealSenseAdapter.h \
+    include/my_arm/RobotKinectAdapter.h \
     include/RealSense/camera/f200_nodelet.h \
     include/RealSense/camera/sr300_nodelet.h \
     include/RealSense/camera/r200_nodelet.h \
@@ -420,4 +429,4 @@ HEADERS += \
     include/Kinect/pcl_tools/clusterevaluation.hpp \
     include/Kinect/pcl_tools/pcl_utils.h \
     include/Kinect/pcl_tools/segfast.hpp \
-    include/my_arm/RobotKinectAdapter.h
+    include/Gazebo/gazebo_my_arm_commander_plugin.h

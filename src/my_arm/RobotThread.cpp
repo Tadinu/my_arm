@@ -182,7 +182,7 @@ const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL] = {
     "rh_THJ3",                                // Thumb hub, revolute
     "rh_THJ2",                                // Thumb middle, revolute
     "rh_THJ1",                                // Thumb distal, revolute
-    "rh_thtip",                               // Thumb tip
+    "rh_THtip",                               // Thumb tip
 
     // Index
     "rh_FFJ4",                                // knuckle, Revolute
@@ -970,8 +970,9 @@ void RobotThread::determineArrangement_JacoArm(tf::Vector3& target_pos)
 
 void RobotThread::determineHandArrangmentOnLeapHands(int armId)
 {
+#ifdef ROBOT_LEAP_HANDS
     // Take the first hand data for convenience:
-    std::vector<std::vector<double>> jointValues = RobotLeapAdapter::getInstance()->getFingerJointValues(0);
+    std::vector<std::vector<double>> jointValues = VLEAP_INSTANCE()->getFingerJointValues(0);
     if(jointValues.size() == 0) {
         return;
     }
@@ -1075,6 +1076,7 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
     default:
         break;
     }
+#endif
 }
 
 void RobotThread::leapCallback(const visualization_msgs::MarkerArray&)

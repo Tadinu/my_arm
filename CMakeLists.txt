@@ -215,7 +215,7 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/K3DStateMachine.h
                         include/my_arm/KsGlobal.h
                         include/my_arm/RobotThread.h
-                        include/my_arm/rviz/VMarker.h
+                        include/Rviz/VMarker.h
                         include/my_arm/RobotLeapAdapter.h
                         include/my_arm/RobotRealSenseAdapter.h
                         include/my_arm/RobotKinectAdapter.h
@@ -301,7 +301,7 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/KsGlobal.cpp
                                   src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotThread.cpp
-                                  src/my_arm/rviz/VMarker.cpp
+                                  src/Rviz/VMarker.cpp
                                   src/my_arm/RobotLeapAdapter.cpp
                                   src/my_arm/RobotRealSenseAdapter.cpp
                                   src/my_arm/RobotKinectAdapter.cpp
@@ -344,8 +344,31 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
 
                                   ## QT moc & Resource --
                                   ${QT_RESOURCES_CPP}
-                                  ${QT_MOC_HPP})
+                                  ${QT_MOC_HPP}
+                                  )
 
+add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_plugin.cpp
+                                            src/my_arm/GeopadMainWindowAgent.cpp
+                                            src/my_arm/GeopadQMLAdapter.cpp
+                                            src/my_arm/K3DMaskedMouseArea.cpp
+                                            src/my_arm/K3DQMLItemAgent.cpp
+                                            src/my_arm/K3DQMLItemInfo.cpp
+                                            src/my_arm/K3DStateMachine.cpp
+                                            src/my_arm/KsGlobal.cpp
+                                            src/my_arm/RobotArmControllerMain.cpp
+                                            src/my_arm/RobotThread.cpp
+                                            src/Rviz/VMarker.cpp
+                                            src/my_arm/RobotLeapAdapter.cpp
+                                            src/my_arm/RobotRealSenseAdapter.cpp
+                                            src/my_arm/RobotKinectAdapter.cpp
+                                            ## LeapMotion --
+                                            src/LeapMotion/hands_listener.cpp
+                                            src/LeapMotion/camera_listener.cpp
+
+                                            ## QT --
+                                            ${QT_RESOURCES_CPP}
+                                            ${QT_MOC_HPP}
+                                            )
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(myArm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -360,6 +383,18 @@ target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          Qt5::Quick
                                          Qt5::Network
                                          )
+target_link_libraries(gazeboRobotArmController ${catkin_LIBRARIES}
+                                         Qt5::Core
+                                         Qt5::Gui
+                                         Qt5::Widgets
+                                         Qt5::Qml
+                                         Qt5::Quick
+                                         Qt5::Network
+                                         )
+## GAZEBO --
+target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
+target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
+
 ## BOOST ++
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
@@ -386,6 +421,7 @@ endif()
 # LEAP MOTION ++
 if(DEFINED ENV{LEAP_SDK})
     message("Linking libLeap...")
+    target_link_libraries(gazeboRobotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
     target_link_libraries(robotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
 endif()
 # LEAP MOTION --
@@ -393,6 +429,7 @@ endif()
 # REAL SENSE ++
 if(librealsense_FOUND)
     message("Linking librealsense...")
+    target_link_libraries(gazeboRobotArmController ${librealsense_LIBRARIES})
     target_link_libraries(robotArmController ${librealsense_LIBRARIES})
 endif()
 # REAL SENSE --

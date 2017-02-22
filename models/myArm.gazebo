@@ -5,9 +5,15 @@
     <gazebo>
       <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
         <robotNamespace>/my_arm</robotNamespace>
-        <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+        <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
+      </plugin>
+      <plugin name="gazebo_my_arm_control" filename="libgazeboRobotArmController.so">
+        <robotNamespace>/my_arm</robotNamespace>
+        <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
       </plugin>
     </gazebo>
+
+
 
     <!-- world link with fixed joint : no need -->
 

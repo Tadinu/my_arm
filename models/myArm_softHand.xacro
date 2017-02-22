@@ -41,7 +41,7 @@
 <xacro:property name="axel_offset"  value="0" />             <!-- Space btw top of beam and the each joint -->
 
 <!-- Import all Gazebo-customization elements, including Gazebo colors -->
-<xacro:include filename="$(find my_arm)/models/myArm2.gazebo" />
+<xacro:include filename="$(find my_arm)/models/myArm.gazebo" />
 <!-- Import Rviz colors -->
 <xacro:include filename="$(find my_arm)/models/materials.xacro" />
 

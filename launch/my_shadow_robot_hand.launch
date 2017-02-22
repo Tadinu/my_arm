@@ -1,5 +1,7 @@
 <launch>
     <!-- http://shadow-robot.readthedocs.io/en/latest/generated/sr_interface/sr_robot_launch/README.html#shadow-hand-only -->
+    <arg name="gazebo" default="true"/> <!-- Else the simulation is Rviz -->
+
     <!-- Loads the robot description -->
     <arg name="robot_description" default="$(find my_arm)/models/shadow_hand/robots/shadowhand_motor.urdf.xacro"/>
     <!-- This launch file is for shadow hand only -->
@@ -26,23 +28,35 @@
     <!-- Set to false if you want to start without guis -->
     <arg name="gui" default="true"/>
 
+    <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+    <arg name="use_sim_time" default="true"/>
+    <arg name="headless" default="false"/>
+
     <!-- SIMULATED ROBOTS -->
     <group if="$(arg sim)">
-        <!--
-        <arg name="world_name" value="$(find sr_description)/other/worlds/shadowhand.world"/>
-        <arg name="paused" value="false"/>
-        <include file="$(find gazebo_ros)/launch/empty_world.launch">
-            <arg name="world_name" default="$(arg world_name)"/>
-            <arg name="gui" default="$(arg gui)"/>
-            <arg name="paused" value="$(arg paused)"/>
-            <arg name="debug" value="$(arg debug)"/>
-            <arg name="verbose" value="$(arg verbose)" />
-        </include>
-        -->
+        <!-- Load the URDF/XACRO into the ROS Parameter Server -->
+        <param name="robot_description"
+               command="$(find xacro)/xacro --inorder '$(arg robot_description)'"/>
+
+        <group if="$(arg gazebo)">
+            <arg name="world_name" value="$(find my_arm)/worlds/shadowhand.world"/>
+            <arg name="paused" value="false"/>
+            <include file="$(find gazebo_ros)/launch/empty_world.launch">
+                <env name="GAZEBO_RESOURCE_PATH" value="$(env GAZEBO_RESOURCE_PATH):$(find my_arm)"/>
+                <arg name="world_name" default="$(arg world_name)"/>
+                <arg name="gui" default="$(arg gui)"/>
+                <arg name="paused" value="$(arg paused)"/>
+                <arg name="debug" value="$(arg debug)"/>
+                <arg name="verbose" value="$(arg verbose)" />
+                <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+                <arg name="headless" value="$(arg headless)"/>
+            </include>
+            <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
+            <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+                  args="-urdf -model shadowhand_motor -z 0.0 -param robot_description"/>
+        </group>
 
         <!--
-        <node name="spawn_model" pkg="gazebo_ros" type="spawn_model" args="-urdf -param robot_description -model usrh -z 0.0 "
-              respawn="false" output="screen"/>
         <rosparam command="load" file="$(find sr_description)/hand/config/$(arg hand_id)_controller_gazebo.yaml"/>
         <include file="$(find ros_ethercat_model)/launch/joint_state_publisher.launch" />
 
@@ -50,8 +64,6 @@
         <param name="/hand/joint_prefix/$(arg hand_serial)" value="$(arg hand_id)_"/>
         -->
 
-        <param name="robot_description"
-               command="$(find xacro)/xacro --inorder '$(arg robot_description)'"/>
         <!-- Robot state publisher -->
         <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
             <param name="publish_frequency" type="double" value="50.0" />
@@ -65,7 +77,9 @@
             <param name="use_gui" value="TRUE"/>
         </node>
         -->
-        <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
+        <group unless="$(arg gazebo)">
+            <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
+        </group>
     </group>
 
     <!-- REAL ROBOTS -->

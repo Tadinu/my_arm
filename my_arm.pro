@@ -1,6 +1,33 @@
 QT += qml quick core widgets network
 
 CONFIG += c++11
+## CONFIG += console
+## CONFIG -= app_bundle
+
+#greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+TARGET = robotArmController
+TEMPLATE = app
+
+CONFIG(release, debug|release) {
+    message(Release)
+    LIBS += -L./opencv/lib64/ \
+            -lopencv_core2413 \
+            \#-lopencv_imgcodecs2413 \
+            -lopencv_highgui2413 \
+            -lopencv_contrib2413 \
+            -lopencv_imgproc2413 \
+}
+
+CONFIG(debug, debug|release) {
+    message(Debug)
+    LIBS += -L./opencv/lib64/ \
+              -lopencv_core2413d \
+              \#-lopencv_imgcodecs2413d \
+              -lopencv_highgui2413d \
+              -lopencv_contrib2413d \
+              -lopencv_imgproc2413d \
+}
 
 SOURCES += main.cpp \
     src/my_arm/GeopadMainWindowAgent.cpp \
@@ -30,7 +57,18 @@ SOURCES += main.cpp \
     src/Kinect/pcl_tools/pcl_utils.cpp \
     src/Kinect/pcl_tools/segfast.cpp \
     src/my_arm/RobotKinectAdapter.cpp \
-    src/Gazebo/gazebo_my_arm_commander_plugin.cpp
+    src/Gazebo/gazebo_my_arm_commander_plugin.cpp \
+    3rd/Voxelyze/src/VX_LinearSolver.cpp \
+    3rd/Voxelyze/src/VX_External.cpp \
+    3rd/Voxelyze/src/VX_Collision.cpp \
+    3rd/Voxelyze/src/Voxelyze.cpp \
+    3rd/Voxelyze/src/VX_Link.cpp \
+    3rd/Voxelyze/src/VX_Material.cpp \
+    3rd/Voxelyze/src/VX_MaterialLink.cpp \
+    3rd/Voxelyze/src/VX_MaterialVoxel.cpp \
+    3rd/Voxelyze/src/VX_Voxel.cpp \
+    3rd/Voxelyze/src/VX_MeshRender.cpp \
+    3rd/Voxelyze/test/VoxelyzeUnitTests.cpp
 
 RESOURCES += qml.qrc
 
@@ -41,8 +79,10 @@ QML_IMPORT_PATH =
 QML_DESIGNER_IMPORT_PATH =
 
 INCLUDEPATH+= /usr/include \
+              /usr/local/include \
               /opt/ros/kinetic/include \
               /usr/include/gazebo-7 \
+              /usr/include/gazebo-7/gazebo \
               \
               ./include        \
               ./include/my_arm \
@@ -52,7 +92,9 @@ INCLUDEPATH+= /usr/include \
               /usr/include/pcl-1.7 \
               \
               ./include/RealSense \
-              ./include/RealSense/pxc
+              ./include/RealSense/pxc \
+              \
+              ./3rd/Voxelyze/include
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -300,7 +342,10 @@ DISTFILES += \
     msg/Kinect/body_msgs/Skeletons.msg \
     models/myArm.gazebo \
     worlds/shadowhand.world \
-    src/my_arm/my_arm_controller_py/main.py
+    src/my_arm/my_arm_controller_py/main.py \
+    worlds/universe.world \
+    3rd/Voxelyze/makefile \
+    3rd/Voxelyze/README.md
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -429,4 +474,48 @@ HEADERS += \
     include/Kinect/pcl_tools/clusterevaluation.hpp \
     include/Kinect/pcl_tools/pcl_utils.h \
     include/Kinect/pcl_tools/segfast.hpp \
-    include/Gazebo/gazebo_my_arm_commander_plugin.h
+    include/Gazebo/gazebo_my_arm_commander_plugin.h \
+    3rd/Voxelyze/include/Array3D.h \
+    3rd/Voxelyze/include/Quat3D.h \
+    3rd/Voxelyze/include/Vec3D.h \
+    3rd/Voxelyze/include/Voxelyze.h \
+    3rd/Voxelyze/include/VX_Collision.h \
+    3rd/Voxelyze/include/VX_External.h \
+    3rd/Voxelyze/include/VX_LinearSolver.h \
+    3rd/Voxelyze/include/VX_Link.h \
+    3rd/Voxelyze/include/VX_Material.h \
+    3rd/Voxelyze/include/VX_MaterialLink.h \
+    3rd/Voxelyze/include/VX_MaterialVoxel.h \
+    3rd/Voxelyze/include/VX_MeshRender.h \
+    3rd/Voxelyze/include/VX_Utils.h \
+    3rd/Voxelyze/include/VX_Voxel.h \
+    3rd/Voxelyze/include/rapidjson/error/en.h \
+    3rd/Voxelyze/include/rapidjson/error/error.h \
+    3rd/Voxelyze/include/rapidjson/internal/dtoa.h \
+    3rd/Voxelyze/include/rapidjson/internal/itoa.h \
+    3rd/Voxelyze/include/rapidjson/internal/meta.h \
+    3rd/Voxelyze/include/rapidjson/internal/pow10.h \
+    3rd/Voxelyze/include/rapidjson/internal/stack.h \
+    3rd/Voxelyze/include/rapidjson/internal/strfunc.h \
+    3rd/Voxelyze/include/rapidjson/msinttypes/inttypes.h \
+    3rd/Voxelyze/include/rapidjson/msinttypes/stdint.h \
+    3rd/Voxelyze/include/rapidjson/allocators.h \
+    3rd/Voxelyze/include/rapidjson/document.h \
+    3rd/Voxelyze/include/rapidjson/encodedstream.h \
+    3rd/Voxelyze/include/rapidjson/encodings.h \
+    3rd/Voxelyze/include/rapidjson/filereadstream.h \
+    3rd/Voxelyze/include/rapidjson/filestream.h \
+    3rd/Voxelyze/include/rapidjson/filewritestream.h \
+    3rd/Voxelyze/include/rapidjson/memorybuffer.h \
+    3rd/Voxelyze/include/rapidjson/memorystream.h \
+    3rd/Voxelyze/include/rapidjson/prettywriter.h \
+    3rd/Voxelyze/include/rapidjson/rapidjson.h \
+    3rd/Voxelyze/include/rapidjson/reader.h \
+    3rd/Voxelyze/include/rapidjson/stringbuffer.h \
+    3rd/Voxelyze/include/rapidjson/writer.h \
+    3rd/Voxelyze/test/tArray3D.h \
+    3rd/Voxelyze/test/tVoxelyze.h \
+    3rd/Voxelyze/test/tVX_Material.h \
+    3rd/Voxelyze/test/tVX_MaterialLink.h \
+    3rd/Voxelyze/test/tVX_MaterialVoxel.h \
+    3rd/Voxelyze/test/tVX_Voxel.h

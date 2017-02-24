@@ -17,7 +17,7 @@ endif()
 
 # http://doc.qt.io/qt-5/cmake-manual.html
 set(CMAKE_CXX_FLAGS "-std=c++11 ${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
-set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt5.7.1/5.7/gcc64 ${CMAKE_PREFIX_PATH}")
+set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt5.7.1/5.7/gcc64 $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -41,6 +41,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   visualization_msgs
   interactive_markers
+  moveit_visual_tools
   std_msgs
   tf
 
@@ -233,7 +234,8 @@ include_directories(include
                     include/RealSense
                     include/RealSense/camera
                     include/RealSense/pxc
-
+                    3rd/Voxelyze/include
+                    3rd/Voxelyze/include/rapidjson
                     ${catkin_INCLUDE_DIRS})
 
 ## Gazebo --
@@ -277,8 +279,6 @@ include_directories(${GRASPIT_ROOT}/include)
 # rosbuild_add_executable(capri src/sensor.cpp)
 # target_link_libraries(capri boost_filesystem boost_system OpenNI2)
 
-
-## OpenCV2 --
 
 ## Declare a C++ library
 # add_library(myArm
@@ -342,6 +342,18 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/RealSense/camera/base_nodelet.cpp
                                   src/RealSense/camera/sr300_nodelet.cpp
 
+                                  ## Voxelyze --
+                                  3rd/Voxelyze/src/Voxelyze.cpp
+                                  3rd/Voxelyze/src/VX_Collision.cpp
+                                  3rd/Voxelyze/src/VX_External.cpp
+                                  3rd/Voxelyze/src/VX_LinearSolver.cpp
+                                  3rd/Voxelyze/src/VX_Link.cpp
+                                  3rd/Voxelyze/src/VX_Material.cpp
+                                  3rd/Voxelyze/src/VX_MaterialLink.cpp
+                                  3rd/Voxelyze/src/VX_MaterialVoxel.cpp
+                                  3rd/Voxelyze/src/VX_MeshRender.cpp
+                                  3rd/Voxelyze/src/VX_Voxel.cpp
+
                                   ## QT moc & Resource --
                                   ${QT_RESOURCES_CPP}
                                   ${QT_MOC_HPP}
@@ -361,9 +373,22 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             src/my_arm/RobotLeapAdapter.cpp
                                             src/my_arm/RobotRealSenseAdapter.cpp
                                             src/my_arm/RobotKinectAdapter.cpp
+
                                             ## LeapMotion --
                                             src/LeapMotion/hands_listener.cpp
                                             src/LeapMotion/camera_listener.cpp
+
+                                            ## Voxelyze --
+                                            3rd/Voxelyze/src/Voxelyze.cpp
+                                            3rd/Voxelyze/src/VX_Collision.cpp
+                                            3rd/Voxelyze/src/VX_External.cpp
+                                            3rd/Voxelyze/src/VX_LinearSolver.cpp
+                                            3rd/Voxelyze/src/VX_Link.cpp
+                                            3rd/Voxelyze/src/VX_Material.cpp
+                                            3rd/Voxelyze/src/VX_MaterialLink.cpp
+                                            3rd/Voxelyze/src/VX_MaterialVoxel.cpp
+                                            3rd/Voxelyze/src/VX_MeshRender.cpp
+                                            3rd/Voxelyze/src/VX_Voxel.cpp
 
                                             ## QT --
                                             ${QT_RESOURCES_CPP}
@@ -420,19 +445,39 @@ endif()
 
 # LEAP MOTION ++
 if(DEFINED ENV{LEAP_SDK})
-    message("Linking libLeap...")
     target_link_libraries(gazeboRobotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
     target_link_libraries(robotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
+    message("Found libLeap...")
 endif()
 # LEAP MOTION --
 
 # REAL SENSE ++
 if(librealsense_FOUND)
-    message("Linking librealsense...")
     target_link_libraries(gazeboRobotArmController ${librealsense_LIBRARIES})
     target_link_libraries(robotArmController ${librealsense_LIBRARIES})
+    message("Found librealsense...")
 endif()
 # REAL SENSE --
+
+# Voxelyze ++
+target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
+# Voxelyze --
+
+# Ignition Rendering ++
+##if(libignition-rendering_FOUND)
+    target_link_libraries(gazeboRobotArmController ignition-rendering ignition-rendering-base ignition-rendering-ogre OgreMain)
+    target_link_libraries(robotArmController ignition-rendering ignition-rendering-base ignition-rendering-ogre OgreMain)
+    message("Found libignition-rendering...")
+##endif()
+# Ignition Rendering --
+
+# NVIDIA OPTIX ++
+if(DEFINED ENV{OPTIX_SDK})
+    target_link_libraries(gazeboRobotArmController $ENV{OPTIX_SDK}/lib64/liboptix.so)
+    target_link_libraries(robotArmController $ENV{OPTIX_SDK}/lib64/liboptix.so)
+    message("Found libOptix...")
+endif()
+# NVIDIA OPTIX --
 
 #############
 ## Install ##

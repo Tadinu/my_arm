@@ -52,6 +52,7 @@
                 <arg name="headless" value="$(arg headless)"/>
             </include>
             <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
+            <!-- Note : 'shadowhand_motor' is the name of the robot in shadowhand_motor.urdf.xacro! -->
             <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
                   args="-urdf -model shadowhand_motor -z 0.0 -param robot_description"/>
         </group>

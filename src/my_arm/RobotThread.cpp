@@ -9,8 +9,8 @@
 #include "KsGlobal.h"
 
 // ROBOT TO RUN
-#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
-//#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
+//#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
+#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
 
 // NODE --
 #define CMY_ARM_NODE_NAME ("robotArmController")
@@ -357,7 +357,7 @@ void RobotThread::runArmOperation(int armId)
     // MAIN ROS SPINNING LOOP --
     //
 #endif  // ducta --
-    ros::Rate loop_rate(300);
+    ros::Rate loop_rate(1000);
 
     // Joint No
     _jointNo = KsGlobal::VBRHAND_ARM         == armId ? KsGlobal::VBRHAND_ARM_JOINT_TOTAL         :
@@ -431,7 +431,7 @@ void RobotThread::runArmOperation(int armId)
 
         // =====================================================================================
         // Send Static Markers
-
+        VMARKER_INSTANCE()->publishVisualArrows();
         // Arrow Marker
         //publishStaticMarkers(marker_pub, VMARKER_INSTANCE()->getStaticMarker(VMarker::TARGET_BALL));
 

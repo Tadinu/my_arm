@@ -7,10 +7,12 @@
         <robotNamespace>/my_arm</robotNamespace>
         <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
       </plugin>
+      <!--
       <plugin name="gazebo_my_arm_control" filename="libgazeboRobotArmController.so">
         <robotNamespace>/my_arm</robotNamespace>
         <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
       </plugin>
+      -->
     </gazebo>
 
 

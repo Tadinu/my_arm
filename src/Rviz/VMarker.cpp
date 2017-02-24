@@ -3,6 +3,8 @@
 #include <boost/iterator/iterator_concepts.hpp>
 #include "KsGlobal.h"
 
+#include "VX_MeshRender.h"
+
 // Reference:
 // http://wiki.ros.org/rviz/Tutorials/Interactive%20Markers%3A%20Getting%20Started
 // http://wiki.ros.org/rviz/Tutorials/Interactive%20Markers%3A%20Basic%20Controls
@@ -176,13 +178,22 @@ bool VMarker::checkInstance()
 
 VMarker::VMarker():
          _pos_limit(10, 10, 100),
-         _static_markers(std::vector<visualization_msgs::Marker>(MARKER_ID_TOTAL)) {
+         _static_markers(std::vector<visualization_msgs::Marker>(MARKER_ID_TOTAL)) { // Don't use std::vector::reserve!!!
     // Don't call VMarker::initialize(); here!!!
+    //_visual_tools.reset(new moveit_visual_tools::MoveItVisualTools(CWORLD_FRAME, "/moveit_visual_markers"));
+    _visual_tools.reset(new rviz_visual_tools::RvizVisualTools(CWORLD_FRAME, "/rviz_visual_markers"));
+    ROS_INFO("Sleeping 5 seconds before running demo");
+    ros::Duration(5.0).sleep();
+
+    // Clear messages
+    _visual_tools->deleteAllMarkers();
+    _visual_tools->enableBatchPublishing();
 }
 
 VMarker::~VMarker()
 {
     _server.reset();
+    _static_markers.clear();
 }
 
 void VMarker::setStaticMarkerProperties(int markerId,
@@ -243,6 +254,10 @@ void VMarker::createInteractiveMarkers()
     // Make Cube Cloud --
     //
     //makeCubeCloud();
+
+    // Make CantileverBeam
+    //
+    makeCantileverBeam();
 #if 0
     tf::Vector3 position;
     position = tf::Vector3( 0, 3, 0);
@@ -791,6 +806,117 @@ visualization_msgs::Marker VMarker::makeStaticMarker(int marker_type)
     marker.lifetime = ros::Duration();
 
     return marker;
+}
+
+visualization_msgs::Marker VMarker::makeVoxelyzeMarker(int marker_type)
+{
+    // Create a pure static marker
+    visualization_msgs::Marker voxelyzeMarker = makeStaticMarker(marker_type);
+
+    // Create a voxelyze
+    CVoxelyze Vx(0.005); //5mm voxels
+    CVX_Material* pMaterial = Vx.addMaterial(1000000, 1000); //A material with stiffness E=1MPa and density 1000Kg/m^3
+    CVX_Voxel* Voxel1 = Vx.setVoxel(pMaterial, 0, 0, 0); //Voxel at index x=0, y=0. z=0
+    Voxel1->external()->setFixedAll(); //Fixes all 6 degrees of freedom with an external condition
+    for (int i=0; i<100; i++) Vx.doTimeStep(); //simulates 100 timesteps
+
+    // Assign the voxelyze properties to the static marker
+    voxelyzeMarker.pose.position.x = Voxel1->position().x;
+    voxelyzeMarker.pose.position.y = Voxel1->position().y;
+    voxelyzeMarker.pose.position.z = Voxel1->position().z;
+
+    voxelyzeMarker.pose.orientation.x = Voxel1->orientation().x;
+    voxelyzeMarker.pose.orientation.y = Voxel1->orientation().y;
+    voxelyzeMarker.pose.orientation.z = Voxel1->orientation().z;
+    voxelyzeMarker.pose.orientation.w = Voxel1->orientation().w;
+
+    return voxelyzeMarker;
+}
+
+std::vector<float> flVertices;
+// ----------------------------------------------------------------------------------------------
+// Create polygon
+//
+geometry_msgs::Polygon polygon;
+geometry_msgs::Point32 point;
+
+void VMarker::makeCantileverBeam()
+{
+    CVoxelyze Vx(0.005); //5mm voxels
+    CVX_Material* pMaterial = Vx.addMaterial(1000000, 1000); //A material with stiffness E=1MPa and density 1000Kg/m^3
+    std::vector<CVX_Voxel*> voxelList; voxelList.reserve(3);
+    voxelList.push_back(Vx.setVoxel(pMaterial, 0, 0, 0)); //Voxel at index x=0, y=0. z=0
+    voxelList.push_back(Vx.setVoxel(pMaterial, 0.01, 0, 0));
+    voxelList.push_back(Vx.setVoxel(pMaterial, 0.02, 0, 0)); //Beam extends in the +X direction
+
+    voxelList[0]->external()->setFixedAll(); //Fixes all 6 degrees of freedom with an external condition on Voxel 1
+    voxelList[2]->external()->setForce(0, 0, -1); //pulls Voxel 3 downward with 1 Newton of force.
+
+    //for (int i=0; i<100; i++) Vx.doTimeStep(); //simulate  100 timesteps.
+
+    // Create a visual marker based on meshRender data
+    //
+    CVX_MeshRender meshRender(&Vx);
+    meshRender.generateMesh();
+    std::vector<geometry_msgs::Point32> verticeList;
+    flVertices = meshRender.getVertices();
+    for(size_t i = 0; i < flVertices.size();) {
+        point.x = flVertices[i];
+        point.y = flVertices[++i];
+        point.z = flVertices[++i];
+        polygon.points.push_back(point);
+    }
+    // -------------------------------------------------------------------------------------
+#if 0
+    for(int i = 0; i < voxelList.size(); i++) {
+        visualization_msgs::InteractiveMarker int_marker;
+        int_marker.header.frame_id = CMARKER_BASE_FRAME;
+        int_marker.scale = 0.1;
+
+        int_marker.pose.position.x    = voxelList[i]->position().x;
+        int_marker.pose.position.y    = voxelList[i]->position().y;
+        int_marker.pose.position.z    = voxelList[i]->position().z;
+
+        int_marker.pose.orientation.x = voxelList[i]->orientation().x;
+        int_marker.pose.orientation.y = voxelList[i]->orientation().y;
+        int_marker.pose.orientation.z = voxelList[i]->orientation().z;
+        int_marker.pose.orientation.w = voxelList[i]->orientation().w;
+
+        std::stringstream s;
+        s << i;
+        int_marker.name = s.str();
+
+        makeBoxControl(int_marker);
+
+        _server->insert(int_marker);
+        _server->setCallback(int_marker.name, &processFeedback);
+    }
+#endif
+}
+
+void VMarker::publishVisualArrows()
+{
+#if 1
+    // ----------------------------------------------------------------------------------------------
+    // Create pose
+    Eigen::Affine3d pose;
+    pose = Eigen::AngleAxisd(M_PI/4, Eigen::Vector3d::UnitY()); // rotate along X axis by 45 degrees
+    pose.translation() = Eigen::Vector3d( 0.1, 0.1, 0.1 ); // translate x,y,z
+
+    // Publish arrow vector of pose
+    //ROS_INFO_STREAM_NAMED("test","Publishing Arrow");
+    _visual_tools->publishArrow(pose, rviz_visual_tools::RED, rviz_visual_tools::LARGE);
+    // Don't forget to trigger the publisher!
+    _visual_tools->trigger();
+#endif
+}
+
+void VMarker::publishPolygon()
+{
+    _visual_tools->publishPolygon(polygon, rviz_visual_tools::BLUE);
+    // ----------------------------------------------------------------------------------------------
+    // Don't forget to trigger the publisher!
+    _visual_tools->trigger();
 }
 
 visualization_msgs::InteractiveMarkerControl&

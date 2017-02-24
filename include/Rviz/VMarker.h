@@ -12,7 +12,16 @@
 #include <interactive_markers/interactive_marker_server.h>
 #include <interactive_markers/menu_handler.h>
 
+// Actually, moveit is built based on rviz visual tools, so already include it!
+// https://github.com/davetcoleman/moveit_visual_tools
+//#include <moveit_visual_tools/moveit_visual_tools.h>
+// https://github.com/davetcoleman/rviz_visual_tools
+#include <rviz_visual_tools/rviz_visual_tools.h>
+
 #include "KsGlobal.h"
+
+#include "Voxelyze.h"
+
 #define RVizMarker              (visualization_msgs::Marker)
 #define RVizIntMarker           (visualization_msgs::InteractiveMarker)
 
@@ -45,32 +54,42 @@ public:
     static void processFeedback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 
     // Common Marker --
-    void createInteractiveMarkers();
-    visualization_msgs::Marker makeStaticMarker(int marker_type = visualization_msgs::Marker::CUBE);
     void saveMarker(const visualization_msgs::InteractiveMarker& int_marker);
     static void alignMarker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
     visualization_msgs::InteractiveMarkerControl&
         makeMarkerControl(visualization_msgs::InteractiveMarker &msg, const visualization_msgs::Marker& marker);
+    void setMarkerPos(const std::string& marker_name, const tf::Vector3& pos);
 
     // Custom Markers
     void makeCubeCloud();
     // -----------------------------------------------------------------------------------------------------------------
     // Static Marker --
     //
+    visualization_msgs::Marker makeStaticMarker(int marker_type = visualization_msgs::Marker::CUBE);
     void setStaticMarker(int markerId, const visualization_msgs::Marker& marker);
     visualization_msgs::Marker& getStaticMarker(int markerId);
     tf::Vector3 getStaticMarkerPos(int markerId);
     void setStaticMarkerPos(int markerId, const tf::Vector3& pos);
     void moveStaticMarkerPos(int markerId, const tf::Vector3& distance);
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // Voxelyze Marker --
+    //
+    visualization_msgs::Marker makeVoxelyzeMarker(int marker_type = visualization_msgs::Marker::CUBE);
+    void makeCantileverBeam();
+    void publishVisualArrows();
+    void publishPolygon();
+
     // Interactive Marker --
     //
+    void createInteractiveMarkers();
     tf::Vector3 getInteractiveMarkerPos();
     void setInteractiveMarkerPos(const tf::Vector3& pos);
     void moveInteractiveMarkerPos(const tf::Vector3& distance);
 
-    void setMarkerPos(const std::string& marker_name, const tf::Vector3& pos);
-
+    // -----------------------------------------------------------------------------------------------------------------
+    // Various Interactive Markers --
+    //
     visualization_msgs::InteractiveMarkerControl&
         makeBoxControl(visualization_msgs::InteractiveMarker &msg);
     void makeMovingMarker(const visualization_msgs::Marker& marker);
@@ -113,8 +132,11 @@ private:
     VMarker();
     static VMarker* _instance;
     static boost::shared_ptr<interactive_markers::InteractiveMarkerServer> _server;
-
     interactive_markers::MenuHandler _menu_handler;
+
+    // For visualizing things in rviz
+    //moveit_visual_tools::MoveItVisualToolsPtr _visual_tools;
+    rviz_visual_tools::RvizVisualToolsPtr _visual_tools;
 
     std::vector<visualization_msgs::Marker> _static_markers;
 

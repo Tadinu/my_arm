@@ -3,6 +3,8 @@
 #include <tf/transform_listener.h>
 
 #include <ros/ros.h>
+#include <gazebo/common/Console.hh>
+#include <gazebo/transport/TransportIface.hh>
 #include "Gazebo/gazebo_my_arm_commander_plugin.h"
 
 #include "RobotLeapAdapter.h"
@@ -11,7 +13,6 @@
 #define CROBOT_NAME_SPACE_TAG ("robotNamespace")
 #define CJOINT_NAME_TAG       ("jointName")
 #define CUPDATE_RATE_TAG      ("updateRate")
-using namespace gazebo;
 
 namespace gazebo
 {
@@ -60,11 +61,11 @@ namespace gazebo
         }
         rosnode_ = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(this->robot_namespace_));
 
-//#ifdef ROBOT_LEAP_HANDS
+#ifdef ROBOT_LEAP_HANDS
         // LEAP HANDS --
-        RobotLeapAdapter::getInstance()->initLeapMotion(rosnode_.get());
+        VLEAP_INSTANCE()->initLeapMotion(rosnode_.get());
         ros::Subscriber _leap_listener = rosnode_->subscribe(CLEAP_HANDS_TOPIC, 1, &GazeboMyArmCommander::leapCallback, this);
-//#endif
+#endif
 
         if (!_sdf->HasElement(CJOINT_NAME_TAG)) {
             ROS_ASSERT("GazeboMyArmCommander Plugin missing jointNames");
@@ -119,8 +120,9 @@ namespace gazebo
 
     void GazeboMyArmCommander::determineHandArrangmentOnLeapHands()
     {
+#ifdef ROBOT_LEAP_HANDS
         // Take the first hand data for convenience:
-        std::vector<std::vector<double>> jointValues = RobotLeapAdapter::getInstance()->getFingerJointValues(0);
+        std::vector<std::vector<double>> jointValues = VLEAP_INSTANCE()->getFingerJointValues(0);
 
         if(jointValues.size() > 0) {
             //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
@@ -157,6 +159,7 @@ namespace gazebo
             updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]));
             updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]));
         }
+#endif
     }
 
     void GazeboMyArmCommander::leapCallback(const visualization_msgs::MarkerArray&)
@@ -201,4 +204,185 @@ namespace gazebo
         }
         joint_state_publisher_.publish(joint_state_);
     }
+
+
+    // =========================================================================================================
+    //
+#ifdef USE_GAZEBO_RENDERING
+    ScenePtr GazeboMyArmCommander::createScene()
+    {
+        RenderEngine engine;
+        ScenePtr scene = engine.CreateScene("scene", true);
+        scene->SetBackgroundColor(common::Color::White);
+        return scene;
+    }
+
+    CameraPtr GazeboMyArmCommander::createCamera(const ScenePtr& scene)
+    {
+        CameraPtr camera = scene->CreateCamera("camera");
+        camera->SetWorldPosition(ignition::math::Vector3d(0.0, 0.0, 1.5));
+        camera->SetWorldRotation(ignition::math::Quaterniond(0.0, 0.20, M_PI / 2));
+        camera->SetImageWidth(640);
+        camera->SetImageHeight(480);
+        camera->SetAspectRatio(1.333);
+        camera->SetHFOV(M_PI / 2);
+        return camera;
+    }
+
+    Ogre::MeshPtr GazeboMyArmCommander::createMesh()
+    {
+        gazebo::common::Mesh*  plane_mesh = new gazebo::common::Mesh;
+        gazebo::common::SubMesh* submesh  = new gazebo::common::SubMesh;
+
+        submesh->AddVertex(-1,-1,0);
+        submesh->AddVertex(1, -1,0);
+        submesh->AddVertex(-1,1,0);
+        submesh->AddVertex(1, 1,0);
+
+        submesh->AddIndex(0);
+        submesh->AddIndex(1);
+        submesh->AddIndex(2);
+
+        submesh->AddIndex(1);
+        submesh->AddIndex(3);
+        submesh->AddIndex(2);
+
+        plane_mesh->AddSubMesh(submesh);
+        plane_mesh->SetName("myMesh");
+        gazebo::common::MeshManager::Instance()->AddMesh(plane_mesh);
+
+        //Ogre::MeshPtr mesh = sceneManager.mesh
+        return plane_mesh;
+    }
+
+    void GazeboMyArmCommander::startSceneViewer()
+    {
+        // Connect SceneManager to Gazebo
+        //gazebo::common::Console::SetQuiet(false);
+        //gazebo::transport::init();
+        //gazebo::transport::run();
+
+        Ogre::SceneManager manager;
+
+        // ----------------------------------------------
+        //
+        ScenePtr scene = createScene();
+        //manager.AddScene(scene);
+        VisualPtr root = scene->GetWorldVisual();
+
+        // MESH --
+        //ignition::rendering::MeshPtr mesh = this->createMesh(scene);
+        //root->AddGeometry(mesh);
+        return;
+    }
+
+#elif defined USE_IGNITION_RENDERING
+    ignition::rendering::ScenePtr GazeboMyArmCommander::createScene(const std::string &_engine)
+    {
+      ignition::rendering::RenderEngine *engine = ignition::rendering::get_engine(_engine);
+      ignition::rendering::ScenePtr scene = engine->CreateScene("scene");
+      scene->SetBackgroundColor(0.25, 0.25, 0.25);
+      return scene;
+    }
+
+    ignition::rendering::CameraPtr GazeboMyArmCommander::createCamera(const ignition::rendering::ScenePtr& scene)
+    {
+        ignition::rendering::CameraPtr camera = scene->CreateCamera("camera");
+        camera->SetLocalPosition(0.0, 0.0, 1.5);
+        camera->SetLocalRotation(0.0, 0.20, M_PI / 2);
+        camera->SetImageWidth(640);
+        camera->SetImageHeight(480);
+        camera->SetAntiAliasing(2);
+        camera->SetAspectRatio(1.333);
+        camera->SetHFOV(M_PI / 2);
+        return camera;
+    }
+
+    ignition::rendering::MeshPtr GazeboMyArmCommander::createMesh(const ignition::rendering::ScenePtr& scene)
+    {
+        gazebo::common::Mesh*  plane_mesh = new gazebo::common::Mesh;
+        gazebo::common::SubMesh* submesh  = new gazebo::common::SubMesh;
+
+        submesh->AddVertex(-1,-1,0);
+        submesh->AddVertex(1, -1,0);
+        submesh->AddVertex(-1,1,0);
+        submesh->AddVertex(1, 1,0);
+
+        submesh->AddIndex(0);
+        submesh->AddIndex(1);
+        submesh->AddIndex(2);
+
+        submesh->AddIndex(1);
+        submesh->AddIndex(3);
+        submesh->AddIndex(2);
+
+        plane_mesh->AddSubMesh(submesh);
+        plane_mesh->SetName("myMesh");
+        gazebo::common::MeshManager::Instance()->AddMesh(plane_mesh);
+
+        // ------------------------------------------------------------------
+        ignition::rendering::MeshDescriptor meshDesc("myMesh");
+        ignition::rendering::MeshPtr mesh = scene->CreateMesh(meshDesc);
+
+        ignition::rendering::MaterialPtr planeMat = scene->CreateMaterial();
+        planeMat->SetAmbient(gazebo::common::Color::Black);
+        planeMat->SetReflectivity(0.5);
+        mesh->SetMaterial(planeMat);
+
+        return mesh;
+    }
+
+    void GazeboMyArmCommander::startSceneViewer()
+    {
+        // Connect SceneManager to Gazebo
+        //gazebo::common::Console::SetQuiet(false);
+        //gazebo::transport::init();
+        //gazebo::transport::run();
+
+        ignition::rendering::SceneManager* manager = ignition::rendering::SceneManager::Instance();
+        manager->Load();
+        manager->Init();
+
+        // ----------------------------------------------
+        //
+        ScenePtr scene = createScene(CGZ_RENDERING_ENGINE);
+        manager->AddScene(scene);
+        VisualPtr root = scene->GetRootVisual();
+
+        // LIGHT --
+        ignition::rendering::PointLightPtr light = scene->CreatePointLight();
+        light->SetLocalPosition(0, 5, 5);
+        root->AddChild(light);
+
+        ignition::rendering::MaterialPtr planeMat = scene->CreateMaterial();
+        planeMat->SetAmbient(gazebo::common::Color::Black);
+        planeMat->SetReflectivity(0.5);
+
+        ignition::rendering::VisualPtr plane = scene->CreateVisual();
+        plane->AddGeometry(scene->CreatePlane());
+        plane->SetLocalPosition(1, 0, -0.5);
+        plane->SetLocalScale(5, 5, 1);
+        plane->SetMaterial(planeMat);
+        root->AddChild(plane);
+
+        ignition::rendering::MaterialPtr sphereMat = scene->CreateMaterial();
+        sphereMat->SetAmbient(0.5, 0, 0);
+        sphereMat->SetDiffuse(0.8, 0 ,0);
+
+        ignition::rendering::VisualPtr sphere = scene->CreateVisual();
+        sphere->AddGeometry(scene->CreateSphere());
+        sphere->SetLocalPosition(1, 0 , 0);
+        sphere->SetMaterial(sphereMat);
+        root->AddChild(sphere);
+
+        // CAMERA --
+        ignition::rendering::CameraPtr camera = this->createCamera(scene);
+        root->AddChild(camera);
+
+        // MESH --
+        //ignition::rendering::MeshPtr mesh = this->createMesh(scene);
+        //root->AddGeometry(mesh);
+        return;
+    }
+#endif
 }

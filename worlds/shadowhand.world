@@ -11,6 +11,53 @@
             <uri>model://sun</uri>
         </include>
 
+        <model name="topviewcamera">
+          <static>true</static>
+          <link name="link">
+             <inertial>
+                <mass>0.1</mass>
+             </inertial>
+             <visual name="visual">
+                <material>
+                   <ambient>0.0 1.0 0.0 1.0</ambient>
+                   <diffuse>0.0 1.0 0.0 1.0</diffuse>
+                </material>
+                <geometry>
+                   <box>
+                      <size>0.1 0.1 0.1</size>
+                   </box>
+                </geometry>
+             </visual>
+             <collision name="collision">
+                <geometry>
+                   <box>
+                      <size>0.1 0.1 0.1</size>
+                   </box>
+                </geometry>
+             </collision>
+             <sensor name="topviewcamera" type="camera">
+                <always_on>1</always_on>
+                <update_rate>24</update_rate>
+                <visualize>true</visualize>
+                <plugin name="topviewcamera_plugin" filename="libgazeboCameraPublisher.so" />
+                <camera>
+                   <horizontal_fov>1.20273934</horizontal_fov>
+                   <image>
+                      <width>800</width>
+                      <height>600</height>
+                   </image>
+                   <clip>
+                      <near>0.1</near>
+                      <far>200</far>
+                   </clip>
+                   <save enabled="false">
+                      <path>/home/gotony5614/QT4_workspace/test/saveframe</path>
+                   </save>
+                </camera>
+             </sensor>
+          </link>
+        </model>
+
         <!-- Physics -->
         <physics type="ode">
             <gravity>0.000000 0.000000 -9.810000</gravity>

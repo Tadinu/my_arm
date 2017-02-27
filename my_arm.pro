@@ -68,7 +68,8 @@ SOURCES += main.cpp \
     3rd/Voxelyze/src/VX_MaterialVoxel.cpp \
     3rd/Voxelyze/src/VX_Voxel.cpp \
     3rd/Voxelyze/src/VX_MeshRender.cpp \
-    3rd/Voxelyze/test/VoxelyzeUnitTests.cpp
+    3rd/Voxelyze/test/VoxelyzeUnitTests.cpp \
+    src/Gazebo/gazebo_camera_publisher_plugin.cpp
 
 RESOURCES += qml.qrc
 

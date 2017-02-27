@@ -46,6 +46,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 
   ## Gazebo --
+  gazebo_plugins
   gazebo_ros
 
   ## Kinect --
@@ -394,12 +395,18 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             ${QT_RESOURCES_CPP}
                                             ${QT_MOC_HPP}
                                             )
+
+add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plugin.cpp)
+
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(myArm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## http://wiki.ros.org/catkin/CMakeLists.txt
 ## Specify libraries to link a library or executable target against
+
+## link_directories(${GAZEBO_LIBRARY_DIRS} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins)
+
 target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          Qt5::Core
                                          Qt5::Gui
@@ -416,9 +423,19 @@ target_link_libraries(gazeboRobotArmController ${catkin_LIBRARIES}
                                          Qt5::Quick
                                          Qt5::Network
                                          )
+
+target_link_libraries(gazeboCameraPublisher ${catkin_LIBRARIES}
+                                         Qt5::Core
+                                         Qt5::Gui
+                                         Qt5::Widgets
+                                         Qt5::Qml
+                                         Qt5::Quick
+                                         Qt5::Network
+                                         )
 ## GAZEBO --
-target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
+target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
+target_link_libraries(gazeboCameraPublisher ${GAZEBO_LIBRARIES} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins/libCameraPlugin.so)
 
 ## BOOST ++
 set(Boost_USE_STATIC_LIBS OFF)
@@ -436,6 +453,18 @@ if(Boost_FOUND)
                                              ${Boost_SYSTEM_LIBRARY}
                                              ${Boost_PROGRAM_OPTIONS_LIBRARY}
                                              ${Boost_REGEX_LIBRARY})
+
+    target_link_libraries(gazeboRobotArmController ${Boost_FILESYSTEM_LIBRARY}
+                                                   ${Boost_LIBRARIES}
+                                                   ${Boost_SYSTEM_LIBRARY}
+                                                   ${Boost_PROGRAM_OPTIONS_LIBRARY}
+                                                   ${Boost_REGEX_LIBRARY})
+
+    target_link_libraries(gazeboCameraPublisher ${Boost_FILESYSTEM_LIBRARY}
+                                                ${Boost_LIBRARIES}
+                                                ${Boost_SYSTEM_LIBRARY}
+                                                ${Boost_PROGRAM_OPTIONS_LIBRARY}
+                                                ${Boost_REGEX_LIBRARY})
 endif()
 # BOOST --
 

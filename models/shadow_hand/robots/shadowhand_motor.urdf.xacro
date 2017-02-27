@@ -7,6 +7,7 @@
     <xacro:include filename="$(find my_arm)/models/shadow_hand/materials.urdf.xacro"/>
     <xacro:include filename="$(find my_arm)/models/shadow_hand/hand/full_hand.urdf.xacro"/>
     <xacro:include filename="$(find my_arm)/models/shadow_hand/other/gazebo/gazebo.urdf.xacro"/>
+
     <!-- hand with cylindrical base drifts in gazebo, attach it to the world -->
     <link name="world" />
     <joint name="rh_world_joint" type="fixed">

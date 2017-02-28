@@ -8,6 +8,8 @@
 #include "RobotThread.h"
 #include "KsGlobal.h"
 
+#include "bullet_server.h"
+
 // ROBOT TO RUN
 //#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
 #define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
@@ -317,6 +319,7 @@ void RobotThread::runArmOperation(int armId)
 #if 1 // ducta ++
     ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME); // Name of the node specified in launch file
     ros::NodeHandle node_handle;
+    ros::param::set("~rigid_only", false);
 
 #if 0
     _sim_velocity  = node_handle.advertise<geometry_msgs::Twist>("/cmd_vel", 100);
@@ -325,6 +328,7 @@ void RobotThread::runArmOperation(int armId)
 
     // -------------------------------------------------------------------------------------------------------
     // MARKERS --
+    //
     ros::Publisher marker_pub = node_handle.advertise<visualization_msgs::Marker>(CRVIZ_MARKER_TOPIC_NAME, 1);
     // 1- Initialize Interactive Server
     VMARKER_INSTANCE()->initialize();// -> !VMarker SERVICE MUST BE INITIALIZED AFTER ros::init(...)!!!
@@ -343,6 +347,8 @@ void RobotThread::runArmOperation(int armId)
     ros::Timer frame_timer = node_handle.createTimer(ros::Duration(0.01), &VMarker::frameCallback);
 
     // -------------------------------------------------------------------------------------------------------
+    // 3rd SERVICES
+    //
 #ifdef ROBOT_LEAP_HANDS
     // LEAP HANDS --
     VLEAP_INSTANCE()->initLeapMotion(&node_handle);
@@ -352,6 +358,10 @@ void RobotThread::runArmOperation(int armId)
     VREAL_SENSE_INSTANCE()->initRealSense(&node_handle);
     ros::Subscriber _real_sense_listener = node_handle.subscribe(CREAL_SENSE_HANDS_TOPIC, 1, &RobotThread::realSenseCallback, this);
 #endif
+
+    // BULLET SERVER --
+    //
+    BulletServer bullet_server;
 
     // =======================================================================================================
     // MAIN ROS SPINNING LOOP --
@@ -434,6 +444,10 @@ void RobotThread::runArmOperation(int armId)
         VMARKER_INSTANCE()->publishVisualArrows();
         // Arrow Marker
         //publishStaticMarkers(marker_pub, VMARKER_INSTANCE()->getStaticMarker(VMarker::TARGET_BALL));
+
+        // =====================================================================================
+        // Update bullet server
+        bullet_server.update();
 
         // =====================================================================================
         // Callbacks registered from Interactive Marker Server:

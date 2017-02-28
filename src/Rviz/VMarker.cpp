@@ -5,6 +5,9 @@
 
 #include "VX_MeshRender.h"
 
+#include <shape_msgs/Mesh.h>
+#include <shape_msgs/MeshTriangle.h>
+
 // Reference:
 // http://wiki.ros.org/rviz/Tutorials/Interactive%20Markers%3A%20Getting%20Started
 // http://wiki.ros.org/rviz/Tutorials/Interactive%20Markers%3A%20Basic%20Controls

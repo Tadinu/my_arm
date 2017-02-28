@@ -3,20 +3,31 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(my_arm)
 
+## The ROS Client Libraries implement message generators that translate .msg files into source code.
+## These message generators must be invoked from your build script, though most of the gory details
+## are taken care of by including some common build rules. By convention, all msg files are stored
+## in a directory within your package called "msg." If you have msgs defined there, you simply have
+## to add the line rosbuild_genmsg() to your CMakeLists.txt file. Here is an example:
+##
+## cmake_minimum_required(VERSION 2.6)
+## include(rosbuild)
+## rosbuild_init()
+## rosbuild_genmsg()
+
 # check c++11 / c++0x
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
 if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "-std=c++11")
+    set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 elseif(COMPILER_SUPPORTS_CXX0X)
-    set(CMAKE_CXX_FLAGS "-std=c++0x")
+    set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
 # http://doc.qt.io/qt-5/cmake-manual.html
-set(CMAKE_CXX_FLAGS "-std=c++11 ${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt5.7.1/5.7/gcc64 $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
 
 # Find includes in corresponding build directories
@@ -25,6 +36,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
+set(BULLET_INCLUDE "/usr/local/include/bullet")
 
 ##TEST VAR
 ##message("CATKIN DIRS " $ENV{librealsense_INCLUDE_DIRS} $ENV{librealsense_LIBRARY_DIRS})
@@ -44,6 +56,9 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_visual_tools
   std_msgs
   tf
+
+  ## rviz --
+  rviz
 
   ## Gazebo --
   gazebo_plugins
@@ -71,6 +86,9 @@ find_package(catkin REQUIRED COMPONENTS
   ## Graspit --
   graspit
   ## graspit_ros_planning_msgs
+
+  ## Bullet --
+  bullet_server
 )
 find_package(gazebo REQUIRED)
 find_package(Qt5Core REQUIRED)
@@ -217,10 +235,11 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/K3DStateMachine.h
                         include/my_arm/KsGlobal.h
                         include/my_arm/RobotThread.h
-                        include/Rviz/VMarker.h
                         include/my_arm/RobotLeapAdapter.h
                         include/my_arm/RobotRealSenseAdapter.h
                         include/my_arm/RobotKinectAdapter.h
+                        include/Rviz/VMarker.h
+                        include/Rviz/mesh_display_custom.h
                         )
 
 ## Specify additional locations of header files
@@ -230,36 +249,48 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
 ## my_arm & ROS catkin --
 include_directories(include
                     include/my_arm
+                    3rd
+
+                    ## catkin --
+                    ${catkin_INCLUDE_DIRS}
+
+                    ## rviz --
+                    ${rviz_INCLUDE_DIRS}
+
+                    ## Gazebo --
+                    ${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS}
+
+                    ## Qt --
+                    ${Qt5Core_INCLUDE_DIRS}
+                    ${Qt5Widgets_INCLUDE_DIRS}
+                    ${Qt5Gui_INCLUDE_DIRS}
+                    ${Qt5Qml_INCLUDE_DIRS}
+                    ${Qt5Quick_INCLUDE_DIRS}
+                    ${Qt5Network_INCLUDE_DIRS}
+
+                    ## Kinect --
                     include/Kinect
+                    include_directories(/usr/include/pcl-1.7)
+
+                    ## Leap Motion --
                     include/LeapMotion
+                    if($ENV{LEAP_SDK} $ENV{LEAP_SDK}/include)
+
+                    ## Realsense --
+                    # librealsense & realsense_camera are already installed as catkin packages in ROS!
                     include/RealSense
                     include/RealSense/camera
                     include/RealSense/pxc
+
+                    ## Voxelyze --
                     3rd/Voxelyze/include
                     3rd/Voxelyze/include/rapidjson
-                    ${catkin_INCLUDE_DIRS})
 
-## Gazebo --
-include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
-
-## Qt --
-include_directories(${Qt5Core_INCLUDE_DIRS})
-include_directories(${Qt5Widgets_INCLUDE_DIRS})
-include_directories(${Qt5Gui_INCLUDE_DIRS})
-include_directories(${Qt5Qml_INCLUDE_DIRS})
-include_directories(${Qt5Quick_INCLUDE_DIRS})
-include_directories(${Qt5Network_INCLUDE_DIRS})
-
-## Kinect --
-include_directories(/usr/include/pcl-1.7)
-
-## Leap Motion --
-include_directories(
-    if($ENV{LEAP_SDK} $ENV{LEAP_SDK}/include)
-)
-
-## Real Sense --
-# librealsense & realsense_camera are already installed as catkin packages in ROS!
+                    ## Bullet --
+                    ${BULLET_INCLUDE}
+                    /usr/include/bullet
+                    3rd/bullet_server/include
+                    )
 
 ## Graspit include files should now come directly from the graspit package
 set(GRASPIT_ROOT $ENV{GRASPIT})
@@ -302,10 +333,11 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/KsGlobal.cpp
                                   src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotThread.cpp
-                                  src/Rviz/VMarker.cpp
                                   src/my_arm/RobotLeapAdapter.cpp
                                   src/my_arm/RobotRealSenseAdapter.cpp
                                   src/my_arm/RobotKinectAdapter.cpp
+                                  src/Rviz/VMarker.cpp
+                                  src/Rviz/mesh_display_custom.cpp
 
                                   ## Kinect --
                                   src/Kinect/hand_interaction/analyze_hands.cpp
@@ -355,6 +387,9 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   3rd/Voxelyze/src/VX_MeshRender.cpp
                                   3rd/Voxelyze/src/VX_Voxel.cpp
 
+                                  ## bullet_server --
+                                  3rd/bullet_server/src/bullet_server.cpp
+
                                   ## QT moc & Resource --
                                   ${QT_RESOURCES_CPP}
                                   ${QT_MOC_HPP}
@@ -370,10 +405,11 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             src/my_arm/KsGlobal.cpp
                                             src/my_arm/RobotArmControllerMain.cpp
                                             src/my_arm/RobotThread.cpp
-                                            src/Rviz/VMarker.cpp
                                             src/my_arm/RobotLeapAdapter.cpp
                                             src/my_arm/RobotRealSenseAdapter.cpp
                                             src/my_arm/RobotKinectAdapter.cpp
+                                            src/Rviz/VMarker.cpp
+                                            src/Rviz/mesh_display_custom.cpp
 
                                             ## LeapMotion --
                                             src/LeapMotion/hands_listener.cpp
@@ -391,6 +427,9 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             3rd/Voxelyze/src/VX_MeshRender.cpp
                                             3rd/Voxelyze/src/VX_Voxel.cpp
 
+                                            ## bullet_server --
+                                            3rd/bullet_server/src/bullet_server.cpp
+
                                             ## QT --
                                             ${QT_RESOURCES_CPP}
                                             ${QT_MOC_HPP}
@@ -407,6 +446,7 @@ add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plug
 
 ## link_directories(${GAZEBO_LIBRARY_DIRS} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins)
 
+## CATKIN & QT --
 target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          Qt5::Core
                                          Qt5::Gui
@@ -432,6 +472,11 @@ target_link_libraries(gazeboCameraPublisher ${catkin_LIBRARIES}
                                          Qt5::Quick
                                          Qt5::Network
                                          )
+
+## RVIZ --
+target_link_libraries(robotArmController ${rviz_LIBRARIES})
+target_link_libraries(gazeboRobotArmController ${rviz_LIBRARIES})
+
 ## GAZEBO --
 target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
@@ -492,11 +537,41 @@ endif()
 target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
 # Voxelyze --
 
+# Bullet ++
+##if(bullet_FOUND)
+    target_link_libraries(robotArmController /usr/local/lib/libBullet2FileLoader.so
+                                             /usr/local/lib/libBullet3Collision.so
+                                             /usr/local/lib/libBullet3Common.so
+                                             /usr/local/lib/libBullet3Dynamics.so
+                                             /usr/local/lib/libBullet3Geometry.so
+                                             /usr/local/lib/libBullet3OpenCL_clew.so
+                                             /usr/local/lib/libBulletCollision.so
+                                             /usr/local/lib/libBulletDynamics.so
+                                             /usr/local/lib/libBulletInverseDynamics.so
+                                             /usr/local/lib/libBulletSoftBody.so
+                                             /usr/local/lib/libLinearMath.so
+                                             )
+    target_link_libraries(gazeboRobotArmController /usr/local/lib/libBullet2FileLoader.so
+                                                   /usr/local/lib/libBullet3Collision.so
+                                                   /usr/local/lib/libBullet3Common.so
+                                                   /usr/local/lib/libBullet3Dynamics.so
+                                                   /usr/local/lib/libBullet3Geometry.so
+                                                   /usr/local/lib/libBullet3OpenCL_clew.so
+                                                   /usr/local/lib/libBulletCollision.so
+                                                   /usr/local/lib/libBulletDynamics.so
+                                                   /usr/local/lib/libBulletInverseDynamics.so
+                                                   /usr/local/lib/libBulletSoftBody.so
+                                                   /usr/local/lib/libLinearMath.so
+                                                   )
+    ##message("Found bullet...")
+##endif()
+# Bullet --
+
 # Ignition Rendering ++
 ##if(libignition-rendering_FOUND)
     target_link_libraries(gazeboRobotArmController ignition-rendering ignition-rendering-base ignition-rendering-ogre OgreMain)
     target_link_libraries(robotArmController ignition-rendering ignition-rendering-base ignition-rendering-ogre OgreMain)
-    message("Found libignition-rendering...")
+    ##message("Found libignition-rendering...")
 ##endif()
 # Ignition Rendering --
 
@@ -524,6 +599,21 @@ endif()
 
 install(PROGRAMS
     scripts/LeapMotion/leap_interface.py scripts/LeapMotion/sender.py scripts/LeapMotion/subscriber.py
+    3rd/bullet_server/scripts/soft_body.py
+    3rd/bullet_server/scripts/imarker_spawn.py
+    3rd/bullet_server/scripts/init_sim.py
+    3rd/bullet_server/scripts/load_urdf.py
+    3rd/bullet_server/scripts/make_wall.py
+    3rd/bullet_server/scripts/mesh.py
+    3rd/bullet_server/scripts/pos_to_vel.py
+    3rd/bullet_server/scripts/random_body.py
+    3rd/bullet_server/scripts/soft_body.py
+    3rd/bullet_server/scripts/soft_tetra.py
+    3rd/bullet_server/scripts/soft_vehicle.py
+    3rd/bullet_server/scripts/stewart_platform.py
+    3rd/bullet_server/scripts/terrain.py
+    3rd/bullet_server/scripts/test.py
+
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

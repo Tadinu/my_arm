@@ -26,7 +26,6 @@ public:virtual ~GazeboCameraPublisher()
 
 public:void Load(sensors::SensorPtr _parent, sdf::ElementPtr _sdf)
 {
-
 	node = transport::NodePtr(new transport::Node());
 	node->Init("default");
     publisher =node->Advertise<gazebo::msgs::Image>("~/gazebo_camera_streaming");

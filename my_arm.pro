@@ -69,7 +69,9 @@ SOURCES += main.cpp \
     3rd/Voxelyze/src/VX_Voxel.cpp \
     3rd/Voxelyze/src/VX_MeshRender.cpp \
     3rd/Voxelyze/test/VoxelyzeUnitTests.cpp \
-    src/Gazebo/gazebo_camera_publisher_plugin.cpp
+    src/Gazebo/gazebo_camera_publisher_plugin.cpp \
+    src/Rviz/mesh_display_custom.cpp \
+    3rd/bullet_server/src/bullet_server.cpp
 
 RESOURCES += qml.qrc
 
@@ -85,8 +87,9 @@ INCLUDEPATH+= /usr/include \
               /usr/include/gazebo-7 \
               /usr/include/gazebo-7/gazebo \
               \
-              ./include        \
-              ./include/my_arm \
+              include        \
+              include/my_arm \
+              3rd \
               \
               /home/brhm/LeapSDK/include \
               ./include/Kinect    \
@@ -95,7 +98,9 @@ INCLUDEPATH+= /usr/include \
               ./include/RealSense \
               ./include/RealSense/pxc \
               \
-              ./3rd/Voxelyze/include
+              3rd/Voxelyze/include \
+              \
+              3rd/bullet_server/include
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -346,7 +351,43 @@ DISTFILES += \
     src/my_arm/my_arm_controller_py/main.py \
     worlds/universe.world \
     3rd/Voxelyze/makefile \
-    3rd/Voxelyze/README.md
+    3rd/Voxelyze/README.md \
+    src/bullet_server/utility/__init__.py \
+    src/bullet_server/utility/utility.py \
+    3rd/bullet_server/config/bullet_server.perspective \
+    3rd/bullet_server/config/bullet_server.rviz \
+    3rd/bullet_server/scripts/imarker_spawn.py \
+    3rd/bullet_server/scripts/init_sim.py \
+    3rd/bullet_server/scripts/load_urdf.py \
+    3rd/bullet_server/scripts/make_wall.py \
+    3rd/bullet_server/scripts/mesh.py \
+    3rd/bullet_server/scripts/pos_to_vel.py \
+    3rd/bullet_server/scripts/random_body.py \
+    3rd/bullet_server/scripts/soft_body.py \
+    3rd/bullet_server/scripts/soft_tetra.py \
+    3rd/bullet_server/scripts/soft_vehicle.py \
+    3rd/bullet_server/scripts/stewart_platform.py \
+    3rd/bullet_server/scripts/terrain.py \
+    3rd/bullet_server/scripts/test.py \
+    3rd/bullet_server/scripts/tracks.py \
+    3rd/bullet_server/msg/Anchor.msg \
+    3rd/bullet_server/msg/Body.msg \
+    3rd/bullet_server/msg/Constraint.msg \
+    3rd/bullet_server/msg/Face.msg \
+    3rd/bullet_server/msg/Heightfield.msg \
+    3rd/bullet_server/msg/Impulse.msg \
+    3rd/bullet_server/msg/Link.msg \
+    3rd/bullet_server/msg/Material.msg \
+    3rd/bullet_server/msg/Node.msg \
+    3rd/bullet_server/msg/SoftBody.msg \
+    3rd/bullet_server/msg/SoftConfig.msg \
+    3rd/bullet_server/msg/Tetra.msg \
+    3rd/bullet_server/src/utility/utility.py \
+    3rd/bullet_server/srv/AddBody.srv \
+    3rd/bullet_server/srv/AddCompound.srv \
+    3rd/bullet_server/srv/AddConstraint.srv \
+    3rd/bullet_server/srv/AddHeightfield.srv \
+    3rd/bullet_server/srv/AddImpulse.srv
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -519,4 +560,6 @@ HEADERS += \
     3rd/Voxelyze/test/tVX_Material.h \
     3rd/Voxelyze/test/tVX_MaterialLink.h \
     3rd/Voxelyze/test/tVX_MaterialVoxel.h \
-    3rd/Voxelyze/test/tVX_Voxel.h
+    3rd/Voxelyze/test/tVX_Voxel.h \
+    include/Rviz/mesh_display_custom.h \
+    3rd/bullet_server/include/bullet_server.h

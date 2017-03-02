@@ -1,10 +1,12 @@
-QT += qml quick core widgets network
+QT += qml quick core gui xml network opengl concurrent
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
 ## CONFIG += console
 ## CONFIG -= app_bundle
 
-#greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+DEFINES += QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL QT_DLL PREC_MED
 
 TARGET = robotArmController
 TEMPLATE = app
@@ -70,8 +72,9 @@ SOURCES += main.cpp \
     3rd/Voxelyze/src/VX_MeshRender.cpp \
     3rd/Voxelyze/test/VoxelyzeUnitTests.cpp \
     src/Gazebo/gazebo_camera_publisher_plugin.cpp \
-    src/Rviz/mesh_display_custom.cpp \
-    3rd/bullet_server/src/bullet_server.cpp
+    3rd/bullet_server/src/bullet_server.cpp \
+    src/my_arm/RobotVoxelyzeAdapter.cpp \
+    src/Gazebo/gazebo_marker_plugin.cpp
 
 RESOURCES += qml.qrc
 
@@ -86,9 +89,10 @@ INCLUDEPATH+= /usr/include \
               /opt/ros/kinetic/include \
               /usr/include/gazebo-7 \
               /usr/include/gazebo-7/gazebo \
+              /usr/include/OGRE \
               \
-              include        \
-              include/my_arm \
+              ./include        \
+              ./include/my_arm \
               3rd \
               \
               /home/brhm/LeapSDK/include \
@@ -98,9 +102,13 @@ INCLUDEPATH+= /usr/include \
               ./include/RealSense \
               ./include/RealSense/pxc \
               \
-              3rd/Voxelyze/include \
+              ./3rd/ros_vox_cad \
+              ./3rd/ros_vox_cad/VoxCad \
+              ./3rd/ros_vox_cad/VoxCad/Voxelyze \
+              ./3rd/ros_vox_cad/VoxCad/Voxelyze/Utils \
+              ./3rd/ros_vox_cad/Voxelyze/include \
               \
-              3rd/bullet_server/include
+              ./3rd/bullet_server/include
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -561,5 +569,39 @@ HEADERS += \
     3rd/Voxelyze/test/tVX_MaterialLink.h \
     3rd/Voxelyze/test/tVX_MaterialVoxel.h \
     3rd/Voxelyze/test/tVX_Voxel.h \
-    include/Rviz/mesh_display_custom.h \
-    3rd/bullet_server/include/bullet_server.h
+    3rd/bullet_server/include/bullet_server.h \
+    include/my_arm/RobotVoxelyzeAdapter.h \
+    3rd/VoxCad/QVX_Interfaces.h \
+    3rd/VoxCad/Voxelyze/VX_Benchmark.h \
+    3rd/VoxCad/Voxelyze/VX_Bond.h \
+    3rd/VoxCad/Voxelyze/VX_Enums.h \
+    3rd/VoxCad/Voxelyze/VX_Environment.h \
+    3rd/VoxCad/Voxelyze/VX_FEA.h \
+    3rd/VoxCad/Voxelyze/VX_FRegion.h \
+    3rd/VoxCad/Voxelyze/VX_MeshUtil.h \
+    3rd/VoxCad/Voxelyze/VX_Object.h \
+    3rd/VoxCad/Voxelyze/VX_Sim.h \
+    3rd/VoxCad/Voxelyze/VX_SimGA.h \
+    3rd/VoxCad/Voxelyze/VX_Source.h \
+    3rd/VoxCad/Voxelyze/VX_Voxel.h \
+    3rd/VoxCad/Voxelyze/VXS_Bond.h \
+    3rd/VoxCad/Voxelyze/VXS_BondCollision.h \
+    3rd/VoxCad/Voxelyze/VXS_BondInternal.h \
+    3rd/VoxCad/Voxelyze/VXS_SimGLView.h \
+    3rd/VoxCad/Voxelyze/VXS_Voxel.h \
+    3rd/VoxCad/Voxelyze/OpenGLInclude.h \
+    3rd/VoxCad/Voxelyze/Utils/Array3D.h \
+    3rd/VoxCad/Voxelyze/Utils/GL_Utils.h \
+    3rd/VoxCad/Voxelyze/Utils/MarchCube.h \
+    3rd/VoxCad/Voxelyze/Utils/Mesh.h \
+    3rd/VoxCad/Voxelyze/Utils/tinyxml.h \
+    3rd/VoxCad/Voxelyze/Utils/Vec3D.h \
+    3rd/VoxCad/Voxelyze/Utils/XML_Rip.h \
+    3rd/VoxCad/Voxelyze/Utils/zconf.h \
+    3rd/VoxCad/Voxelyze/Utils/zlib.h \
+    3rd/VoxCad/QVX_Edit.h \
+    3rd/VoxCad/QVX_TensileTest.h \
+    3rd/VoxCad/QTUtils/QOpenGL.h \
+    3rd/VoxCad/QTUtils/QSimplePlot.h \
+    3rd/VoxCad/QTUtils/QThreadWrap.h \
+    include/Gazebo/gazebo_marker_plugin.h

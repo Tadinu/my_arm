@@ -3,7 +3,7 @@
 #include <boost/iterator/iterator_concepts.hpp>
 #include "KsGlobal.h"
 
-#include "VX_MeshRender.h"
+//#include "Voxelyze/include/VX_MeshRender.h"
 
 #include <shape_msgs/Mesh.h>
 #include <shape_msgs/MeshTriangle.h>
@@ -17,11 +17,20 @@
 #define CMARKER_BASE_FRAME (CWORLD_FRAME) //CBASE_LINK
 
 VMarker* VMarker::_instance = nullptr;
+QMutex VMarker::_markerMutex;
+bool VMarker::_isInitialized = false;
+bool VMarker::_isVoxelMeshUpdated = false;
+std::vector<CVertex> VMarker::gbVoxelMeshVertices;
+std::vector<CLine> VMarker::gbVoxelMeshEdges;
+std::vector<CFacet> VMarker::gbVoxelMeshFaces;
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> VMarker::_server = nullptr;
 std::vector<tf::Vector3> gb_cloud_cube_positions;
 
 void VMarker::frameCallback(const ros::TimerEvent&)
 {
+    // Be careful, this may be invoked on RobotThread worker thread!
+    // If VMARKER_INSTANCE() is initialized on RobotThread thread, so it is okay.
+    // Otherwise, a mutex installation is required!
 #if 0
     static uint32_t counter = 0;
 
@@ -184,9 +193,9 @@ VMarker::VMarker():
          _static_markers(std::vector<visualization_msgs::Marker>(MARKER_ID_TOTAL)) { // Don't use std::vector::reserve!!!
     // Don't call VMarker::initialize(); here!!!
     //_visual_tools.reset(new moveit_visual_tools::MoveItVisualTools(CWORLD_FRAME, "/moveit_visual_markers"));
-    _visual_tools.reset(new rviz_visual_tools::RvizVisualTools(CWORLD_FRAME, "/rviz_visual_markers"));
+    _visual_tools.reset(new rviz_visual_tools::RvizVisualTools("rh_forearm" /* CWORLD_FRAME */, "/rviz_visual_markers"));
     ROS_INFO("Sleeping 5 seconds before running demo");
-    ros::Duration(5.0).sleep();
+    //ros::Duration(5.0).sleep();
 
     // Clear messages
     _visual_tools->deleteAllMarkers();
@@ -260,7 +269,7 @@ void VMarker::createInteractiveMarkers()
 
     // Make CantileverBeam
     //
-    makeCantileverBeam();
+    //makeCantileverBeam();
 #if 0
     tf::Vector3 position;
     position = tf::Vector3( 0, 3, 0);
@@ -294,6 +303,8 @@ void VMarker::createInteractiveMarkers()
 
 void VMarker::initialize()
 {
+    VMarker::_isInitialized = true;
+    // -------------------------------------------------------------------------------------------
     // Static Markers --
     //
     for(size_t i = 0; i < MARKER_ID_TOTAL; i++) {
@@ -811,13 +822,14 @@ visualization_msgs::Marker VMarker::makeStaticMarker(int marker_type)
     return marker;
 }
 
+#if 0
 visualization_msgs::Marker VMarker::makeVoxelyzeMarker(int marker_type)
 {
     // Create a pure static marker
     visualization_msgs::Marker voxelyzeMarker = makeStaticMarker(marker_type);
 
     // Create a voxelyze
-    CVoxelyze Vx(0.005); //5mm voxels
+    CVoxelyze Vx(0.05); //5mm voxels
     CVX_Material* pMaterial = Vx.addMaterial(1000000, 1000); //A material with stiffness E=1MPa and density 1000Kg/m^3
     CVX_Voxel* Voxel1 = Vx.setVoxel(pMaterial, 0, 0, 0); //Voxel at index x=0, y=0. z=0
     Voxel1->external()->setFixedAll(); //Fixes all 6 degrees of freedom with an external condition
@@ -835,40 +847,29 @@ visualization_msgs::Marker VMarker::makeVoxelyzeMarker(int marker_type)
 
     return voxelyzeMarker;
 }
+#endif
 
-std::vector<float> flVertices;
-// ----------------------------------------------------------------------------------------------
-// Create polygon
-//
-geometry_msgs::Polygon polygon;
-geometry_msgs::Point32 point;
-
+#if 0
 void VMarker::makeCantileverBeam()
 {
-    CVoxelyze Vx(0.005); //5mm voxels
+    CVoxelyze Vx(0.5); //500mm voxels
     CVX_Material* pMaterial = Vx.addMaterial(1000000, 1000); //A material with stiffness E=1MPa and density 1000Kg/m^3
     std::vector<CVX_Voxel*> voxelList; voxelList.reserve(3);
     voxelList.push_back(Vx.setVoxel(pMaterial, 0, 0, 0)); //Voxel at index x=0, y=0. z=0
-    voxelList.push_back(Vx.setVoxel(pMaterial, 0.01, 0, 0));
-    voxelList.push_back(Vx.setVoxel(pMaterial, 0.02, 0, 0)); //Beam extends in the +X direction
+    voxelList.push_back(Vx.setVoxel(pMaterial, 1, 0, 0));
+    voxelList.push_back(Vx.setVoxel(pMaterial, 2, 0, 0)); //Beam extends in the +X direction
 
     voxelList[0]->external()->setFixedAll(); //Fixes all 6 degrees of freedom with an external condition on Voxel 1
     voxelList[2]->external()->setForce(0, 0, -1); //pulls Voxel 3 downward with 1 Newton of force.
 
-    //for (int i=0; i<100; i++) Vx.doTimeStep(); //simulate  100 timesteps.
+    for (int i=0; i<100; i++) Vx.doTimeStep(); //simulate  100 timesteps.
 
     // Create a visual marker based on meshRender data
     //
-    CVX_MeshRender meshRender(&Vx);
-    meshRender.generateMesh();
-    std::vector<geometry_msgs::Point32> verticeList;
-    flVertices = meshRender.getVertices();
-    for(size_t i = 0; i < flVertices.size();) {
-        point.x = flVertices[i];
-        point.y = flVertices[++i];
-        point.z = flVertices[++i];
-        polygon.points.push_back(point);
-    }
+    CVX_MeshRender voxelMeshRender(&Vx);
+    voxelMeshRender.generateMesh();
+    gbVoxelMeshVertices = voxelMeshRender.getVertices();
+    gbVoxelMeshEdges    = voxelMeshRender.getEdges();
     // -------------------------------------------------------------------------------------
 #if 0
     for(int i = 0; i < voxelList.size(); i++) {
@@ -896,6 +897,7 @@ void VMarker::makeCantileverBeam()
     }
 #endif
 }
+#endif
 
 void VMarker::publishVisualArrows()
 {
@@ -914,9 +916,113 @@ void VMarker::publishVisualArrows()
 #endif
 }
 
-void VMarker::publishPolygon()
+void VMarker::setVoxelMeshInfo(std::vector<CVertex> vers,
+                               std::vector<CLine> edges,
+                               std::vector<CFacet> faces) {
+    _markerMutex.lock();
+    gbVoxelMeshVertices.swap(vers);
+    gbVoxelMeshEdges.swap(edges);
+    gbVoxelMeshFaces.swap(faces);
+    setVoxelMeshUpdated();
+    _markerMutex.unlock();
+}
+
+void VMarker::publishVoxelMesh(bool isShaded)
 {
-    _visual_tools->publishPolygon(polygon, rviz_visual_tools::BLUE);
+    //return;
+    QMutexLocker lock(&_markerMutex);
+    // ----------------------------------------------------------------------------------------------
+    if(!VMarker::_isVoxelMeshUpdated)
+        return;
+    // ----------------------------------------------------------------------------------------------
+    // DELETE CURRRENT MARKERS
+    _visual_tools->deleteAllMarkers();
+    // LOAD INTERNAL MARKER PUBLISHER, WAITING FOR THE SUBSCRIBER
+    //
+    _visual_tools->loadMarkerPub(true, true); // (publisher.getNumSubscribers() > 0)
+    // ----------------------------------------------------------------------------------------------
+    // START PUBLISHING MARKERS
+    //
+    VMarker::_isVoxelMeshUpdated = false;
+    //ROS_INFO("PUBLISH VOXELS %d %d %d",(int)gbVoxelMeshFaces.size(),
+    //                                   (int)gbVoxelMeshEdges.size(),
+    //                                   (int)gbVoxelMeshVertices.size());
+
+//#define PUBLISH_WHOLE_MESH
+    // SHADED --
+#ifdef PUBLISH_WHOLE_MESH
+    geometry_msgs::Pose pose;
+    _visual_tools->publishMesh(pose, "Voxel.stl");
+#else
+    //
+    isShaded = false;
+    if(isShaded) {
+#if 0
+        // FACES --
+        geometry_msgs::Polygon polygon;
+        geometry_msgs::Point32 point;
+        for (int i = 0; i < (int)gbVoxelMeshFaces.size(); i++) {
+            for (int j = 0; j < 3; j++) {
+                CVertex& CurVert = gbVoxelMeshVertices[gbVoxelMeshFaces[i].vi[j]]; //just a local reference for readability
+                //(CurVert.VColor.r, CurVert.VColor.g, CurVert.VColor.b);
+                //
+                point.x = CurVert.v.x + CurVert.DrawOffset.x;
+                point.y = CurVert.v.y + CurVert.DrawOffset.y;
+                point.z = CurVert.v.z + CurVert.DrawOffset.z;
+                //
+                polygon.points.push_back(point);
+                //
+                _visual_tools->publishPolygon(polygon,  rviz_visual_tools::LIME_GREEN);
+            }
+            polygon.points.clear();
+        }
+#endif
+        // EDGES --
+        geometry_msgs::Point point1;
+        geometry_msgs::Point point2;
+        for (int i = 0; i < (int)gbVoxelMeshEdges.size(); i++) {
+            for (int j=0; j<2; j++) {
+                CVertex& CurVert1 = gbVoxelMeshVertices[gbVoxelMeshEdges[i].vi[0]];
+                CVertex& CurVert2 = gbVoxelMeshVertices[gbVoxelMeshEdges[i].vi[1]];
+
+                // Point 1
+                point1.x = CurVert1.v.x + CurVert1.DrawOffset.x;
+                point1.y = CurVert1.v.y + CurVert1.DrawOffset.y;
+                point1.z = CurVert1.v.z + CurVert1.DrawOffset.z;
+
+                // Point 2
+                point2.x = CurVert2.v.x + CurVert2.DrawOffset.x;
+                point2.y = CurVert2.v.y + CurVert2.DrawOffset.y;
+                point2.z = CurVert2.v.z + CurVert2.DrawOffset.z;
+                //
+                _visual_tools->publishLine(point1, point2, rviz_visual_tools::LIME_GREEN);
+            }
+        }
+    }
+
+    // WIREFRAME
+    else {
+        geometry_msgs::Point point;
+        std::vector<geometry_msgs::Point> path;
+
+        for (int i = 0; i < (int)gbVoxelMeshFaces.size(); i++) {
+            //glNormal3d(Facets[i].n.x, Facets[i].n.y, Facets[i].n.z);
+            for (int j = 0; j < 3; j++) {
+
+                CVertex& CurVert = gbVoxelMeshVertices[gbVoxelMeshFaces[i].vi[j]]; //just a local reference for readability
+                //glColor3d(CurVert.VColor.r, CurVert.VColor.g, CurVert.VColor.b);
+
+                // Point 1
+                point.x = CurVert.v.x + CurVert.DrawOffset.x;
+                point.y = CurVert.v.y + CurVert.DrawOffset.y;
+                point.z = CurVert.v.z + CurVert.DrawOffset.z;
+                path.push_back(point);
+            }
+        }
+        _visual_tools->publishPath(path, rviz_visual_tools::LIME_GREEN, 0.0001);
+    }
+#endif // #ifdef PUBLISH_WHOLE_MESH else
+
     // ----------------------------------------------------------------------------------------------
     // Don't forget to trigger the publisher!
     _visual_tools->trigger();

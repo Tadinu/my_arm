@@ -21,6 +21,7 @@ using namespace std;
 
 #include <functional>
 typedef std::function<void ()> VoidCallback;
+typedef std::function<void (const std::vector<float>&)> FingerGestureCallback;
 
 class HandsListener : public Listener
 {
@@ -33,6 +34,32 @@ public:
         HAND_BONE_DISTAL       = Bone::TYPE_DISTAL,       /**< Bone at the tip of the finger */
         HAND_BONE_TOTAL
     };
+
+    enum FINGER_GESTURE {
+        FINGER_UP,
+        FINGER_DOWN,
+        FINGER_DOWN_MOVE,
+
+        FINGER_GESTURE_TOTAL
+    };
+
+    static void regEmitFingerGestureCallback(int gestureId, FingerGestureCallback callback) {
+        if(gestureId < 0 || gestureId >= FINGER_GESTURE_TOTAL)
+            return;
+        _emitFingerGestureCallBack[gestureId] = callback;
+    }
+    static void unregEmitFingerPosUpdatedCallback(int gestureId) {
+        if(gestureId < 0 || gestureId >= FINGER_GESTURE_TOTAL)
+            return;
+        _emitFingerGestureCallBack[gestureId] = nullptr;
+    }
+    void emitFingerGesture(int gestureId, const std::vector<float>& tipPoint) {
+        if(gestureId < 0 || gestureId >= FINGER_GESTURE_TOTAL)
+            return;
+        if(_emitFingerGestureCallBack[gestureId])
+            _emitFingerGestureCallBack[gestureId](tipPoint);
+    }
+    // -------------------------------------------------------------------
     static void regEmitFingerPosUpdatedCallback(VoidCallback callback) {
         _emitFingerPosUpdatedCallBack = callback;
     }
@@ -46,7 +73,7 @@ public:
             _emitFingerPosUpdatedCallBack();
         }
     }
-    // -------------------------------------------------------------
+    // -------------------------------------------------------------------
     HandsListener(ros::NodeHandle* nodeHandle);
 
     unsigned int seq;
@@ -67,6 +94,8 @@ public:
 
 private:
     static VoidCallback _emitFingerPosUpdatedCallBack;
+    static FingerGestureCallback _emitFingerGestureCallBack[FINGER_GESTURE_TOTAL];
+
     ros::NodeHandle* _node_handle;
     ros::Publisher _pub_marker_array;
     ros::Publisher _pub_bone_only;

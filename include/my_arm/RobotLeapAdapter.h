@@ -20,8 +20,15 @@ public:
     std::vector<std::vector<double>> getFingerJointValues(int hand_id);
     void emitFingerPosesChanged();
 
+    void emitFingerUp(const std::vector<float>& point);
+    void emitFingerDown(const std::vector<float>& point);
+    void emitFingerDownMove(const std::vector<float>& point);
+
 signals:
     void fingerPosesChanged();
+    void fingerUp(const QVector3D&);
+    void fingerDown(const QVector3D&);
+    void fingerDownMove(const QVector3D&);
 
 private:
     RobotLeapAdapter();

@@ -6,6 +6,7 @@
 #include <QEventLoop>
 #include <QMetaObject>
 
+#include <ros/ros.h>
 #include <ros/console.h>
 
 #if   ( (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) )
@@ -236,9 +237,8 @@
 #define V_TF_2_QVECTOR3D(tfVector) (QVector3D(tfVector.x(), tfVector.y(), tfVector.z()))
 #define V_QVECTOR3D_2TF(qVector)   (tf::Vector3(qVector.x(), qVector.y(), qVector.z()))
 // ----------------------------------------------------------------------------------
-// ROS DEFINE
-#define ROBOT_LEAP_HANDS
-//#define ROBOT_REAL_SENSE_HANDS
+// ROS COMMON DEFINE
+
 
 // PACKAGE NAME --
 #define CROS_PACKAGE_NAME ("my_arm")
@@ -249,7 +249,13 @@
 #define RAD_2_ANGLE(rad)   ((rad*180)/V_PI)
 #define ANGLE_2_RAD(angle) ((angle*V_PI)/180)
 
+// VMARKER --
 #define VMARKER_INSTANCE() VMarker::getInstance()
+
+// LEAP / REALSENSE HANDS --
+//
+#define ROBOT_LEAP_HANDS
+//#define ROBOT_REAL_SENSE_HANDS
 
 #ifdef ROBOT_LEAP_HANDS
 #define VLEAP_INSTANCE() RobotLeapAdapter::getInstance()
@@ -257,6 +263,13 @@
 #define VREAL_SENSE_INSTANCE() RobotRealSenseAdapter::getInstance()
 #endif
 #define CLEAP_BASE_FRAME (CWORLD_FRAME)
+
+// VOXELYZE --
+//
+#define ROBOT_VOXELYZE
+#ifdef ROBOT_VOXELYZE
+#define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
+#endif
 
 //#define USING_PISA_SOFT_HAND_ONLY
 

@@ -39,6 +39,7 @@ public:
 	void glDraw(); //!< Executes openGL drawing commands to draw this mesh in an Open GL window if USE_OPEN_GL is defined.
 
     std::vector<float> getVertices();
+    std::vector<int> getEdges();
 private:
 	CVoxelyze* vx;
 

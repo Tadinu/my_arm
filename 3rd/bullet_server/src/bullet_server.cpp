@@ -19,7 +19,7 @@
 */
 #include "bullet_server.h"
 #include "KsGlobal.h"
-#include "VX_MeshRender.h"
+//#include "Voxelyze/include/VX_MeshRender.h"
 
 // Ros package 'bullet_server'
 #include "bullet_server/AddCompound.h"

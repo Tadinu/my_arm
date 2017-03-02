@@ -1,5 +1,6 @@
 #include <functional> // std::bind
 #include <QThread>
+#include <QVector3D>
 #include "RobotLeapAdapter.h"
 #include "KsGlobal.h"
 
@@ -20,6 +21,15 @@ RobotLeapAdapter::RobotLeapAdapter():
 {
     HandsListener::regEmitFingerPosUpdatedCallback(
         std::bind(&RobotLeapAdapter::emitFingerPosesChanged, this));
+
+    HandsListener::regEmitFingerGestureCallback(HandsListener::FINGER_UP,
+        std::bind(&RobotLeapAdapter::emitFingerUp, this, std::placeholders::_1));
+
+    HandsListener::regEmitFingerGestureCallback(HandsListener::FINGER_DOWN,
+        std::bind(&RobotLeapAdapter::emitFingerDown, this, std::placeholders::_1));
+
+    HandsListener::regEmitFingerGestureCallback(HandsListener::FINGER_DOWN_MOVE,
+        std::bind(&RobotLeapAdapter::emitFingerDownMove, this, std::placeholders::_1));
 }
 
 RobotLeapAdapter::~RobotLeapAdapter()
@@ -70,3 +80,20 @@ void RobotLeapAdapter::emitFingerPosesChanged()
     emit fingerPosesChanged();
 }
 
+void RobotLeapAdapter::emitFingerUp(const std::vector<float>& point)
+{
+    //ROS_INFO("RobotLeapAdapter::emitFingerUp(): %f, %f, %f", point[0], point[1], point[2]);
+    emit fingerUp(QVector3D(point[0], point[1], point[2]));
+}
+
+void RobotLeapAdapter::emitFingerDown(const std::vector<float>& point)
+{
+    //ROS_INFO("RobotLeapAdapter::emitFingerDown(): %f, %f, %f", point[0], point[1], point[2]);
+    emit fingerDown(QVector3D(point[0], point[1], point[2]));
+}
+
+void RobotLeapAdapter::emitFingerDownMove(const std::vector<float>& point)
+{
+    //ROS_INFO("RobotLeapAdapter::emitFingerDownMove(): %f, %f, %f", point[0], point[1], point[2]);
+    emit fingerDownMove(QVector3D(point[0], point[1], point[2]));
+}

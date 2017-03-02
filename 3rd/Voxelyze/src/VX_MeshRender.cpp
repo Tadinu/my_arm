@@ -97,6 +97,7 @@ void CVX_MeshRender::generateMesh()
 	}
 
 	//vertex links: do here to make it the right size all at once and avoid lots of expensive allocations
+    //8-connected voxels
 	vertexLinks.resize(vertexCounter*8, NULL);
 	for (int z=minZ; z<minZ+sizeZ+1; z++){ //for each in vIndMap, now.
 		for (int y=minY; y<minY+sizeY+1; y++){
@@ -140,6 +141,11 @@ void CVX_MeshRender::generateMesh()
 std::vector<float> CVX_MeshRender::getVertices()
 {
     return vertices;
+}
+
+std::vector<int> CVX_MeshRender::getEdges()
+{
+    return lines;
 }
 
 //updates all the modal properties: offsets, quadColors, quadNormals.

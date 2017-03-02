@@ -8,11 +8,15 @@
 #include "RobotThread.h"
 #include "KsGlobal.h"
 
+#include "RobotLeapAdapter.h"
+#include "RobotRealSenseAdapter.h"
+#include "RobotVoxelyzeAdapter.h"
+
 #include "bullet_server.h"
 
 // ROBOT TO RUN
-//#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
-#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
+#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
+//#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
 
 // NODE --
 #define CMY_ARM_NODE_NAME ("robotArmController")
@@ -277,6 +281,20 @@ bool RobotThread::init()
     ros::Time::init();
 
     _pThread->start();
+
+    // -----------------------------------------------------------
+    // Start Service Timer, which must be run on main thread since RobotThread is blocked by its internal ros loop
+    //
+    _serviceTimer = new QTimer();
+    _serviceTimer->setInterval(500);
+    QObject::connect(_serviceTimer, SIGNAL(timeout()), this, SLOT(onCommonServiceTimeout()));
+    //_serviceTimer->start();
+
+#ifdef ROBOT_VOXELYZE
+    // VOXELYZE MESH --
+    VVOXELYZE_ADAPTER()->initVoxelyze(); // UI TASK -> MUST BE RUN ON MAIN THREAD
+#endif
+
     return true;
 }//set up the thread
 
@@ -284,6 +302,7 @@ void RobotThread::run()
 {
     // Robot Arm --
     this->runArmOperation(CRUN_ROBOT);
+
 #if 0
         pMutex = new QMutex();
 
@@ -298,6 +317,12 @@ void RobotThread::run()
         loop_rate.sleep();
         delete pMutex;
 #endif
+}
+
+void RobotThread::onCommonServiceTimeout()
+{
+    _pMutex->lock();
+    _pMutex->unlock();
 }
 
 void RobotThread::poseCallback(const nav_msgs::Odometry & msg)
@@ -344,7 +369,7 @@ void RobotThread::runArmOperation(int armId)
                      this, &RobotThread::determineArmArrangement);
 
     // create a timer to update the published transforms
-    ros::Timer frame_timer = node_handle.createTimer(ros::Duration(0.01), &VMarker::frameCallback);
+    ros::Timer frame_timer = node_handle.createTimer(ros::Duration(0.5), &VMarker::frameCallback);
 
     // -------------------------------------------------------------------------------------------------------
     // 3rd SERVICES
@@ -359,9 +384,11 @@ void RobotThread::runArmOperation(int armId)
     ros::Subscriber _real_sense_listener = node_handle.subscribe(CREAL_SENSE_HANDS_TOPIC, 1, &RobotThread::realSenseCallback, this);
 #endif
 
+#ifdef BULLET_SERVER
     // BULLET SERVER --
     //
     BulletServer bullet_server;
+#endif
 
     // =======================================================================================================
     // MAIN ROS SPINNING LOOP --
@@ -441,13 +468,13 @@ void RobotThread::runArmOperation(int armId)
 
         // =====================================================================================
         // Send Static Markers
-        VMARKER_INSTANCE()->publishVisualArrows();
-        // Arrow Marker
         //publishStaticMarkers(marker_pub, VMARKER_INSTANCE()->getStaticMarker(VMarker::TARGET_BALL));
-
+        VMARKER_INSTANCE()->publishVoxelMesh();
         // =====================================================================================
+#ifdef BULLET_SERVER
         // Update bullet server
         bullet_server.update();
+#endif
 
         // =====================================================================================
         // Callbacks registered from Interactive Marker Server:

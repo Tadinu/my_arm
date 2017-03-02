@@ -28,6 +28,9 @@
 //#include "fvupdater.h"
 
 //#include "RobotAgent.h"
+
+#include <OGRE/Overlay/OgreOverlayManager.h>
+
 #define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
 
 GeopadMainWindowAgent* GeopadMainWindowAgent::_instance = nullptr;
@@ -134,4 +137,73 @@ void GeopadMainWindowAgent::setTargetPos(const QVector3D& pos)
 void GeopadMainWindowAgent::onRobotPostureReset()
 {
     _robotThread.updateBallFollowingEndTip(); // Joint values mean angle values, Link values mean length values
+}
+
+void GeopadMainWindowAgent::createOverlayManager()
+{
+#if 0
+    QString name("my_arm");
+    Ogre::OverlayManager &overlay_manager = Ogre::OverlayManager::getSingleton();
+    overlay_ = overlay_manager.create(name);
+
+    material_ = Ogre::MaterialManager::getSingleton().create(
+                name + "_OverlayMaterial",
+                Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
+    );
+
+    Ogre::OverlayContainer *overlay_panel =
+        static_cast<Ogre::OverlayContainer *>( overlay_manager.createOverlayElement( "Panel", name + "_Panel" ));
+
+    overlay_panel->setPosition(0.0, 0.0);
+    overlay_panel->setDimensions(1.0, 1.0);
+    overlay_panel->setMaterialName(name + "_OverlayMaterial");
+
+    overlay_->add2D(overlay_panel);
+    overlay_->show();
+
+    // Init Qt Stuff
+    QGraphicsScene* scene_ = new QGraphicsScene( this );
+    QGraphics* view_ = new QGraphicsView( scene_ );
+    view_->setAlignment( Qt::AlignLeft | Qt::AlignTop );
+    view_->setMouseTracking(true);
+
+    QEvent activate_event( QEvent::WindowActivate );
+    QApplication::sendEvent( scene_, &activate_event );
+
+    if ( texture_.isNull()
+          || texture_->getWidth() != render_panel_->width()
+          || texture_->getHeight() != render_panel_->height()) {
+       if ( !texture_.isNull()) {
+         Ogre::TextureManager::getSingleton().remove( name_ + "_OverlayTexture" );
+         material_->getTechnique( 0 )->getPass( 0 )->removeAllTextureUnitStates();
+       }
+       texture_ = Ogre::TextureManager::getSingleton().createManual(
+           name_ + "_OverlayTexture",
+           Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
+           Ogre::TEX_TYPE_2D,
+           (uint) render_panel_->width(),
+           (uint) render_panel_->height(),
+           0,
+           Ogre::PF_A8R8G8B8,
+           Ogre::TU_DEFAULT
+       );
+       material_->getTechnique( 0 )->getPass( 0 )->createTextureUnitState( name_ + "_OverlayTexture" );
+       material_->getTechnique( 0 )->getPass( 0 )->setSceneBlending( Ogre::SBT_TRANSPARENT_ALPHA );
+     }
+
+     // Setting up Overlay
+     Ogre::HardwarePixelBufferSharedPtr buffer = texture_->getBuffer();
+     buffer->lock( Ogre::HardwareBuffer::HBL_DISCARD );
+     const Ogre::PixelBox &pixel_box = buffer->getCurrentLock();
+
+     {
+       QImage hud((uchar *) pixel_box.data, (int) pixel_box.getWidth(), (int) pixel_box.getHeight(),
+                  QImage::Format_ARGB32 );
+       hud.fill( 0 );
+
+       QPainter painter( &hud );
+
+       view_->render( &painter, QRect( QPoint( 0, 0 ), view_->size()), QRect( QPoint( 0, 0 ), view_->size()));
+     }
+#endif
 }

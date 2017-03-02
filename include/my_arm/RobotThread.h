@@ -22,8 +22,6 @@
 #include <visualization_msgs/Marker.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include "Rviz/VMarker.h"
-#include "RobotLeapAdapter.h"
-#include "RobotRealSenseAdapter.h"
 
 class RobotThread : public QObject {
     Q_OBJECT
@@ -62,6 +60,7 @@ public:
 
 public slots:
     void run();
+    void onCommonServiceTimeout();
     void determineArmArrangement(const QVector3D& world_target_pos);
     void determineHandArrangmentOnLeapHands(int armId);
 
@@ -123,6 +122,7 @@ private:
     double _maxRange;
     double _minRange;
 
+    QTimer* _serviceTimer;
     QThread * _pThread;
     QMutex* _pMutex; // std::mutex
 

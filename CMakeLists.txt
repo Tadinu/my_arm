@@ -1,4 +1,18 @@
+## ~/.config/QtProject/qtcreator/styles, where contain .xml style file for QtCreator theme!
 ## http://wiki.ros.org/catkin/CMakeLists.txt
+## QT INSTALLATION CONFIG:
+## $ qtchooser -print-env
+## QT_SELECT="5"
+## QTTOOLDIR="/usr/lib/x86_64-linux-gnu/qt5/bin"
+## QTLIBDIR="/usr/lib/x86_64-linux-gnu"
+
+## Edit the paths in following files:
+## /usr/lib/x86_64-linux-gnu/qt-default/qtchooser/default.conf
+## /usr/lib/x86_64-linux-gnu/qtchooser/4.conf
+## /usr/lib/x86_64-linux-gnu/qtchooser/5.conf
+## /usr/lib/x86_64-linux-gnu/qtchooser/qt4.conf
+## /usr/lib/x86_64-linux-gnu/qtchooser/qt5.conf
+## /usr/share/qtchooser/qt5-x86_64-linux-gnu.conf
 ##
 cmake_minimum_required(VERSION 2.8.3)
 project(my_arm)
@@ -19,21 +33,33 @@ include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
 if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC ${CMAKE_CXX_FLAGS}")
 elseif(COMPILER_SUPPORTS_CXX0X)
-    set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-std=c++0x -fPIC ${CMAKE_CXX_FLAGS}")
 else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
 # http://doc.qt.io/qt-5/cmake-manual.html
 set(CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
-set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt5.7.1/5.7/gcc64 $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
+
+## http://doc.qt.io/qt-5/cmake-manual.html
+# In order for find_package to be successful, Qt 5 must be found below the CMAKE_PREFIX_PATH,
+# or the Qt5<Module>_DIR must be set in the CMake cache to the location of the Qt5WidgetsConfig.cmake
+# file. The easiest way to use CMake is to set the CMAKE_PREFIX_PATH environment variable to the install
+# prefix of Qt 5.
+set(QT_DIR "$ENV{HOME}/Qt5.7.1/5.7/gcc_64")
+message(STATUS "QT_DIR:" ${QT_DIR})
+set(CMAKE_PREFIX_PATH "${QT_DIR} $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
+message(STATUS "CMAKE_PREFIX_PATH: " ${CMAKE_PREFIX_PATH})
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
+
+# Definitions
+add_definitions(-DQT_XML_LIB -DQT_OPENGL_LIB -DUSE_ZLIB_COMPRESSION -DUSE_OPEN_GL -DPREC_MED)
 
 set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
 set(BULLET_INCLUDE "/usr/local/include/bullet")
@@ -53,12 +79,13 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   visualization_msgs
   interactive_markers
-  moveit_visual_tools
   std_msgs
   tf
 
   ## rviz --
   rviz
+  ##moveit_visual_tools
+  rviz_visual_tools
 
   ## Gazebo --
   gazebo_plugins
@@ -94,17 +121,41 @@ find_package(gazebo REQUIRED)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Gui REQUIRED)
 find_package(Qt5Widgets REQUIRED)
+find_package(Qt5Xml REQUIRED)
+find_package(Qt5XmlPatterns REQUIRED)
 find_package(Qt5Qml REQUIRED)
 find_package(Qt5Quick REQUIRED)
 find_package(Qt5Network REQUIRED)
+find_package(Qt5OpenGL REQUIRED)
+find_package(Qt5Concurrent REQUIRED)
 
-SET(QT_LIB_DIR "$ENV{HOME}/Qt5.7.1/5.7/gcc64/lib")
-get_target_property(QtCore_location Qt5::Core    ${QT_LIB_DIR})
-get_target_property(QtCore_location Qt5::Gui     ${QT_LIB_DIR})
-get_target_property(QtCore_location Qt5::Widgets ${QT_LIB_DIR})
-get_target_property(QtCore_location Qt5::Quick   ${QT_LIB_DIR})
-get_target_property(QtCore_location Qt5::Qml     ${QT_LIB_DIR})
-get_target_property(QtCore_location Qt5::Network ${QT_LIB_DIR})
+SET(QT_LIB_DIR "${QT_DIR}/lib")
+get_target_property(QtCore_location        Qt5::Core        ${QT_LIB_DIR})
+get_target_property(QtGui_location         Qt5::Gui         ${QT_LIB_DIR})
+get_target_property(QtWidgets_location     Qt5::Widgets     ${QT_LIB_DIR})
+get_target_property(QtXml_location         Qt5::Xml         ${QT_LIB_DIR})
+get_target_property(QtXmlPatterns_location Qt5::XmlPatterns ${QT_LIB_DIR})
+get_target_property(QtQuick_location       Qt5::Quick       ${QT_LIB_DIR})
+get_target_property(QtQml_location         Qt5::Qml         ${QT_LIB_DIR})
+get_target_property(QtNetwork_location     Qt5::Network     ${QT_LIB_DIR})
+get_target_property(QtOpenGL_location      Qt5::OpenGL      ${QT_LIB_DIR})
+get_target_property(QtConcurrent_location  Qt5::Concurrent  ${QT_LIB_DIR})
+
+## set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_RELEASE} -fprofile-arcs -ftest-coverage)
+
+# set up a mapping so that the Release configuration for the Qt imported target is
+# used in the COVERAGE CMake configuration.
+set_target_properties(Qt5::Core        PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Gui         PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Widgets     PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Xml         PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::XmlPatterns PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Quick       PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Qml         PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Network     PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::OpenGL      PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+set_target_properties(Qt5::Concurrent  PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "RELEASE")
+
 #find_package(Qt5QuickCompiler)
 #qtquick_compiler_add_resources(RESOURCES qml.qrc)
 
@@ -161,6 +212,11 @@ add_message_files(
 #   Service1.srv
 #   Service2.srv
 # )
+
+add_service_files(
+    FILES
+    #GenerateVoxelMesh.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -226,8 +282,9 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-qt5_add_resources(QT_RESOURCES_CPP qml.qrc)
-qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
+qt5_add_resources(QT_RESOURCES_CPP qml.qrc 3rd/ros_vox_cad/VoxCad.qrc)
+qt5_wrap_cpp(QT_MOC_HPP ## my_arm --
+                        include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/GeopadQMLAdapter.h
                         include/my_arm/K3DMaskedMouseArea.h
                         include/my_arm/K3DQMLItemAgent.h
@@ -238,16 +295,46 @@ qt5_wrap_cpp(QT_MOC_HPP include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/RobotLeapAdapter.h
                         include/my_arm/RobotRealSenseAdapter.h
                         include/my_arm/RobotKinectAdapter.h
+                        include/my_arm/RobotVoxelyzeAdapter.h
                         include/Rviz/VMarker.h
-                        include/Rviz/mesh_display_custom.h
+
+                        ## VoxCad --
+                        ##3rd/ros_vox_cad/VoxCad/VoxCad.h
                         )
+
+qt5_wrap_ui(QT_UI_HPP 3rd/ros_vox_cad/VoxCad/VoxCad.ui
+                      3rd/ros_vox_cad/VoxCad/vBCs.ui
+                      3rd/ros_vox_cad/VoxCad/vFEAInfo.ui
+                      3rd/ros_vox_cad/VoxCad/VoxCad.ui
+                      3rd/ros_vox_cad/VoxCad/vPalette.ui
+                      3rd/ros_vox_cad/VoxCad/vPhysics.ui
+                      3rd/ros_vox_cad/VoxCad/vPrimEdit.ui
+                      3rd/ros_vox_cad/VoxCad/vStructureEditor.ui
+                      3rd/ros_vox_cad/VoxCad/vTensile.ui
+                      3rd/ros_vox_cad/VoxCad/vVideoGen.ui
+                      3rd/ros_vox_cad/VoxCad/vVoxInfo.ui
+                      3rd/ros_vox_cad/VoxCad/vWorkSpace.ui
+                      )
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
 
+SET(QT_COMMON_INCLUDE_DIR  "${QT_DIR}/include")
+SET(Qt5Core_INCLUDE        "${QT_COMMON_INCLUDE_DIR}/QtCore")
+SET(Qt5Widgets_INCLUDE     "${QT_COMMON_INCLUDE_DIR}/QtWidgets")
+SET(Qt5Gui_INCLUDE         "${QT_COMMON_INCLUDE_DIR}/QtGui")
+SET(Qt5Xml_INCLUDE         "${QT_COMMON_INCLUDE_DIR}/QtXml")
+SET(Qt5XmlPatterns         "${QT_COMMON_INCLUDE_DIR}/QtXml")
+SET(Qt5Quick_INCLUDE       "${QT_COMMON_INCLUDE_DIR}/QtQuick")
+SET(Qt5Qml_INCLUDE         "${QT_COMMON_INCLUDE_DIR}/QtQml")
+SET(Qt5Network_INCLUDE     "${QT_COMMON_INCLUDE_DIR}/QtNetwork")
+SET(Qt5OpenGL_INCLUDE      "${QT_COMMON_INCLUDE_DIR}/QtOpenGL")
+SET(Qt5Concurrent_INCLUDE  "${QT_COMMON_INCLUDE_DIR}/QtConcurrent")
+
 ## my_arm & ROS catkin --
-include_directories(include
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ## To include gen files like "ui_form.h" by Qt
+                    include
                     include/my_arm
                     3rd
 
@@ -261,12 +348,17 @@ include_directories(include
                     ${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS}
 
                     ## Qt --
-                    ${Qt5Core_INCLUDE_DIRS}
-                    ${Qt5Widgets_INCLUDE_DIRS}
-                    ${Qt5Gui_INCLUDE_DIRS}
-                    ${Qt5Qml_INCLUDE_DIRS}
-                    ${Qt5Quick_INCLUDE_DIRS}
-                    ${Qt5Network_INCLUDE_DIRS}
+                    ${QT_COMMON_INCLUDE_DIR}
+                    ${Qt5Core_INCLUDE}
+                    ${Qt5Widgets_INCLUDE}
+                    ${Qt5Gui_INCLUDE}
+                    ${Qt5Xml_INCLUDE}
+                    ${Qt5XmlPatterns_INCLUDE}
+                    ${Qt5Quick_INCLUDE}
+                    ${Qt5Qml_INCLUDE}
+                    ${Qt5Network_INCLUDE}
+                    ${Qt5OpenGL_INCLUDE}
+                    ${Qt5Concurrent_INCLUDE}
 
                     ## Kinect --
                     include/Kinect
@@ -282,9 +374,14 @@ include_directories(include
                     include/RealSense/camera
                     include/RealSense/pxc
 
-                    ## Voxelyze --
-                    3rd/Voxelyze/include
-                    3rd/Voxelyze/include/rapidjson
+                    ## VoxCad & Voxelyze --
+                    3rd/ros_vox_cad/
+                    3rd/ros_vox_cad/VoxCad
+                    3rd/ros_vox_cad/Voxelyze
+                    3rd/ros_vox_cad/Voxelyze/Utils
+                    3rd/ros_vox_cad/QTUtils
+                    ##3rd/Voxelyze/include
+                    ##3rd/Voxelyze/include/rapidjson
 
                     ## Bullet --
                     ${BULLET_INCLUDE}
@@ -336,8 +433,8 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotLeapAdapter.cpp
                                   src/my_arm/RobotRealSenseAdapter.cpp
                                   src/my_arm/RobotKinectAdapter.cpp
+                                  src/my_arm/RobotVoxelyzeAdapter.cpp
                                   src/Rviz/VMarker.cpp
-                                  src/Rviz/mesh_display_custom.cpp
 
                                   ## Kinect --
                                   src/Kinect/hand_interaction/analyze_hands.cpp
@@ -376,22 +473,23 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/RealSense/camera/sr300_nodelet.cpp
 
                                   ## Voxelyze --
-                                  3rd/Voxelyze/src/Voxelyze.cpp
-                                  3rd/Voxelyze/src/VX_Collision.cpp
-                                  3rd/Voxelyze/src/VX_External.cpp
-                                  3rd/Voxelyze/src/VX_LinearSolver.cpp
-                                  3rd/Voxelyze/src/VX_Link.cpp
-                                  3rd/Voxelyze/src/VX_Material.cpp
-                                  3rd/Voxelyze/src/VX_MaterialLink.cpp
-                                  3rd/Voxelyze/src/VX_MaterialVoxel.cpp
-                                  3rd/Voxelyze/src/VX_MeshRender.cpp
-                                  3rd/Voxelyze/src/VX_Voxel.cpp
+                                  ##3rd/Voxelyze/src/Voxelyze.cpp
+                                  ##3rd/Voxelyze/src/VX_Collision.cpp
+                                  ##3rd/Voxelyze/src/VX_External.cpp
+                                  ##3rd/Voxelyze/src/VX_LinearSolver.cpp
+                                  ##3rd/Voxelyze/src/VX_Link.cpp
+                                  ##3rd/Voxelyze/src/VX_Material.cpp
+                                  ##3rd/Voxelyze/src/VX_MaterialLink.cpp
+                                  ##3rd/Voxelyze/src/VX_MaterialVoxel.cpp
+                                  ##3rd/Voxelyze/src/VX_MeshRender.cpp
+                                  ##3rd/Voxelyze/src/VX_Voxel.cpp
 
                                   ## bullet_server --
                                   3rd/bullet_server/src/bullet_server.cpp
 
                                   ## QT moc & Resource --
                                   ${QT_RESOURCES_CPP}
+                                  ${QT_UI_HPP}
                                   ${QT_MOC_HPP}
                                   )
 
@@ -408,30 +506,31 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             src/my_arm/RobotLeapAdapter.cpp
                                             src/my_arm/RobotRealSenseAdapter.cpp
                                             src/my_arm/RobotKinectAdapter.cpp
+                                            src/my_arm/RobotVoxelyzeAdapter.cpp
                                             src/Rviz/VMarker.cpp
-                                            src/Rviz/mesh_display_custom.cpp
 
                                             ## LeapMotion --
                                             src/LeapMotion/hands_listener.cpp
                                             src/LeapMotion/camera_listener.cpp
 
                                             ## Voxelyze --
-                                            3rd/Voxelyze/src/Voxelyze.cpp
-                                            3rd/Voxelyze/src/VX_Collision.cpp
-                                            3rd/Voxelyze/src/VX_External.cpp
-                                            3rd/Voxelyze/src/VX_LinearSolver.cpp
-                                            3rd/Voxelyze/src/VX_Link.cpp
-                                            3rd/Voxelyze/src/VX_Material.cpp
-                                            3rd/Voxelyze/src/VX_MaterialLink.cpp
-                                            3rd/Voxelyze/src/VX_MaterialVoxel.cpp
-                                            3rd/Voxelyze/src/VX_MeshRender.cpp
-                                            3rd/Voxelyze/src/VX_Voxel.cpp
+                                            ##3rd/Voxelyze/src/Voxelyze.cpp
+                                            ##3rd/Voxelyze/src/VX_Collision.cpp
+                                            ##3rd/Voxelyze/src/VX_External.cpp
+                                            ##3rd/Voxelyze/src/VX_LinearSolver.cpp
+                                            ##3rd/Voxelyze/src/VX_Link.cpp
+                                            ##3rd/Voxelyze/src/VX_Material.cpp
+                                            ##3rd/Voxelyze/src/VX_MaterialLink.cpp
+                                            ##3rd/Voxelyze/src/VX_MaterialVoxel.cpp
+                                            ##3rd/Voxelyze/src/VX_MeshRender.cpp
+                                            ##3rd/Voxelyze/src/VX_Voxel.cpp
 
                                             ## bullet_server --
                                             3rd/bullet_server/src/bullet_server.cpp
 
                                             ## QT --
                                             ${QT_RESOURCES_CPP}
+                                            ${QT_UI_HPP}
                                             ${QT_MOC_HPP}
                                             )
 
@@ -447,30 +546,51 @@ add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plug
 ## link_directories(${GAZEBO_LIBRARY_DIRS} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins)
 
 ## CATKIN & QT --
+SET(Qt5Core_LIB       "${QT_LIB_DIR}/libQt5Core.so")
+SET(Qt5Widgets_LIB    "${QT_LIB_DIR}/libQt5Widgets.so")
+SET(Qt5Gui_LIB        "${QT_LIB_DIR}/libQt5Gui.so")
+SET(Qt5Xml_LIB        "${QT_LIB_DIR}/libQt5Xml.so")
+SET(Qt5Quick_LIB      "${QT_LIB_DIR}/libQt5Quick.so")
+SET(Qt5Qml_LIB        "${QT_LIB_DIR}/libQt5Qml.so")
+SET(Qt5Network_LIB    "${QT_LIB_DIR}/libQt5Network.so")
+SET(Qt5OpenGL_LIB     "${QT_LIB_DIR}/libQt5OpenGL.so")
+SET(Qt5Concurrent_LIB "${QT_LIB_DIR}/libQt5Concurrent.so")
 target_link_libraries(robotArmController ${catkin_LIBRARIES}
-                                         Qt5::Core
-                                         Qt5::Gui
-                                         Qt5::Widgets
-                                         Qt5::Qml
-                                         Qt5::Quick
-                                         Qt5::Network
+                                         ${Qt5Core_LIB}
+                                         ${Qt5Widgets_LIB}
+                                         ${Qt5Gui_LIB}
+                                         ${Qt5Xml_LIB}
+                                         ${Qt5XmlPatterns_LIB}
+                                         ${Qt5Quick_LIB}
+                                         ${Qt5Qml_LIB}
+                                         ${Qt5Network_LIB}
+                                         ${Qt5OpenGL_LIB}
+                                         ${Qt5Concurrent_LIB}
                                          )
 target_link_libraries(gazeboRobotArmController ${catkin_LIBRARIES}
-                                         Qt5::Core
-                                         Qt5::Gui
-                                         Qt5::Widgets
-                                         Qt5::Qml
-                                         Qt5::Quick
-                                         Qt5::Network
+                                         ${Qt5Core_LIB}
+                                         ${Qt5Widgets_LIB}
+                                         ${Qt5Gui_LIB}
+                                         ${Qt5Xml_LIB}
+                                         ${Qt5XmlPatterns_LIB}
+                                         ${Qt5Quick_LIB}
+                                         ${Qt5Qml_LIB}
+                                         ${Qt5Network_LIB}
+                                         ${Qt5OpenGL_LIB}
+                                         ${Qt5Concurrent_LIB}
                                          )
 
 target_link_libraries(gazeboCameraPublisher ${catkin_LIBRARIES}
-                                         Qt5::Core
-                                         Qt5::Gui
-                                         Qt5::Widgets
-                                         Qt5::Qml
-                                         Qt5::Quick
-                                         Qt5::Network
+                                         ${Qt5Core_LIB}
+                                         ${Qt5Widgets_LIB}
+                                         ${Qt5Gui_LIB}
+                                         ${Qt5Xml_LIB}
+                                         ${Qt5XmlPatterns_LIB}
+                                         ${Qt5Quick_LIB}
+                                         ${Qt5Qml_LIB}
+                                         ${Qt5Network_LIB}
+                                         ${Qt5OpenGL_LIB}
+                                         ${Qt5Concurrent_LIB}
                                          )
 
 ## RVIZ --
@@ -536,6 +656,10 @@ endif()
 # Voxelyze ++
 target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
 # Voxelyze --
+
+# VoxCad ++
+target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/ros_vox_cad/lib/libVoxCad.so)
+# VoxCad --
 
 # Bullet ++
 ##if(bullet_FOUND)

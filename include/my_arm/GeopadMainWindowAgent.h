@@ -40,7 +40,7 @@ public:
     void initializeQMLItemAgents();
     void initializeQMLContent();
     void setK3DQmlCom(QObject* k3dQMLCom);
-
+    void createOverlayManager();
 public slots:
     void updatePoseDisplay(double x, double y, double theta);
     void goForward();

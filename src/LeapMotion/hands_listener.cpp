@@ -1,10 +1,12 @@
 #include "LeapMotion/hands_listener.h"
 #include "KsGlobal.h"
 
+#define CDESCENDING_ZDELTA (0.5)
 using namespace Leap;
 using namespace std;
 
-VoidCallback HandsListener::_emitFingerPosUpdatedCallBack           = nullptr;
+VoidCallback HandsListener::_emitFingerPosUpdatedCallBack = nullptr;
+FingerGestureCallback HandsListener::_emitFingerGestureCallBack[HandsListener::FINGER_GESTURE_TOTAL];
 
 HandsListener::HandsListener(ros::NodeHandle* nodeHandle):
                _node_handle(nodeHandle)
@@ -176,21 +178,21 @@ void HandsListener::onFrame(const Controller& controller) {
                 if(b == 0) {
                     point.x = joint_msg.pose.position.x =  -bone.prevJoint().x/100;
                     point.y = joint_msg.pose.position.y = bone.prevJoint().z/100; // !NOTE: We interchange z & y here to make hand directed upward!
-                    point.z = joint_msg.pose.position.z = bone.prevJoint().y/100;
+                    point.z = joint_msg.pose.position.z = bone.prevJoint().y/100 - CDESCENDING_ZDELTA;
                     marker_array_msg.markers.push_back(joint_msg);
                     marker_msg.points.push_back(point);
                 }
                 joint_msg.id++;
                 point.x = joint_msg.pose.position.x =  -bone.nextJoint().x/100;
                 point.y = joint_msg.pose.position.y = bone.nextJoint().z/100;     // !NOTE: We interchange z & y here to make hand directed upward!
-                point.z = joint_msg.pose.position.z = bone.nextJoint().y/100;
+                point.z = joint_msg.pose.position.z = bone.nextJoint().y/100 - CDESCENDING_ZDELTA;
                 marker_msg.points.push_back(point);
                 marker_array_msg.markers.push_back(joint_msg);
 
                 std_msgs::ColorRGBA color;
                 color.r = 1.0f; color.g=.0f; color.b=.0f, color.a=1.0f;
                 marker_msg.colors.push_back(color);
-                marker_msg.colors.push_back(color);
+                //marker_msg.colors.push_back(color);
             }
         }
     }
@@ -198,6 +200,21 @@ void HandsListener::onFrame(const Controller& controller) {
     // Send the markers to Rviz by publishing them over designated topics
     _pub_marker_array.publish(marker_array_msg);
     _pub_bone_only.publish(marker_msg);
+    // -----------------------------------------------------------------------------------
+    //
+    static Vector lastPointFingerTipZ;
+    if(_hands.count() > 0) {
+        FingerList fingers = _hands[0].fingers();
+        Vector tipPoint = fingers[1].bone(Bone::TYPE_DISTAL).nextJoint();
+        float zTipPointDelta = tipPoint.z - lastPointFingerTipZ.z;
+
+        int fingerGesture = (zTipPointDelta > 0.1)  ? FINGER_UP :
+                            (zTipPointDelta <- 0.1) ? FINGER_DOWN : FINGER_DOWN_MOVE;
+        std::vector<float> tipPointF;
+        tipPointF.push_back(tipPoint.x); tipPointF.push_back(tipPoint.y); tipPointF.push_back(tipPoint.z - CDESCENDING_ZDELTA);
+        this->emitFingerGesture(fingerGesture, tipPointF);
+        lastPointFingerTipZ = tipPoint;
+    }
 }
 
 void HandsListener::onFocusGained(const Controller& controller) {

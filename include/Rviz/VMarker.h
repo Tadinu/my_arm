@@ -2,6 +2,7 @@
 #define ___VMARKER_H___
 
 #include <QtCore>
+#include <QMutex>
 #include "assert.h"
 
 #include <ros/ros.h>
@@ -19,8 +20,9 @@
 #include <rviz_visual_tools/rviz_visual_tools.h>
 
 #include "KsGlobal.h"
+#include "ros_vox_cad/Voxelyze/Utils/Mesh.h"
 
-#include "Voxelyze.h"
+//#include "Voxelyze/include/Voxelyze.h"
 
 #define RVizMarker              (visualization_msgs::Marker)
 #define RVizIntMarker           (visualization_msgs::InteractiveMarker)
@@ -42,7 +44,13 @@ public:
     static bool checkInstance();
     static void deleteInstace();
     virtual ~VMarker();
-
+    // Actually though singleton, however this technially means At least one VMarker instance being initialized
+    static bool isInitialized() { return _isInitialized; } // NOT called through VMarker::getInstace()
+    static void setVoxelMeshUpdated() { _isVoxelMeshUpdated = true; }
+    static void setVoxelMeshInfo(std::vector<CVertex> vers,
+                                 std::vector<CLine> edges,
+                                 std::vector<CFacet> faces);
+    //
     void initialize();
     void setStaticMarkerProperties(int markerId,
                           const char* header_frame,
@@ -75,10 +83,12 @@ public:
     // -----------------------------------------------------------------------------------------------------------------
     // Voxelyze Marker --
     //
+#if 0
     visualization_msgs::Marker makeVoxelyzeMarker(int marker_type = visualization_msgs::Marker::CUBE);
     void makeCantileverBeam();
+#endif
     void publishVisualArrows();
-    void publishPolygon();
+    void publishVoxelMesh(bool isShaded = true);
 
     // Interactive Marker --
     //
@@ -130,7 +140,15 @@ signals:
 
 private:
     VMarker();
+    static QMutex _markerMutex;
     static VMarker* _instance;
+    static bool _isInitialized;
+    static bool _isVoxelMeshUpdated;
+
+    static std::vector<CFacet> gbVoxelMeshFaces;
+    static std::vector<CVertex> gbVoxelMeshVertices;
+    static std::vector<CLine> gbVoxelMeshEdges;
+
     static boost::shared_ptr<interactive_markers::InteractiveMarkerServer> _server;
     interactive_markers::MenuHandler _menu_handler;
 

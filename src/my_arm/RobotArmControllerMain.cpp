@@ -23,6 +23,9 @@ int main(int argc, char *argv[])
     try
     {
         QApplication app(argc, argv);
+        QCoreApplication::setOrganizationName("BRHM");
+        QCoreApplication::setOrganizationDomain("www.brhm.com");
+        QCoreApplication::setApplicationName("RobotArmController");
 
         // NOTE: This is important, adding the path for the executable to look for plugins
         // In application folder, prepare a folder named 'plugins', which contains required plugins.
@@ -82,6 +85,9 @@ int main(int argc, char *argv[])
             Qt::InvertedLandscapeOrientation | Qt::InvertedPortraitOrientation);
 #endif
 
+#ifndef SHOW_QML_MAIN_WINDOW
+        GeopadMainWindowAgent::getInstance();
+#else
         QQmlEngine mainQmlEngine;
         QQmlComponent mainQmlComponent(&mainQmlEngine);
         // The object is expected to be a Window, thus typed as one
@@ -130,6 +136,8 @@ int main(int argc, char *argv[])
         QSurfaceFormat surfaceFormat = window->requestedFormat();
         window->setFormat(surfaceFormat);
         window->show();
+#endif
+
 #if 0
         QObject::connect(window, SIGNAL(screenChanged(QScreen*)),
             MainWindowGeopadAgent::getInstance(), SLOT(onCurrentScreenChanged(QScreen*)));

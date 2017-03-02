@@ -18,7 +18,7 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include "Voxelyze.h" // To be put in RobotVoxelyzeAdapter.h
+//#include "Voxelyze/include/Voxelyze.h" // To be put in RobotVoxelyzeAdapter.h
 
 
 // bullet_server package ++

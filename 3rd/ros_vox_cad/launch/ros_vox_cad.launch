@@ -1,0 +1,3 @@
+<launch>
+    <node name="rosVoxCad" pkg="ros_vox_cad" type="rosVoxCad" output="screen" />
+</launch>

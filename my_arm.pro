@@ -19,6 +19,18 @@ CONFIG(release, debug|release) {
             -lopencv_highgui2413 \
             -lopencv_contrib2413 \
             -lopencv_imgproc2413 \
+
+            ##-L./3rd/dart/lib
+            ##-ldart \
+            ##-ldart-gui \
+            ##-ldart-planning \
+            ##-ldart-collision-bullet \
+            ##-ldart-utils \
+            ##-ldart-utils-urdf \
+            ##-L/usr/lib/x86_64-linux-gnu \
+            ##-lassimp \
+            ##-lboost_system \
+            ##-lglut
 }
 
 CONFIG(debug, debug|release) {
@@ -74,7 +86,8 @@ SOURCES += main.cpp \
     src/Gazebo/gazebo_camera_publisher_plugin.cpp \
     3rd/bullet_server/src/bullet_server.cpp \
     src/my_arm/RobotVoxelyzeAdapter.cpp \
-    src/Gazebo/gazebo_marker_plugin.cpp
+    src/Gazebo/gazebo_marker_plugin.cpp \
+    src/my_arm/RobotDartAdapter.cpp
 
 RESOURCES += qml.qrc
 
@@ -86,29 +99,35 @@ QML_DESIGNER_IMPORT_PATH =
 
 INCLUDEPATH+= /usr/include \
               /usr/local/include \
+              \ ## ROS
               /opt/ros/kinetic/include \
+              \ ## GAZEBO
               /usr/include/gazebo-7 \
               /usr/include/gazebo-7/gazebo \
+              \ ## OGRE
               /usr/include/OGRE \
-              \
+              \ ## my_arm
               ./include        \
               ./include/my_arm \
-              3rd \
-              \
+              ./3rd \
+              \ ## Kinect
               /home/brhm/LeapSDK/include \
               ./include/Kinect    \
               /usr/include/pcl-1.7 \
-              \
+              \ ## RealSense
               ./include/RealSense \
               ./include/RealSense/pxc \
-              \
+              \ ## ros_vox_cad
               ./3rd/ros_vox_cad \
               ./3rd/ros_vox_cad/VoxCad \
               ./3rd/ros_vox_cad/VoxCad/Voxelyze \
               ./3rd/ros_vox_cad/VoxCad/Voxelyze/Utils \
               ./3rd/ros_vox_cad/Voxelyze/include \
-              \
-              ./3rd/bullet_server/include
+              \ ## bullet_server
+              ./3rd/bullet_server/include \
+              \ ## dart
+              ./3rd/dart \
+              ./3rd/dart/build
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -604,4 +623,5 @@ HEADERS += \
     3rd/VoxCad/QTUtils/QOpenGL.h \
     3rd/VoxCad/QTUtils/QSimplePlot.h \
     3rd/VoxCad/QTUtils/QThreadWrap.h \
-    include/Gazebo/gazebo_marker_plugin.h
+    include/Gazebo/gazebo_marker_plugin.h \
+    include/my_arm/RobotDartAdapter.h

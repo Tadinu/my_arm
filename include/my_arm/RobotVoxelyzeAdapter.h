@@ -3,7 +3,7 @@
 
 #include <QtCore>
 #include <QMutex>
-#include "KsGlobal.h"
+//#include "KsGlobal.h"
 //#include "Voxelyze.h"
 
 #include "ros_vox_cad/VoxCad/QVX_Edit.h"

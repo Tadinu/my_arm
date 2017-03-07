@@ -53,6 +53,10 @@ message(STATUS "QT_DIR:" ${QT_DIR})
 set(CMAKE_PREFIX_PATH "${QT_DIR} $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_PREFIX_PATH: " ${CMAKE_PREFIX_PATH})
 
+set(MY_ARM_DIR ${CMAKE_CURRENT_LIST_DIR}) ## "$ENV{HOME}/DUC/RobotArm/src/my_arm"
+file(GLOB ${MY_ARM_DIR} "*.cpp" "*.h" "*.hpp")
+message(STATUS "CMAKE_CURRENT_LIST_DIR:" ${CMAKE_CURRENT_LIST_DIR})
+
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed.
@@ -282,39 +286,6 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-qt5_add_resources(QT_RESOURCES_CPP qml.qrc 3rd/ros_vox_cad/VoxCad.qrc)
-qt5_wrap_cpp(QT_MOC_HPP ## my_arm --
-                        include/my_arm/GeopadMainWindowAgent.h
-                        include/my_arm/GeopadQMLAdapter.h
-                        include/my_arm/K3DMaskedMouseArea.h
-                        include/my_arm/K3DQMLItemAgent.h
-                        include/my_arm/K3DQMLItemInfo.h
-                        include/my_arm/K3DStateMachine.h
-                        include/my_arm/KsGlobal.h
-                        include/my_arm/RobotThread.h
-                        include/my_arm/RobotLeapAdapter.h
-                        include/my_arm/RobotRealSenseAdapter.h
-                        include/my_arm/RobotKinectAdapter.h
-                        include/my_arm/RobotVoxelyzeAdapter.h
-                        include/Rviz/VMarker.h
-
-                        ## VoxCad --
-                        ##3rd/ros_vox_cad/VoxCad/VoxCad.h
-                        )
-
-qt5_wrap_ui(QT_UI_HPP 3rd/ros_vox_cad/VoxCad/VoxCad.ui
-                      3rd/ros_vox_cad/VoxCad/vBCs.ui
-                      3rd/ros_vox_cad/VoxCad/vFEAInfo.ui
-                      3rd/ros_vox_cad/VoxCad/VoxCad.ui
-                      3rd/ros_vox_cad/VoxCad/vPalette.ui
-                      3rd/ros_vox_cad/VoxCad/vPhysics.ui
-                      3rd/ros_vox_cad/VoxCad/vPrimEdit.ui
-                      3rd/ros_vox_cad/VoxCad/vStructureEditor.ui
-                      3rd/ros_vox_cad/VoxCad/vTensile.ui
-                      3rd/ros_vox_cad/VoxCad/vVideoGen.ui
-                      3rd/ros_vox_cad/VoxCad/vVoxInfo.ui
-                      3rd/ros_vox_cad/VoxCad/vWorkSpace.ui
-                      )
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -334,66 +305,14 @@ SET(Qt5Concurrent_INCLUDE  "${QT_COMMON_INCLUDE_DIR}/QtConcurrent")
 
 ## my_arm & ROS catkin --
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ## To include gen files like "ui_form.h" by Qt
-                    include
-                    include/my_arm
-                    3rd
-
                     ## catkin --
                     ${catkin_INCLUDE_DIRS}
 
-                    ## rviz --
-                    ${rviz_INCLUDE_DIRS}
-
-                    ## Gazebo --
-                    ${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS}
-
-                    ## Qt --
-                    ${QT_COMMON_INCLUDE_DIR}
-                    ${Qt5Core_INCLUDE}
-                    ${Qt5Widgets_INCLUDE}
-                    ${Qt5Gui_INCLUDE}
-                    ${Qt5Xml_INCLUDE}
-                    ${Qt5XmlPatterns_INCLUDE}
-                    ${Qt5Quick_INCLUDE}
-                    ${Qt5Qml_INCLUDE}
-                    ${Qt5Network_INCLUDE}
-                    ${Qt5OpenGL_INCLUDE}
-                    ${Qt5Concurrent_INCLUDE}
-
-                    ## Kinect --
-                    include/Kinect
-                    include_directories(/usr/include/pcl-1.7)
-
-                    ## Leap Motion --
-                    include/LeapMotion
-                    if($ENV{LEAP_SDK} $ENV{LEAP_SDK}/include)
-
-                    ## Realsense --
-                    # librealsense & realsense_camera are already installed as catkin packages in ROS!
-                    include/RealSense
-                    include/RealSense/camera
-                    include/RealSense/pxc
-
-                    ## VoxCad & Voxelyze --
-                    3rd/ros_vox_cad/
-                    3rd/ros_vox_cad/VoxCad
-                    3rd/ros_vox_cad/Voxelyze
-                    3rd/ros_vox_cad/Voxelyze/Utils
-                    3rd/ros_vox_cad/QTUtils
-                    ##3rd/Voxelyze/include
-                    ##3rd/Voxelyze/include/rapidjson
-
-                    ## Bullet --
-                    ${BULLET_INCLUDE}
-                    /usr/include/bullet
-                    3rd/bullet_server/include
+                    ## my_arm --
+                    include
+                    include/my_arm
+                    3rd
                     )
-
-## Graspit include files should now come directly from the graspit package
-set(GRASPIT_ROOT $ENV{GRASPIT})
-include_directories(${GRASPIT_ROOT})
-include_directories(${GRASPIT_ROOT}/src)
-include_directories(${GRASPIT_ROOT}/include)
 
 ## OpenNI2 ##
 # set(OPENNI2_DIR "{location of OpenNI2 library} /Linux-x64/OpenNI-Linux-x64-2.2.0/")
@@ -408,6 +327,40 @@ include_directories(${GRASPIT_ROOT}/include)
 # rosbuild_add_executable(capri src/sensor.cpp)
 # target_link_libraries(capri boost_filesystem boost_system OpenNI2)
 
+qt5_add_resources(QT_RESOURCES_CPP qml.qrc 3rd/ros_vox_cad/VoxCad.qrc)
+qt5_wrap_cpp(QT_MOC_HPP ## my_arm --
+                        include/my_arm/GeopadMainWindowAgent.h
+                        include/my_arm/GeopadQMLAdapter.h
+                        include/my_arm/K3DMaskedMouseArea.h
+                        include/my_arm/K3DQMLItemAgent.h
+                        include/my_arm/K3DQMLItemInfo.h
+                        include/my_arm/K3DStateMachine.h
+                        include/my_arm/KsGlobal.h
+                        include/my_arm/RobotThread.h
+                        include/my_arm/RobotLeapAdapter.h
+                        include/my_arm/RobotRealSenseAdapter.h
+                        include/my_arm/RobotKinectAdapter.h
+                        include/my_arm/RobotVoxelyzeAdapter.h
+                        include/my_arm/RobotDartAdapter.h
+                        include/Rviz/VMarker.h
+
+                        ## VoxCad --
+                        ##3rd/ros_vox_cad/VoxCad/VoxCad.h
+                        )
+
+qt5_wrap_ui(QT_UI_HPP 3rd/ros_vox_cad/VoxCad/VoxCad.ui
+                      3rd/ros_vox_cad/VoxCad/vBCs.ui
+                      3rd/ros_vox_cad/VoxCad/vFEAInfo.ui
+                      3rd/ros_vox_cad/VoxCad/VoxCad.ui
+                      3rd/ros_vox_cad/VoxCad/vPalette.ui
+                      3rd/ros_vox_cad/VoxCad/vPhysics.ui
+                      3rd/ros_vox_cad/VoxCad/vPrimEdit.ui
+                      3rd/ros_vox_cad/VoxCad/vStructureEditor.ui
+                      3rd/ros_vox_cad/VoxCad/vTensile.ui
+                      3rd/ros_vox_cad/VoxCad/vVideoGen.ui
+                      3rd/ros_vox_cad/VoxCad/vVoxInfo.ui
+                      3rd/ros_vox_cad/VoxCad/vWorkSpace.ui
+                      )
 
 ## Declare a C++ library
 # add_library(myArm
@@ -434,6 +387,7 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotRealSenseAdapter.cpp
                                   src/my_arm/RobotKinectAdapter.cpp
                                   src/my_arm/RobotVoxelyzeAdapter.cpp
+                                  src/my_arm/RobotDartAdapter.cpp
                                   src/Rviz/VMarker.cpp
 
                                   ## Kinect --
@@ -507,6 +461,7 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             src/my_arm/RobotRealSenseAdapter.cpp
                                             src/my_arm/RobotKinectAdapter.cpp
                                             src/my_arm/RobotVoxelyzeAdapter.cpp
+                                            src/my_arm/RobotDartAdapter.cpp
                                             src/Rviz/VMarker.cpp
 
                                             ## LeapMotion --
@@ -536,6 +491,10 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
 
 add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plugin.cpp)
 
+###########
+## Link ##
+###########
+
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(myArm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -555,6 +514,22 @@ SET(Qt5Qml_LIB        "${QT_LIB_DIR}/libQt5Qml.so")
 SET(Qt5Network_LIB    "${QT_LIB_DIR}/libQt5Network.so")
 SET(Qt5OpenGL_LIB     "${QT_LIB_DIR}/libQt5OpenGL.so")
 SET(Qt5Concurrent_LIB "${QT_LIB_DIR}/libQt5Concurrent.so")
+
+include_directories(## Qt --
+                    ${QT_COMMON_INCLUDE_DIR}
+                    ${Qt5Core_INCLUDE}
+                    ${Qt5Widgets_INCLUDE}
+                    ${Qt5Gui_INCLUDE}
+                    ${Qt5Xml_INCLUDE}
+                    ${Qt5XmlPatterns_INCLUDE}
+                    ${Qt5Quick_INCLUDE}
+                    ${Qt5Qml_INCLUDE}
+                    ${Qt5Network_INCLUDE}
+                    ${Qt5OpenGL_INCLUDE}
+                    ${Qt5Concurrent_INCLUDE}
+                    )
+
+message(STATUS "catkin_LIBRARIES:" ${catkin_LIBRARIES})
 target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          ${Qt5Core_LIB}
                                          ${Qt5Widgets_LIB}
@@ -594,13 +569,22 @@ target_link_libraries(gazeboCameraPublisher ${catkin_LIBRARIES}
                                          )
 
 ## RVIZ --
+include_directories(${rviz_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${rviz_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${rviz_LIBRARIES})
 
 ## GAZEBO --
+include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboCameraPublisher ${GAZEBO_LIBRARIES} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins/libCameraPlugin.so)
+
+## GRASPIT --
+## Graspit include files should now come directly from the graspit package
+set(GRASPIT_ROOT $ENV{GRASPIT})
+include_directories(${GRASPIT_ROOT})
+include_directories(${GRASPIT_ROOT}/src)
+include_directories(${GRASPIT_ROOT}/include)
 
 ## BOOST ++
 set(Boost_USE_STATIC_LIBS OFF)
@@ -635,10 +619,16 @@ endif()
 
 # KINECT ++
 ## libpcl is installed as a standalone library in Ubuntu
+include_directories(include/Kinect
+                    include_directories(/usr/include/pcl-1.7)
+                    )
 # KINECT --
 
 # LEAP MOTION ++
 if(DEFINED ENV{LEAP_SDK})
+    include_directories(include/LeapMotion
+                        $ENV{LEAP_SDK}/include
+                        )
     target_link_libraries(gazeboRobotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
     target_link_libraries(robotArmController $ENV{LEAP_SDK}/lib/x64/libLeap.so)
     message("Found libLeap...")
@@ -647,6 +637,11 @@ endif()
 
 # REAL SENSE ++
 if(librealsense_FOUND)
+    # librealsense & realsense_camera are already installed as catkin packages in ROS!
+    include_directories(include/RealSense
+                        include/RealSense/camera
+                        include/RealSense/pxc
+                        )
     target_link_libraries(gazeboRobotArmController ${librealsense_LIBRARIES})
     target_link_libraries(robotArmController ${librealsense_LIBRARIES})
     message("Found librealsense...")
@@ -654,15 +649,29 @@ endif()
 # REAL SENSE --
 
 # Voxelyze ++
-target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
+include_directories(##3rd/Voxelyze/include
+                    ##3rd/Voxelyze/include/rapidjson
+                    )
+target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
 # Voxelyze --
 
 # VoxCad ++
-target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/ros_vox_cad/lib/libVoxCad.so)
+include_directories(3rd/ros_vox_cad/
+                    3rd/ros_vox_cad/VoxCad
+                    3rd/ros_vox_cad/Voxelyze
+                    3rd/ros_vox_cad/Voxelyze/Utils
+                    3rd/ros_vox_cad/QTUtils
+                    )
+target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
 # VoxCad --
 
 # Bullet ++
 ##if(bullet_FOUND)
+    include_directories(${BULLET_INCLUDE}
+                        /usr/include/bullet
+                        3rd/bullet_server/include
+                        )
+
     target_link_libraries(robotArmController /usr/local/lib/libBullet2FileLoader.so
                                              /usr/local/lib/libBullet3Collision.so
                                              /usr/local/lib/libBullet3Common.so
@@ -690,6 +699,32 @@ target_link_libraries(robotArmController $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd/
     ##message("Found bullet...")
 ##endif()
 # Bullet --
+
+# DART ++
+## Dart --
+include_directories(3rd/dart
+                    3rd/dart/build
+                    )
+
+target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdart.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-gui.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-planning.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-collision-bullet.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils-urdf.so
+                                         assimp
+                                         glut
+                                         )
+target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdart.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-gui.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-planning.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-collision-bullet.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils.so
+                                         ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils-urdf.so
+                                         assimp
+                                         glut
+                                         )
+# DART --
 
 # Ignition Rendering ++
 ##if(libignition-rendering_FOUND)

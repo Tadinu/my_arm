@@ -1,10 +1,16 @@
 #include <functional> // std::bind
+#include <iostream>
 #include <QThread>
 #include <QVector3D>
-#include "Rviz/VMarker.h"
 #include "RobotVoxelyzeAdapter.h"
 #include "ros_vox_cad/VoxCad/QVX_Interfaces.h"
 #include "ros_vox_cad/Voxelyze/VX_MeshUtil.h"
+
+//#define VOXELYZE_RVIZ_MARKER
+#define UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
+#ifdef VOXELYZE_RVIZ_MARKER
+#include "Rviz/VMarker.h"
+#endif
 
 RobotVoxelyzeAdapter* RobotVoxelyzeAdapter::_instance = nullptr;
 RobotVoxelyzeAdapter* RobotVoxelyzeAdapter::getInstance()
@@ -16,7 +22,6 @@ RobotVoxelyzeAdapter* RobotVoxelyzeAdapter::getInstance()
     return _instance;
 }
 
-#define UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
 RobotVoxelyzeAdapter::RobotVoxelyzeAdapter():
                       _pMutex(new QMutex(QMutex::Recursive)),
                       _voxCad(nullptr), _voxelMesh(nullptr)
@@ -49,7 +54,8 @@ void RobotVoxelyzeAdapter::initVoxelyze()
 
     bool test = loadVXA();
     if(test) {
-        ROS_INFO("LOAD VXA SUCCESSFULLY : %d", _voxCad->MainSim.pEnv->pObj->GetNumVox());
+        //ROS_INFO("LOAD VXA SUCCESSFULLY : %d", _voxCad->MainSim.pEnv->pObj->GetNumVox());
+        std::cout << "LOAD VXA SUCCESSFULLY : %d" << _voxCad->MainSim.pEnv->pObj->GetNumVox();
     }
     //
     QObject::connect(&_voxCad->MainSim, SIGNAL(ReqGLUpdate()), this, SLOT(updateVoxelMesh()));
@@ -88,9 +94,11 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
         //                                                 _voxelMesh.DefMesh.Lines.size(),
         //                                                 _voxelMesh.DefMesh.Vertices.size()
         //         );
+#ifdef VOXELYZE_RVIZ_MARKER
         VMarker::setVoxelMeshInfo(_voxelMesh->DefMesh.Vertices,
                                   _voxelMesh->DefMesh.Lines,
                                   _voxelMesh->DefMesh.Facets);
+#endif
         //lastVoxelMesh = *_voxelMesh;
 #if 0
         _voxelMesh->ToStl("Voxel.stl", static_cast<CVX_Object*>(&_voxCad->MainObj), true); // !! THIS DOES NOT WORK!

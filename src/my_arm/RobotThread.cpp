@@ -11,6 +11,7 @@
 #include "RobotLeapAdapter.h"
 #include "RobotRealSenseAdapter.h"
 #include "RobotVoxelyzeAdapter.h"
+//#include "RobotDartAdapter.h"
 
 #include "bullet_server.h"
 
@@ -294,6 +295,10 @@ bool RobotThread::init()
     // VOXELYZE MESH --
     VVOXELYZE_ADAPTER()->initVoxelyze(); // UI TASK -> MUST BE RUN ON MAIN THREAD
 #endif
+
+//#ifdef ROBOT_DART
+//    //VDART_ADAPTER()->initDart(_init_argc, _pInit_argv);
+//#endif
 
     return true;
 }//set up the thread

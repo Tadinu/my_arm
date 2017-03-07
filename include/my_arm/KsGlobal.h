@@ -271,6 +271,12 @@
 #define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
 #endif
 
+// DART --
+#define ROBOT_DART
+#ifdef ROBOT_DART
+#define VDART_ADAPTER() RobotDartAdapter::getInstance()
+#endif
+
 //#define USING_PISA_SOFT_HAND_ONLY
 
 class KsGlobal : public QObject

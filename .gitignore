@@ -1,3 +1,6 @@
 *.pro.user*
 *.stash
+*.o
+ui_*
+moc_*
 Makefile

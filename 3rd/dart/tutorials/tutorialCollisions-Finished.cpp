@@ -34,6 +34,9 @@
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
 
+#include "my_arm/RobotVoxelyzeAdapter.h"
+#include "Voxelyze/Utils/Mesh.h"
+
 const double default_shape_density = 1000; // kg/m^3
 const double default_shape_height  = 0.1;  // m
 const double default_shape_width   = 0.03; // m
@@ -125,10 +128,26 @@ public:
     setWorld(world);
   }
 
+
+  MyWindow(const WorldPtr& world, const SkeletonPtr& softVoxelBody)
+    : mRandomize(true),
+      mRD(),
+      mMT(mRD()),
+      mDistribution(-1.0, std::nextafter(1.0, 2.0)),
+      mOriginalSoftVoxelBody(softVoxelBody),
+      mSkelCount(0)
+  {
+    setWorld(world);
+  }
+
   void keyboard(unsigned char key, int x, int y) override
   {
     switch(key)
     {
+      case '0':
+        addObject(mOriginalSoftVoxelBody->clone());
+      break;
+
       case '1':
         addObject(mOriginalBall->clone());
         break;
@@ -327,6 +346,9 @@ protected:
   /// A blueprint Skeleton that we will use to spawn soft bodies
   SkeletonPtr mOriginalSoftBody;
 
+  /// A blueprint Skeleton that we will use to spawn soft bodies
+  SkeletonPtr mOriginalSoftVoxelBody;
+
   /// A blueprint Skeleton that we will use to spawn hybrid bodies
   SkeletonPtr mOriginalHybridBody;
 
@@ -494,6 +516,65 @@ BodyNode* addSoftBody(const SkeletonPtr& chain, const std::string& name,
   return bn;
 }
 
+/// Add a soft body with the specified Joint type to a chain
+template<class JointType>
+BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
+                           const std::vector<Eigen::Vector3i>& faces,
+                           BodyNode* parent = nullptr)
+{
+  // Set the Joint properties
+  typename JointType::Properties joint_properties;
+  joint_properties.mName = name+"_joint";
+  if(parent)
+  {
+    // If the body has a parent, we should position the joint to be in the
+    // middle of the centers of the two bodies
+    Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+    tf.translation() = Eigen::Vector3d(0, 0, default_shape_height / 2.0);
+    joint_properties.mT_ParentBodyToJoint = tf;
+    joint_properties.mT_ChildBodyToJoint = tf.inverse();
+  }
+
+  // Set the properties of the soft body
+  SoftBodyNode::UniqueProperties soft_properties;
+  {
+      // Add Faces
+      for(size_t i = 0; i < faces.size(); i++) {
+          soft_properties.addFace(faces[i]);
+      }
+
+      // Add Pointmass
+      //PointMass::Properties pointMass;
+      //for(size_t i = 0; i < RobotVoxelyzeAdapter::getInstance()->getVoxelMeshVertices().size(); i++) {
+      //    soft_properties.addPointMass(pointMass);
+      //}
+  }
+
+  soft_properties.mKv = default_vertex_stiffness;
+  soft_properties.mKe = default_edge_stiffness;
+  soft_properties.mDampCoeff = default_soft_damping;
+
+  // Create the Joint and Body pair
+  SoftBodyNode::Properties body_properties(BodyNode::AspectProperties(name),
+                                           soft_properties);
+  SoftBodyNode* bn = chain->createJointAndBodyNodePair<JointType, SoftBodyNode>(
+        parent, joint_properties, body_properties).second;
+
+  // Zero out the inertia for the underlying BodyNode
+  Inertia inertia;
+  inertia.setMoment(1e-8*Eigen::Matrix3d::Identity());
+  inertia.setMass(1e-8);
+  bn->setInertia(inertia);
+
+  // Make the shape transparent
+  auto visualAspect = bn->getShapeNodesWith<VisualAspect>()[0]->getVisualAspect();
+  Eigen::Vector4d color = visualAspect->getRGBA();
+  color[3] = 0.4;
+  visualAspect->setRGBA(color);
+
+  return bn;
+}
+
 void setAllColors(const SkeletonPtr& object, const Eigen::Vector3d& color)
 {
   // Set the color of all the shapes in the object
@@ -573,6 +654,30 @@ SkeletonPtr createSoftBody()
   return soft;
 }
 
+SkeletonPtr createSoftVoxelMesh(const std::vector<Eigen::Vector3i>& faces)
+{
+    SkeletonPtr soft = Skeleton::create("softVoxel");
+
+    // Add a soft body
+    BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "soft voxel", faces);
+
+    // Add a rigid collision geometry and inertia
+    double width = default_shape_height, height = 2*default_shape_width;
+    Eigen::Vector3d dims(width, width, height);
+    dims *= 0.6;
+    std::shared_ptr<BoxShape> box = std::make_shared<BoxShape>(dims);
+    bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(box);
+
+    Inertia inertia;
+    inertia.setMass(default_shape_density * box->getVolume());
+    inertia.setMoment(box->computeInertia(inertia.getMass()));
+    bn->setInertia(inertia);
+
+    setAllColors(soft, dart::Color::Fuchsia());
+
+    return soft;
+}
+
 SkeletonPtr createHybridBody()
 {
   SkeletonPtr hybrid = Skeleton::create("hybrid");
@@ -643,14 +748,34 @@ SkeletonPtr createWall()
   return wall;
 }
 
+#include <QtWidgets/QApplication>
+#include <QThread>
 int main(int argc, char* argv[])
 {
+  QApplication app(argc, argv); // To run VoxCad
+  RobotVoxelyzeAdapter::getInstance()->initVoxelyze(false);
+  // -----------------------------------------------------------------------
   WorldPtr world = std::make_shared<World>();
   world->addSkeleton(createGround());
   world->addSkeleton(createWall());
+  //
+#if 1
+  QThread::msleep(1000);
+  const std::vector<CFacet>& facets = RobotVoxelyzeAdapter::getInstance()->getVoxelMeshFaces();
+  std::vector<Eigen::Vector3i> faces;
+  Eigen::Vector3i face;
+  for(size_t i = 0; i < facets.size(); i++) {
+    face[0] = facets[i].vi[0];
+    face[1] = facets[i].vi[1];
+    face[2] = facets[i].vi[2];
 
+    faces.push_back(face);
+  }
+  MyWindow window(world, createSoftVoxelMesh(faces));
+#else
   MyWindow window(world, createBall(), createSoftBody(), createHybridBody(),
                   createRigidChain(), createRigidRing());
+#endif`
 
   std::cout << "space bar: simulation on/off" << std::endl;
   std::cout << "'1': toss a rigid ball" << std::endl;

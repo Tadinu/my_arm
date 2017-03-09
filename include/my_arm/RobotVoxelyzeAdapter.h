@@ -21,11 +21,12 @@ public:
     ~RobotVoxelyzeAdapter();
     static void deleteInstance();
 
-    void initVoxelyze();
+    void initVoxelyze(bool isShowMainWindow = true);
     void emitVoxelMeshUpdated();
 
     bool loadVXA();
-
+    const std::vector<CFacet>& getVoxelMeshFaces();
+    const std::vector<CVertex>& getVoxelMeshVertices();
 signals:
     void voxelMeshUpdated();
 

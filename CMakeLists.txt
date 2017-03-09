@@ -652,7 +652,8 @@ endif()
 include_directories(##3rd/Voxelyze/include
                     ##3rd/Voxelyze/include/rapidjson
                     )
-target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
+target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
+target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
 # Voxelyze --
 
 # VoxCad ++
@@ -662,7 +663,8 @@ include_directories(3rd/ros_vox_cad/
                     3rd/ros_vox_cad/Voxelyze/Utils
                     3rd/ros_vox_cad/QTUtils
                     )
-target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
+target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
+target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
 # VoxCad --
 
 # Bullet ++

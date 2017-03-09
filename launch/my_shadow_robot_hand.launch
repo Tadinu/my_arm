@@ -1,6 +1,6 @@
 <launch>
     <!-- http://shadow-robot.readthedocs.io/en/latest/generated/sr_interface/sr_robot_launch/README.html#shadow-hand-only -->
-    <arg name="gazebo" default="false"/> <!-- Else the simulation is Rviz -->
+    <arg name="gazebo" default="true"/> <!-- Else the simulation is Rviz -->
 
     <!-- Loads the robot description -->
     <arg name="robot_description" default="$(find my_arm)/models/shadow_hand/robots/shadowhand_motor.urdf.xacro"/>

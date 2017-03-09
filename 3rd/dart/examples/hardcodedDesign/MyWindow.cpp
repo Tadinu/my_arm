@@ -41,7 +41,6 @@
 MyWindow::MyWindow(dart::dynamics::SkeletonPtr _skel): SimWindow(), skel(_skel) {
       mTrans[1] = 200.f;
       mZoom = 0.3;
-      //VVOXELYZE_ADAPTER()->initVoxelyze();
       RobotVoxelyzeAdapter::getInstance()->initVoxelyze();
 }
 

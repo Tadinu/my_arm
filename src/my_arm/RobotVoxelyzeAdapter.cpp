@@ -47,7 +47,7 @@ void RobotVoxelyzeAdapter::deleteInstance()
     _instance = nullptr;
 }
 
-void RobotVoxelyzeAdapter::initVoxelyze()
+void RobotVoxelyzeAdapter::initVoxelyze(bool isShowMainWindow)
 {
     // INIT VOXEL MESH
     _voxCad = new VoxCad();
@@ -65,7 +65,10 @@ void RobotVoxelyzeAdapter::initVoxelyze()
     //QObject::connect(&_voxCad->MainFEA, SIGNAL(GetCurGLSelected(int*)), this, SLOT(GetCurGLSelected(int*)));
 #endif
 
-    _voxCad->show();
+    if(isShowMainWindow) {
+        _voxCad->show();
+    }
+    _voxCad->EnterVMMode(VoxCad::VM_PHYSICS);
 
     // Publish 1st time, then wait for the next GLUpdate() from VoxCad Simulator
     this->updateVoxelMesh();
@@ -138,4 +141,24 @@ bool RobotVoxelyzeAdapter::loadVXA()
 {
     QString fileName;
     return _voxCad->MainSim.OpenVXA(&fileName);
+}
+
+const std::vector<CFacet>& RobotVoxelyzeAdapter::getVoxelMeshFaces()
+{
+    //_voxelMesh.DefMesh.Lines.size(),
+    //_voxelMesh.DefMesh.Vertices.size()
+    if(_voxelMesh) {
+        return _voxelMesh->DefMesh.Facets;
+    }
+    return std::vector<CFacet>();
+}
+
+const std::vector<CVertex>& RobotVoxelyzeAdapter::getVoxelMeshVertices()
+{
+    //_voxelMesh.DefMesh.Lines.size(),
+    //_voxelMesh.DefMesh.Vertices.size()
+    if(_voxelMesh) {
+        return _voxelMesh->DefMesh.Vertices;
+    }
+    return std::vector<CVertex>();
 }

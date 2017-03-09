@@ -414,7 +414,8 @@ DISTFILES += \
     3rd/bullet_server/srv/AddCompound.srv \
     3rd/bullet_server/srv/AddConstraint.srv \
     3rd/bullet_server/srv/AddHeightfield.srv \
-    3rd/bullet_server/srv/AddImpulse.srv
+    3rd/bullet_server/srv/AddImpulse.srv \
+    worlds/shadowhand_full.world
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

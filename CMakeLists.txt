@@ -490,6 +490,7 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             )
 
 add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plugin.cpp)
+add_library(gazeboMarkerPlugin SHARED src/Gazebo/gazebo_marker_plugin.cpp src/Gazebo/gazebo_selection_box.cpp)
 
 ###########
 ## Link ##
@@ -567,7 +568,18 @@ target_link_libraries(gazeboCameraPublisher ${catkin_LIBRARIES}
                                          ${Qt5OpenGL_LIB}
                                          ${Qt5Concurrent_LIB}
                                          )
-
+target_link_libraries(gazeboMarkerPlugin ${catkin_LIBRARIES}
+                                         ${Qt5Core_LIB}
+                                         ${Qt5Widgets_LIB}
+                                         ${Qt5Gui_LIB}
+                                         ${Qt5Xml_LIB}
+                                         ${Qt5XmlPatterns_LIB}
+                                         ${Qt5Quick_LIB}
+                                         ${Qt5Qml_LIB}
+                                         ${Qt5Network_LIB}
+                                         ${Qt5OpenGL_LIB}
+                                         ${Qt5Concurrent_LIB}
+                                         )
 ## RVIZ --
 include_directories(${rviz_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${rviz_LIBRARIES})
@@ -578,7 +590,7 @@ include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboCameraPublisher ${GAZEBO_LIBRARIES} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins/libCameraPlugin.so)
-
+target_link_libraries(gazeboMarkerPlugin ${GAZEBO_LIBRARIES})
 ## GRASPIT --
 ## Graspit include files should now come directly from the graspit package
 set(GRASPIT_ROOT $ENV{GRASPIT})
@@ -610,6 +622,11 @@ if(Boost_FOUND)
                                                    ${Boost_REGEX_LIBRARY})
 
     target_link_libraries(gazeboCameraPublisher ${Boost_FILESYSTEM_LIBRARY}
+                                                ${Boost_LIBRARIES}
+                                                ${Boost_SYSTEM_LIBRARY}
+                                                ${Boost_PROGRAM_OPTIONS_LIBRARY}
+                                                ${Boost_REGEX_LIBRARY})
+    target_link_libraries(gazeboMarkerPlugin ${Boost_FILESYSTEM_LIBRARY}
                                                 ${Boost_LIBRARIES}
                                                 ${Boost_SYSTEM_LIBRARY}
                                                 ${Boost_PROGRAM_OPTIONS_LIBRARY}

@@ -87,7 +87,8 @@ SOURCES += main.cpp \
     3rd/bullet_server/src/bullet_server.cpp \
     src/my_arm/RobotVoxelyzeAdapter.cpp \
     src/Gazebo/gazebo_marker_plugin.cpp \
-    src/my_arm/RobotDartAdapter.cpp
+    src/my_arm/RobotDartAdapter.cpp \
+    src/Gazebo/gazebo_selection_box.cpp
 
 RESOURCES += qml.qrc
 
@@ -625,4 +626,5 @@ HEADERS += \
     3rd/VoxCad/QTUtils/QSimplePlot.h \
     3rd/VoxCad/QTUtils/QThreadWrap.h \
     include/Gazebo/gazebo_marker_plugin.h \
-    include/my_arm/RobotDartAdapter.h
+    include/my_arm/RobotDartAdapter.h \
+    include/Gazebo/gazebo_selection_box.h

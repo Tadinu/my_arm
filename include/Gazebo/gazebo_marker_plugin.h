@@ -25,6 +25,22 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 
+// OGRE --
+#include <OgreRoot.h>
+#include <OgreCamera.h>
+#include <OgreViewport.h>
+#include <OgreSceneManager.h>
+#include <OgreRenderWindow.h>
+#include <OgreConfigFile.h>
+#include <OgreException.h>
+#include <OgreEntity.h>
+#include <OgreFrameListener.h>
+#include <OgreWindowEventUtilities.h>
+#include <OgreSceneQuery.h>
+#include <OgreManualObject.h>
+//using namespace Ogre;
+
+#include "gazebo_selection_box.h"
 
 namespace gazebo
 {
@@ -43,6 +59,10 @@ namespace gazebo
         /// \param node XML config node
         void Load( VisualPtr _parent, sdf::ElementPtr _sdf );
 
+        void createColourCube();
+        void createColourCubeManual();
+        void createScene();
+        bool setup();
 
       protected:
         /// \brief Update the visual plugin
@@ -79,6 +99,15 @@ namespace gazebo
 
         // Pointer to the update event connection
         event::ConnectionPtr update_connection_;
+
+        // OGRE ----------------------------------------------------------------
+        Ogre::Root* mRoot;
+        Ogre::SceneManager* mSceneMgr;
+
+        SelectionBox* mSelectionBox;
+        std::list<Ogre::MovableObject*> mSelected;
+
+        Ogre::Vector2 mStart, mStop;
     };
   }
 }

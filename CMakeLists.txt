@@ -79,11 +79,17 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   roslib
   rospy
+  message_generation
+  message_runtime
+
+  sensor_msgs
+  std_msgs
   geometry_msgs
   sensor_msgs
+  shape_msgs
+  object_recognition_msgs
   visualization_msgs
   interactive_markers
-  std_msgs
   tf
 
   ## rviz --
@@ -102,8 +108,6 @@ find_package(catkin REQUIRED COMPONENTS
   camera_calibration_parsers
   camera_info_manager
   image_transport
-  message_generation
-  message_runtime
 
   ## Realsense --
   librealsense
@@ -206,8 +210,12 @@ set_target_properties(Qt5::Concurrent  PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "
 
 add_message_files(
     FILES
+    ## LeapMotion --
     LeapMotion/leap.msg
     LeapMotion/leapros.msg
+
+    ## VoxelMesh --
+    VoxelMesh/voxel_mesh.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -230,10 +238,15 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  sensor_msgs
+  std_msgs
+  geometry_msgs
+  shape_msgs
+  object_recognition_msgs
+  voxel_mesh_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -490,7 +503,8 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             )
 
 add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plugin.cpp)
-add_library(gazeboMarkerPlugin SHARED src/Gazebo/gazebo_marker_plugin.cpp src/Gazebo/gazebo_selection_box.cpp)
+add_library(gazeboMarkerPlugin    SHARED src/Gazebo/gazebo_marker_plugin.cpp src/Gazebo/gazebo_selection_box.cpp)
+add_library(gazeboVoxelMesh       SHARED src/Gazebo/gazebo_voxel_mesh.cpp src/Gazebo/gazebo_selection_box.cpp src/my_arm/RobotVoxelyzeAdapter.cpp)
 
 ###########
 ## Link ##
@@ -530,7 +544,7 @@ include_directories(## Qt --
                     ${Qt5Concurrent_INCLUDE}
                     )
 
-message(STATUS "catkin_LIBRARIES:" ${catkin_LIBRARIES})
+##message(STATUS "catkin_LIBRARIES:" ${catkin_LIBRARIES})
 target_link_libraries(robotArmController ${catkin_LIBRARIES}
                                          ${Qt5Core_LIB}
                                          ${Qt5Widgets_LIB}
@@ -580,17 +594,30 @@ target_link_libraries(gazeboMarkerPlugin ${catkin_LIBRARIES}
                                          ${Qt5OpenGL_LIB}
                                          ${Qt5Concurrent_LIB}
                                          )
+target_link_libraries(gazeboVoxelMesh    ${catkin_LIBRARIES}
+                                         ${Qt5Core_LIB}
+                                         ${Qt5Widgets_LIB}
+                                         ${Qt5Gui_LIB}
+                                         ${Qt5Xml_LIB}
+                                         ${Qt5XmlPatterns_LIB}
+                                         ${Qt5Quick_LIB}
+                                         ${Qt5Qml_LIB}
+                                         ${Qt5Network_LIB}
+                                         ${Qt5OpenGL_LIB}
+                                         ${Qt5Concurrent_LIB}
+                                         )
 ## RVIZ --
 include_directories(${rviz_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${rviz_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${rviz_LIBRARIES})
+target_link_libraries(gazeboVoxelMesh          ${rviz_LIBRARIES})
 
 ## GAZEBO --
 include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboCameraPublisher ${GAZEBO_LIBRARIES} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins/libCameraPlugin.so)
-target_link_libraries(gazeboMarkerPlugin ${GAZEBO_LIBRARIES})
+target_link_libraries(gazeboVoxelMesh ${GAZEBO_LIBRARIES})
 ## GRASPIT --
 ## Graspit include files should now come directly from the graspit package
 set(GRASPIT_ROOT $ENV{GRASPIT})
@@ -626,7 +653,14 @@ if(Boost_FOUND)
                                                 ${Boost_SYSTEM_LIBRARY}
                                                 ${Boost_PROGRAM_OPTIONS_LIBRARY}
                                                 ${Boost_REGEX_LIBRARY})
-    target_link_libraries(gazeboMarkerPlugin ${Boost_FILESYSTEM_LIBRARY}
+
+    target_link_libraries(gazeboMarkerPlugin    ${Boost_FILESYSTEM_LIBRARY}
+                                                ${Boost_LIBRARIES}
+                                                ${Boost_SYSTEM_LIBRARY}
+                                                ${Boost_PROGRAM_OPTIONS_LIBRARY}
+                                                ${Boost_REGEX_LIBRARY})
+
+    target_link_libraries(gazeboVoxelMesh       ${Boost_FILESYSTEM_LIBRARY}
                                                 ${Boost_LIBRARIES}
                                                 ${Boost_SYSTEM_LIBRARY}
                                                 ${Boost_PROGRAM_OPTIONS_LIBRARY}
@@ -671,6 +705,7 @@ include_directories(##3rd/Voxelyze/include
                     )
 target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
 target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
+target_link_libraries(gazeboVoxelMesh          ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
 # Voxelyze --
 
 # VoxCad ++
@@ -682,6 +717,7 @@ include_directories(3rd/ros_vox_cad/
                     )
 target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
 target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
+target_link_libraries(gazeboVoxelMesh          ${MY_ARM_DIR}/3rd/ros_vox_cad/lib/libVoxCad.so)
 # VoxCad --
 
 # Bullet ++

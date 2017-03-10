@@ -264,13 +264,6 @@
 #endif
 #define CLEAP_BASE_FRAME (CWORLD_FRAME)
 
-// VOXELYZE --
-//
-#define ROBOT_VOXELYZE
-#ifdef ROBOT_VOXELYZE
-#define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
-#endif
-
 // DART --
 #define ROBOT_DART
 #ifdef ROBOT_DART

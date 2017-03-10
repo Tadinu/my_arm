@@ -8,10 +8,10 @@ namespace gazebo
     ////////////////////////////////////////////////////////////////////////////////
     // Constructor
     GazeboMarkerPlugin::GazeboMarkerPlugin():
-      line(nullptr),
-      mRoot(0),
-      mSceneMgr(0),
-      mSelectionBox(0)
+        line(nullptr),
+        mRoot(0),
+        mSceneMgr(0),
+        mSelectionBox(0)
     {
 
     }
@@ -37,25 +37,27 @@ namespace gazebo
     // Load the plugin
     void GazeboMarkerPlugin::Load( VisualPtr _parent, sdf::ElementPtr _sdf )
     {
-      this->visual_ = _parent;
+        this->visual_ = _parent;
 
-      this->visual_namespace_ = "visual/";
+        this->visual_namespace_ = _parent->GetName();
+        if (!this->visual_namespace_.empty()) {
+            this->visual_namespace_ += "/";
+        }
+        // start ros node
+        if (!ros::isInitialized())
+        {
+          int argc = 0;
+          char** argv = NULL;
+          ros::init(argc,argv,"gazebo_visual",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
+        }
 
-      // start ros node
-      if (!ros::isInitialized())
-      {
-        int argc = 0;
-        char** argv = NULL;
-        ros::init(argc,argv,"gazebo_visual",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
-      }
+        this->rosnode_ = new ros::NodeHandle(this->visual_namespace_);
+        this->force_sub_ = this->rosnode_->subscribe("joint_states", 1000, &GazeboMarkerPlugin::VisualizeForceOnLink, this);
 
-      this->rosnode_ = new ros::NodeHandle(this->visual_namespace_);
-      this->force_sub_ = this->rosnode_->subscribe("/some_force", 1000, &GazeboMarkerPlugin::VisualizeForceOnLink, this);
-
-      // Listen to the update event. This event is broadcast every
-      // simulation iteration.
-      this->update_connection_ = event::Events::ConnectRender(
-          boost::bind(&GazeboMarkerPlugin::UpdateChild, this));
+        // Listen to the update event. This event is broadcast every
+        // simulation iteration.
+        this->update_connection_ = event::Events::ConnectRender(
+            boost::bind(&GazeboMarkerPlugin::UpdateChild, this));
 
       // ----------------------------------------------------------------------------
 #if 0
@@ -68,31 +70,33 @@ namespace gazebo
     // Update the visualizer
     void GazeboMarkerPlugin::UpdateChild()
     {
-      ros::spinOnce();
+        ros::spinOnce();
     }
 
     //////////////////////////////////////////////////////////////////////////////////
     // VisualizeForceOnLink
     void GazeboMarkerPlugin::VisualizeForceOnLink(const geometry_msgs::PointConstPtr &force_msg)
     {
-      this->line = this->visual_->CreateDynamicLine(RENDERING_LINE_STRIP);
+        this->line = this->visual_->CreateDynamicLine(RENDERING_LINE_STRIP);
+#if     0
+        //TODO: Get the current link position
+        link_pose = CurrentLinkPose();
+        //TODO: Get the current end position
+        endpoint = CalculateEndpointOfForceVector(link_pose, force_msg);
 
-#if 0
-      //TODO: Get the current link position
-      link_pose = CurrentLinkPose();
-      //TODO: Get the current end position
-      endpoint = CalculateEndpointOfForceVector(link_pose, force_msg);
-
-      // Add two points to a connecting line strip from link_pose to endpoint
-      this->line->AddPoint(
-        math::Vector3(
-          link_pose.position.x,
-          link_pose.position.y,
-          link_pose.position.z
-          )
-        );
-      this->line->AddPoint(math::Vector3(endpoint.x, endpoint.y, endpoint.z));
+        // Add two points to a connecting line strip from link_pose to endpoint
+        this->line->AddPoint(
+          ignition::math::Vector3d(
+            link_pose.position.x,
+            link_pose.position.y,
+            link_pose.position.z
+            )
+          );
+        this->line->AddPoint(ignition::math::Vector3d(endpoint.x, endpoint.y, endpoint.z));
 #endif
+
+      this->line->AddPoint(ignition::math::Vector3d(12, 12, 0));
+      this->line->AddPoint(ignition::math::Vector3d(15, 15, 0));
 
       // set the Material of the line, in this case to purple
       this->line->setMaterial("Gazebo/Purple");
@@ -102,32 +106,32 @@ namespace gazebo
 
     bool GazeboMarkerPlugin::setup()
     {
-      mRoot = new Ogre::Root();
-      mSceneMgr = mRoot->createSceneManager(Ogre::ST_EXTERIOR_CLOSE);
-      Ogre::TextureManager::getSingleton().setDefaultNumMipmaps(5);
-      createScene();
-      return true;
+        mRoot = new Ogre::Root();
+        mSceneMgr = mRoot->createSceneManager(Ogre::ST_EXTERIOR_CLOSE);
+        Ogre::TextureManager::getSingleton().setDefaultNumMipmaps(5);
+        createScene();
+        return true;
     }
 
     void GazeboMarkerPlugin::createScene()
     {
-      mSceneMgr->setAmbientLight(Ogre::ColourValue(0.7, 0.7, 0.7));
+        mSceneMgr->setAmbientLight(Ogre::ColourValue(0.7, 0.7, 0.7));
 
-      for (int i = 0; i < 10; ++i)
-      {
-        for (int j = 0; j < 10; ++j)
+        for (int i = 0; i < 10; ++i)
         {
-          Ogre::Entity* ent = mSceneMgr->createEntity("robot.mesh");
+            for (int j = 0; j < 10; ++j)
+            {
+                Ogre::Entity* ent = mSceneMgr->createEntity("robot.mesh");
 
-          Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-          node->setPosition(Ogre::Vector3(i * 15, 0, j * 15));
-          node->attachObject(ent);
-          node->setScale(0.2, 0.2, 0.2);
+                Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+                node->setPosition(Ogre::Vector3(i * 15, 0, j * 15));
+                node->attachObject(ent);
+                node->setScale(0.2, 0.2, 0.2);
+            }
         }
-      }
 
-      mSelectionBox = new SelectionBox("SelectionBox");
-      mSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(mSelectionBox);
+        mSelectionBox = new SelectionBox("SelectionBox");
+        mSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(mSelectionBox);
     }
 
     void GazeboMarkerPlugin::createColourCubeManual()
@@ -137,10 +141,10 @@ namespace gazebo
         manual->begin("BaseWhiteNoLighting", Ogre::RenderOperation::OT_LINE_STRIP);
 
         // define vertex position of index 0..3
-        manual->position(-100.0, -100.0, 0.0);
-        manual->position( 100.0, -100.0, 0.0);
-        manual->position( 100.0,  100.0, 0.0);
-        manual->position(-100.0,  100.0, 0.0);
+        manual->position(-1.0, -1.0, 0.0);
+        manual->position( 1.0, -1.0, 0.0);
+        manual->position( 1.0,  1.0, 0.0);
+        manual->position(-1.0,  1.0, 0.0);
 
         // define usage of vertices by refering to the indexes
         manual->index(0);
@@ -151,17 +155,6 @@ namespace gazebo
 
         manual->end();
         mSceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual);
-
-        // ------------------------------------------------------------------------------------------------------------------------
-        Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create(
-              "Test/ColourTest", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-        material->getTechnique(0)->getPass(0)->setVertexColourTracking(Ogre::TVC_AMBIENT);
-
-        Ogre::Entity* thisEntity = mSceneMgr->createEntity("cc", "ColourCube");
-        thisEntity->setMaterialName("Test/ColourTest");
-        Ogre::SceneNode* thisSceneNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-        thisSceneNode->setPosition(-35, 0, 0);
-        thisSceneNode->attachObject(thisEntity);
     }
 
     void GazeboMarkerPlugin::createColourCube()
@@ -287,6 +280,17 @@ namespace gazebo
 
         /// Notify -Mesh object that it has been loaded
         msh->load();
+
+        // ------------------------------------------------------------------------------------------------------------------------
+        Ogre::MaterialPtr material = Ogre::MaterialManager::getSingleton().create(
+              "Test/ColourTest", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        material->getTechnique(0)->getPass(0)->setVertexColourTracking(Ogre::TVC_AMBIENT);
+
+        Ogre::Entity* thisEntity = mSceneMgr->createEntity("cc", "ColourCube");
+        thisEntity->setMaterialName("Test/ColourTest");
+        Ogre::SceneNode* thisSceneNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+        thisSceneNode->setPosition(-35, 0, 0);
+        thisSceneNode->attachObject(thisEntity);
     }
 
     // Register this plugin within the simulator

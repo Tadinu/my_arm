@@ -753,7 +753,7 @@ SkeletonPtr createWall()
 int main(int argc, char* argv[])
 {
   QApplication app(argc, argv); // To run VoxCad
-  RobotVoxelyzeAdapter::getInstance()->initVoxelyze(false);
+  VVOXELYZE_ADAPTER()->initVoxelyze(false);
   // -----------------------------------------------------------------------
   WorldPtr world = std::make_shared<World>();
   world->addSkeleton(createGround());
@@ -761,7 +761,7 @@ int main(int argc, char* argv[])
   //
 #if 1
   QThread::msleep(1000);
-  const std::vector<CFacet>& facets = RobotVoxelyzeAdapter::getInstance()->getVoxelMeshFaces();
+  const std::vector<CFacet>& facets = VVOXELYZE_ADAPTER()->getVoxelMeshFaces();
   std::vector<Eigen::Vector3i> faces;
   Eigen::Vector3i face;
   for(size_t i = 0; i < facets.size(); i++) {

@@ -15,43 +15,6 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 
-
-//#define USE_GAZEBO_RENDERING
-#define USE_IGNITION_RENDERING
-
-#ifdef USE_GAZEBO_RENDERING
-#include <rendering/rendering.hh>
-#include <rendering/RenderTypes.hh>
-#include <rendering/Scene.hh>
-#include <rendering/Visual.hh>
-#include <rendering/Material.hh>
-#include <rendering/Camera.hh>
-#include <rendering/Light.hh>
-
-#include <common/common.hh>
-#include <common/Mesh.hh>
-#include <OGRE/OgrePrerequisites.h>
-#include <OGRE/OgreSceneManager.h>
-
-#include <ignition/math2/ignition/math/Vector3.hh>
-#include <ignition/math2/ignition/math/Quaternion.hh>
-
-#elif defined USE_IGNITION_RENDERING
-#include <ignition/rendering.hh> // Extending gazebo built-in <rendering/rendering.hh>
-#include <ignition/rendering/SceneManager.hh>
-#include <ignition/rendering/Scene.hh>
-#include <ignition/rendering/Visual.hh>
-#include <ignition/rendering/Material.hh>
-#include <ignition/rendering/Mesh.hh>
-#include <ignition/rendering/Camera.hh>
-#include <ignition/rendering/Light.hh>
-#endif
-
-//#include <gazebo/physics/bullet/BulletMesh.hh>
-#include <gazebo/common/common.hh>
-#include <gazebo/common/Mesh.hh>
-
-
 // Usage in URDF:
 //   <gazebo>
 //       <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
@@ -61,15 +24,6 @@
 // 		<alwaysOn>true</alwaysOn>
 //       </plugin>
 //   </gazebo>
-
-#ifdef USE_GAZEBO_RENDERING
-using namespace gazebo;
-using namespace gazebo::rendering;
-#elif defined USE_IGNITION_RENDERING
-#define CGZ_RENDERING_ENGINE ("ogre") // ("optix")
-using namespace ignition;
-using namespace ignition::rendering;
-#endif
 
 
 namespace gazebo {
@@ -84,18 +38,6 @@ public:
     void determineHandArrangmentOnLeapHands();
     void updateJointPosition(int jointId,
                              double position);
-    //
-    // Pointer to the model
-#ifdef USE_GAZEBO_RENDERING
-    Ogre::MeshPtr createMesh();
-    ScenePtr createScene();
-    CameraPtr createCamera(const ScenePtr& scene);
-#elif defined USE_IGNITION_RENDERING
-    ignition::rendering::MeshPtr createMesh(const ignition::rendering::ScenePtr& scene);
-    ignition::rendering::ScenePtr createScene(const std::string &_engine);
-    ignition::rendering::CameraPtr createCamera(const ignition::rendering::ScenePtr& scene);
-#endif
-    void startSceneViewer();
 
 private:
     event::ConnectionPtr updateConnection;

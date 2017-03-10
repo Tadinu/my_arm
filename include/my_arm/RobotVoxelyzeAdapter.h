@@ -13,6 +13,13 @@
 #include "ros_vox_cad/VoxCad/VoxCad.h"
 //#include <rviz/robot/robot.h>
 
+// VOXELYZE --
+//
+#define ROBOT_VOXELYZE
+#ifdef ROBOT_VOXELYZE
+#define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
+#endif
+
 class RobotVoxelyzeAdapter : public QObject {
     Q_OBJECT
 

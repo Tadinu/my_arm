@@ -4,6 +4,14 @@
         <!-- Ground plane -->
         <include>
             <uri>model://ground_plane</uri>
+            <link name="my_visual_link">
+                <visual name="my_visual">
+                    <plugin name="GazeboMarkerPlugin" filename="libgazeboMarkerPlugin.so"/>
+                    <pose>0 0 0 0 0 0</pose>
+                    <geometry>
+                    </geometry>
+                </visual>
+            </link>
         </include>
 
         <!-- Sun -->
@@ -11,6 +19,7 @@
             <uri>model://sun</uri>
         </include>
 
+        <!--
         <model name="sr_top_view_camera">
           <static>true</static>
           <link name="link">
@@ -57,6 +66,7 @@
              </sensor>
           </link>
         </model>
+        -->
 
         <!-- Physics -->
         <physics type="ode">

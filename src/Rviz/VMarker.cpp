@@ -981,22 +981,20 @@ void VMarker::publishVoxelMesh(bool isShaded)
         geometry_msgs::Point point1;
         geometry_msgs::Point point2;
         for (int i = 0; i < (int)gbVoxelMeshEdges.size(); i++) {
-            for (int j=0; j<2; j++) {
-                CVertex& CurVert1 = gbVoxelMeshVertices[gbVoxelMeshEdges[i].vi[0]];
-                CVertex& CurVert2 = gbVoxelMeshVertices[gbVoxelMeshEdges[i].vi[1]];
+            CVertex& CurVert1 = gbVoxelMeshVertices[gbVoxelMeshEdges[i].vi[0]];
+            CVertex& CurVert2 = gbVoxelMeshVertices[gbVoxelMeshEdges[i].vi[1]];
 
-                // Point 1
-                point1.x = CurVert1.v.x + CurVert1.DrawOffset.x;
-                point1.y = CurVert1.v.y + CurVert1.DrawOffset.y;
-                point1.z = CurVert1.v.z + CurVert1.DrawOffset.z;
+            // Point 1
+            point1.x = CurVert1.v.x + CurVert1.DrawOffset.x;
+            point1.y = CurVert1.v.y + CurVert1.DrawOffset.y;
+            point1.z = CurVert1.v.z + CurVert1.DrawOffset.z;
 
-                // Point 2
-                point2.x = CurVert2.v.x + CurVert2.DrawOffset.x;
-                point2.y = CurVert2.v.y + CurVert2.DrawOffset.y;
-                point2.z = CurVert2.v.z + CurVert2.DrawOffset.z;
-                //
-                _visual_tools->publishLine(point1, point2, rviz_visual_tools::LIME_GREEN);
-            }
+            // Point 2
+            point2.x = CurVert2.v.x + CurVert2.DrawOffset.x;
+            point2.y = CurVert2.v.y + CurVert2.DrawOffset.y;
+            point2.z = CurVert2.v.z + CurVert2.DrawOffset.z;
+            //
+            _visual_tools->publishLine(point1, point2, rviz_visual_tools::LIME_GREEN);
         }
     }
 

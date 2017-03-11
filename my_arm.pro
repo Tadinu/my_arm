@@ -89,7 +89,7 @@ SOURCES += main.cpp \
     src/Gazebo/gazebo_marker_plugin.cpp \
     src/my_arm/RobotDartAdapter.cpp \
     src/Gazebo/gazebo_selection_box.cpp \
-    src/Gazebo/gazebo_voxel_mesh.cpp
+    src/Gazebo/gazebo_voxel_mesh_renderer.cpp
 
 RESOURCES += qml.qrc
 
@@ -630,4 +630,4 @@ HEADERS += \
     include/Gazebo/gazebo_marker_plugin.h \
     include/my_arm/RobotDartAdapter.h \
     include/Gazebo/gazebo_selection_box.h \
-    include/Gazebo/gazebo_voxel_mesh.h
+    include/Gazebo/gazebo_voxel_mesh_renderer.h

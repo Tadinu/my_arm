@@ -3,11 +3,9 @@
 #include <tf/transform_listener.h>
 
 #include <ros/ros.h>
-#include <gazebo/common/Console.hh>
-#include <gazebo/transport/TransportIface.hh>
 #include "Gazebo/gazebo_my_arm_commander_plugin.h"
-
 #include "RobotLeapAdapter.h"
+#include "RobotVoxelyzeAdapter.h"
 #include "KsGlobal.h"
 
 #define CROBOT_NAME_SPACE_TAG ("robotNamespace")
@@ -22,99 +20,113 @@ namespace gazebo
         // plugin tag inside .gazebo file!
         if (!ros::isInitialized())
         {
-            ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
-                             << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
+            //ROS_FATAL_STREAM("A ROS node for Gazebo has not been initialized, unable to load plugin. "
+            //                 << "Load the Gazebo system plugin 'libgazebo_ros_api_plugin.so' in the gazebo_ros package)");
+            int argc = 0;
+            char** argv = NULL;
+            ros::init(argc, argv,
+                      "gazebo_my_arm_commander",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
             return;
         }
 
-        ROS_INFO("Hello World!");
+        ROS_INFO("GazeboArmCommander Model plugin - Hello World!");
     }
 
     GazeboMyArmCommander::~GazeboMyArmCommander()
     {
-        rosnode_->shutdown();
-        V_DELETE_POINTER(joint_controller_);
+        _rosnode->shutdown();
+        V_DELETE_POINTER(_joint_controller);
     }
 
     void GazeboMyArmCommander::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     {
         // Store the pointer to the model
-        this->parent_ = _parent;
-        this->world_  = _parent->GetWorld();
-        this->joint_controller_ = new physics::JointController(this->parent_);
+        this->_model = _parent;
+        this->_world = _parent->GetWorld();
+        this->_joint_controller = new physics::JointController(this->_model);
 
         //ROS_INFO("Joint count: %d", parent_->GetJointCount());
-        this->robot_namespace_ = parent_->GetName();
+        this->_robot_namespace = _model->GetName();
         if (!_sdf->HasElement(CROBOT_NAME_SPACE_TAG)) {
             ROS_INFO_NAMED("joint_state_publisher", "GazeboMyArmCommander Plugin missing \"%s\", defaults to \"%s\"",
-                           CROBOT_NAME_SPACE_TAG, this->robot_namespace_.c_str());
+                           CROBOT_NAME_SPACE_TAG, this->_robot_namespace.c_str());
         } else {
-            this->robot_namespace_ = _sdf->GetElement(CROBOT_NAME_SPACE_TAG)->Get<std::string>();
-            if (this->robot_namespace_.empty()) {
-                this->robot_namespace_ = parent_->GetName();
+            this->_robot_namespace = _sdf->GetElement(CROBOT_NAME_SPACE_TAG)->Get<std::string>();
+            if (this->_robot_namespace.empty()) {
+                this->_robot_namespace = _model->GetName();
             }
         }
 
-        ROS_INFO("Robot Namespace: %s", this->robot_namespace_.c_str());
-        if (!robot_namespace_.empty()) {
-            this->robot_namespace_ += "/";
+        ROS_INFO("Robot Namespace: %s", this->_robot_namespace.c_str());
+        if (!_robot_namespace.empty()) {
+            this->_robot_namespace += "/";
         }
-        rosnode_ = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(this->robot_namespace_));
+        _rosnode = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME));
 
 #ifdef ROBOT_LEAP_HANDS
         // LEAP HANDS --
-        VLEAP_INSTANCE()->initLeapMotion(rosnode_.get());
-        ros::Subscriber _leap_listener = rosnode_->subscribe(CLEAP_HANDS_TOPIC, 1, &GazeboMyArmCommander::leapCallback, this);
+        VLEAP_INSTANCE()->initLeapMotion(_rosnode.get());
+        ros::Subscriber _leap_listener = _rosnode->subscribe(CLEAP_HANDS_TOPIC, 1000,
+                                                             &GazeboMyArmCommander::leapCallback, this);
 #endif
 
+#ifdef ROBOT_VOXELYZE
+        _voxel_mesh_listener = _rosnode->subscribe(CVOXEL_MESH_TOPIC, 1000,
+                                                   &GazeboMyArmCommander::voxelMeshCallback, this);
+#endif
+        // ------------------------------------------------------------------------------------------
+        // JOIN/LINK INFO --
+        //
         if (!_sdf->HasElement(CJOINT_NAME_TAG)) {
             ROS_ASSERT("GazeboMyArmCommander Plugin missing jointNames");
         } else {
             sdf::ElementPtr element = _sdf->GetElement(CJOINT_NAME_TAG);
             std::string joint_names = element->Get<std::string>();
             boost::erase_all(joint_names, " ");
-            boost::split(joint_names_, joint_names, boost::is_any_of(","));
+            boost::split(_joint_names, joint_names, boost::is_any_of(","));
         }
 
-        this->update_rate_ = 100.0;
+        this->_update_rate = 100.0;
         if (!_sdf->HasElement(CUPDATE_RATE_TAG)) {
             ROS_WARN_NAMED("joint_state_publisher", "GazeboMyArmCommander Plugin (ns = %s) missing <updateRate>, defaults to %f",
-                           this->robot_namespace_.c_str(), this->update_rate_);
+                           this->_robot_namespace.c_str(), this->_update_rate);
         } else {
-            this->update_rate_ = _sdf->GetElement(CUPDATE_RATE_TAG)->Get<double>();
+            this->_update_rate = _sdf->GetElement(CUPDATE_RATE_TAG)->Get<double>();
         }
 
         // Initialize update rate stuff
-        if ( this->update_rate_ > 0.0 ) {
-            this->update_period_ = 1.0 / this->update_rate_;
+        if ( this->_update_rate > 0.0 ) {
+            this->update_period_ = 1.0 / this->_update_rate;
         } else {
             this->update_period_ = 0.0;
         }
-        last_update_time_ = this->world_->GetSimTime();
+        _last_update_time = this->_world->GetSimTime();
 
-        for ( unsigned int i = 0; i< joint_names_.size(); i++ ) {
-            joints_.push_back (this->parent_->GetJoint(joint_names_[i]));
-            ROS_INFO_NAMED("joint_state_publisher", "GazeboMyArmCommander is going to publish joint: %s", joint_names_[i].c_str() );
+        for ( unsigned int i = 0; i< _joint_names.size(); i++ ) {
+            _joints.push_back (this->_model->GetJoint(_joint_names[i]));
+            ROS_INFO_NAMED("joint_state_publisher", "GazeboMyArmCommander is going to publish joint: %s", _joint_names[i].c_str() );
         }
 
-        ROS_INFO_NAMED("joint_state_publisher", "Starting GazeboMyArmCommander Plugin (ns = %s)!, parent name: %s", this->robot_namespace_.c_str(), parent_->GetName ().c_str() );
+        ROS_INFO_NAMED("joint_state_publisher", "Starting GazeboMyArmCommander Plugin (ns = %s)!, parent name: %s", this->_robot_namespace.c_str(), _model->GetName ().c_str() );
 
-        tf_prefix_ = tf::getPrefixParam ( *rosnode_ );
-        joint_state_publisher_ = rosnode_->advertise<sensor_msgs::JointState>("joint_states", 1000);
+        _tf_prefix = tf::getPrefixParam ( *_rosnode );
+        _joint_state_publisher = _rosnode->advertise<sensor_msgs::JointState>("joint_states", 1000);
 
-        last_update_time_ = this->world_->GetSimTime();
+        _last_update_time = this->_world->GetSimTime();
 
+        // -----------------------------------------------------------------------------------------
         // Listen to the update event. This event is broadcast every
         // simulation iteration.
-        this->updateConnection = event::Events::ConnectWorldUpdateBegin (
+        //
+        this->_updateConnection = event::Events::ConnectWorldUpdateBegin (
                                      boost::bind ( &GazeboMyArmCommander::OnUpdate, this, _1 ));
     }
 
     void GazeboMyArmCommander::updateJointPosition(int jointId,
                                                    double position)
     {
-        if(joints_[jointId] != nullptr) {
-            this->joint_controller_->SetJointPosition(this->parent_->GetJoint(joints_[jointId]->GetName()), position);
+        if(_joints[jointId] != nullptr) {
+            this->_joint_controller->SetJointPosition(this->_model->GetJoint(_joints[jointId]->GetName()), position);
         }
     }
 
@@ -166,11 +178,38 @@ namespace gazebo
     {
     }
 
+    void GazeboMyArmCommander::voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo)
+    {
+        _mMutex.lock();
+        std::cout << "My Arm Voxel Mesh Message" << voxelMeshInfo.vertices.size() << std::endl;
+        _voxel_mesh_info = voxelMeshInfo;
+        _mMutex.unlock();
+    }
+
+#include <gazebo/physics/bullet/BulletMesh.hh>
+#include <gazebo/physics/ode/ODEMesh.hh>
+//#include <gazebo/physics/dart/DARTMesh.hh>
+    void GazeboMyArmCommander::calculateVoxelMeshCollision()
+    {
+        //Ogre::MeshPtr voxelMesh = mManualObj->convertToMesh("voxel_mesh");
+        //gazebo::physics::ODEMesh mesh;
+        //gazebo::physics::ODECollisionPtr meshCollisionPtr;
+        //mesh.Init(voxelMesh, meshCollisionPtr, math::Vector3(1,1,1));
+        //
+        //gazebo::rendering::SelectionObj obj;
+        //obj.InsertMesh(voxelMesh, "voxel_mesh");
+        //obj.CreateDynamicLine();
+    }
+
     void GazeboMyArmCommander::OnUpdate (const common::UpdateInfo & _info)
     {
+        // TO QUICKLY HANDLE CALLBACKS
+        //
+        ros::spinOnce();
+        // ------------------------------------------------------------------------------
         // Apply a small linear velocity to the model.
-        common::Time current_time = this->world_->GetSimTime();
-        double seconds_since_last_update = ( current_time - last_update_time_ ).Double();
+        common::Time current_time = this->_world->GetSimTime();
+        double seconds_since_last_update = ( current_time - _last_update_time ).Double();
         if ( seconds_since_last_update > update_period_ ) {
 #if 1
             determineHandArrangmentOnLeapHands();
@@ -178,7 +217,7 @@ namespace gazebo
             // Publish Joint States
             publishJointStates();
 #endif
-            last_update_time_+= common::Time ( update_period_ );
+            _last_update_time+= common::Time ( update_period_ );
         }
     }
 
@@ -186,23 +225,23 @@ namespace gazebo
     {
         ros::Time current_time = ros::Time::now();
 
-        joint_state_.header.stamp = current_time;
-        joint_state_.name.resize ( joints_.size() );
-        joint_state_.position.resize ( joints_.size() );
+        _joint_state.header.stamp = current_time;
+        _joint_state.name.resize ( _joints.size() );
+        _joint_state.position.resize ( _joints.size() );
 
-        for ( int i = 0; i < joints_.size(); i++ ) {
+        for ( int i = 0; i < _joints.size(); i++ ) {
             //ROS_INFO("Joint: %s, %d", joint_names_[i].c_str(), this->parent_->GetJoint(joint_names_[i]).get());
-            if(joints_[i] != nullptr) {
-                math::Angle angle        = joints_[i]->GetAngle(0);
-                joint_state_.name[i]     = joints_[i]->GetName();
-                joint_state_.position[i] = angle.Radian() ;
-                //ROS_INFO("JOINT: %d %s %f", i, joint_state_.name[i].c_str(), joint_state_.position[i]);
+            if(_joints[i] != nullptr) {
+                math::Angle angle        = _joints[i]->GetAngle(0);
+                _joint_state.name[i]     = _joints[i]->GetName();
+                _joint_state.position[i] = angle.Radian() ;
+                //ROS_INFO("JOINT: %d %s %f", i, _joint_state_.name[i].c_str(), _joint_state_.position[i]);
             }
             else {
                 ROS_INFO("JOINT NULL: %d", i);
             }
         }
-        joint_state_publisher_.publish(joint_state_);
+        _joint_state_publisher.publish(_joint_state);
     }
 
 

@@ -273,8 +273,10 @@ bool RobotThread::init()
     //m_pMutex = new QMutex();
 
     connect(_pThread, &QThread::started, this, &RobotThread::run);
-    ros::init(_init_argc, _pInit_argv, "gui_command");
-
+    ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME);  // Name of the node specified in launch file
+    _node_handle = new ros::NodeHandle(std::string(CROS_MY_ARM_PACKAGE_NAME));
+    ros::param::set("~rigid_only", false);
+    //
     if (!ros::master::check())
         return false; //do not start without ros.
 
@@ -293,7 +295,7 @@ bool RobotThread::init()
 
 #ifdef ROBOT_VOXELYZE
     // VOXELYZE MESH --
-    VVOXELYZE_ADAPTER()->initVoxelyze(); // UI TASK -> MUST BE RUN ON MAIN THREAD
+    VVOXELYZE_ADAPTER()->initVoxelyze(_node_handle); // UI TASK -> MUST BE RUN ON MAIN THREAD
 #endif
 
 //#ifdef ROBOT_DART
@@ -347,10 +349,6 @@ void RobotThread::poseCallback(const nav_msgs::Odometry & msg)
 void RobotThread::runArmOperation(int armId)
 {
 #if 1 // ducta ++
-    ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME); // Name of the node specified in launch file
-    ros::NodeHandle node_handle;
-    ros::param::set("~rigid_only", false);
-
 #if 0
     _sim_velocity  = node_handle.advertise<geometry_msgs::Twist>("/cmd_vel", 100);
     _pose_listener = node_handle.subscribe(_topic, 10, &RobotThread::poseCallback, this);
@@ -359,7 +357,7 @@ void RobotThread::runArmOperation(int armId)
     // -------------------------------------------------------------------------------------------------------
     // MARKERS --
     //
-    ros::Publisher marker_pub = node_handle.advertise<visualization_msgs::Marker>(CRVIZ_MARKER_TOPIC_NAME, 1);
+    ros::Publisher marker_pub = _node_handle->advertise<visualization_msgs::Marker>(CRVIZ_MARKER_TOPIC_NAME, 1);
     // 1- Initialize Interactive Server
     VMARKER_INSTANCE()->initialize();// -> !VMarker SERVICE MUST BE INITIALIZED AFTER ros::init(...)!!!
     // 2- Setup static marker properties
@@ -374,15 +372,15 @@ void RobotThread::runArmOperation(int armId)
                      this, &RobotThread::determineArmArrangement);
 
     // create a timer to update the published transforms
-    ros::Timer frame_timer = node_handle.createTimer(ros::Duration(0.5), &VMarker::frameCallback);
+    ros::Timer frame_timer = _node_handle->createTimer(ros::Duration(0.5), &VMarker::frameCallback);
 
     // -------------------------------------------------------------------------------------------------------
     // 3rd SERVICES
     //
 #ifdef ROBOT_LEAP_HANDS
     // LEAP HANDS --
-    VLEAP_INSTANCE()->initLeapMotion(&node_handle);
-    ros::Subscriber _leap_listener = node_handle.subscribe(CLEAP_HANDS_TOPIC, 1, &RobotThread::leapCallback, this);
+    VLEAP_INSTANCE()->initLeapMotion(_node_handle);
+    ros::Subscriber _leap_listener = _node_handle->subscribe(CLEAP_HANDS_TOPIC, 1, &RobotThread::leapCallback, this);
 #elif defined ROBOT_REAL_SENSE_HANDS
     // REAL SENSE HANDS --
     VREAL_SENSE_INSTANCE()->initRealSense(&node_handle);
@@ -421,7 +419,7 @@ void RobotThread::runArmOperation(int armId)
     _world_trans.header.frame_id = CWORLD_FRAME;
     _world_trans.child_frame_id  = base_link_name;
 
-    ros::Publisher joint_pub = node_handle.advertise<sensor_msgs::JointState>("joint_states", 1);
+    ros::Publisher joint_pub = _node_handle->advertise<sensor_msgs::JointState>("joint_states", 1);
     tf::TransformBroadcaster trans_broadcaster;
     tf::TransformListener trans_listener;
 

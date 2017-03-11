@@ -5,6 +5,8 @@
 #include "RobotVoxelyzeAdapter.h"
 #include "ros_vox_cad/VoxCad/QVX_Interfaces.h"
 #include "ros_vox_cad/Voxelyze/VX_MeshUtil.h"
+#include "ros_vox_cad/Voxelyze/Utils/Mesh.h"
+#include "my_arm/voxel_mesh_msg.h"
 
 //#define VOXELYZE_RVIZ_MARKER
 #define UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
@@ -47,11 +49,19 @@ void RobotVoxelyzeAdapter::deleteInstance()
     _instance = nullptr;
 }
 
-void RobotVoxelyzeAdapter::initVoxelyze(bool isShowMainWindow)
+void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShowMainWindow)
 {
+    _node_handle = nodeHandle;
+    // ADVERTISE VOXEL MESH TOPIC
+    //
+    if(_node_handle) {
+        _pub_voxel_mesh = _node_handle->advertise<my_arm::voxel_mesh>(CVOXEL_MESH_TOPIC, 1000);
+    }
+    // -------------------------------------------------------------------------------------------------------
     // INIT VOXEL MESH
+    //
     _voxCad = new VoxCad();
-
+    ROS_INFO("VOX_CAD START");
     bool test = loadVXA();
     if(test) {
         //ROS_INFO("LOAD VXA SUCCESSFULLY : %d", _voxCad->MainSim.pEnv->pObj->GetNumVox());
@@ -107,6 +117,64 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
         _voxelMesh->ToStl("Voxel.stl", static_cast<CVX_Object*>(&_voxCad->MainObj), true); // !! THIS DOES NOT WORK!
 #endif
         emitVoxelMeshUpdated();
+        //
+        // ------------------------------------------------------------------------------------------
+        // PUBLISH VOXEL MESH MESSAGE
+        //
+        my_arm::voxel_mesh voxel_mesh_msg;
+
+        // Facets
+        voxel_mesh_msgs::facet facet;
+        for(size_t i = 0; i < _voxelMesh->DefMesh.Facets.size(); i++) {
+            facet.normal.x = _voxelMesh->DefMesh.Facets[i].n.x;
+            facet.normal.y = _voxelMesh->DefMesh.Facets[i].n.y;
+            facet.normal.z = _voxelMesh->DefMesh.Facets[i].n.z;
+
+            facet.vi0      = _voxelMesh->DefMesh.Facets[i].vi[0];
+            facet.vi1      = _voxelMesh->DefMesh.Facets[i].vi[1];
+            facet.vi2      = _voxelMesh->DefMesh.Facets[i].vi[2];
+
+            facet.color[0] = _voxelMesh->DefMesh.Facets[i].FColor.r;
+            facet.color[1] = _voxelMesh->DefMesh.Facets[i].FColor.g;
+            facet.color[2] = _voxelMesh->DefMesh.Facets[i].FColor.b;
+            facet.color[3] = _voxelMesh->DefMesh.Facets[i].FColor.a;
+            //
+            voxel_mesh_msg.facets.push_back(facet);
+        }
+
+        // Vertices
+        voxel_mesh_msgs::vertex vertex;
+        for(size_t i = 0; i < _voxelMesh->DefMesh.Vertices.size(); i++) {
+            vertex.normal.x = _voxelMesh->DefMesh.Vertices[i].n.x;
+            vertex.normal.y = _voxelMesh->DefMesh.Vertices[i].n.y;
+            vertex.normal.z = _voxelMesh->DefMesh.Vertices[i].n.z;
+
+            vertex.vertex.x = _voxelMesh->DefMesh.Vertices[i].v.x;
+            vertex.vertex.y = _voxelMesh->DefMesh.Vertices[i].v.y;
+            vertex.vertex.z = _voxelMesh->DefMesh.Vertices[i].v.z;
+
+            vertex.offset.x = _voxelMesh->DefMesh.Vertices[i].DrawOffset.x;
+            vertex.offset.y = _voxelMesh->DefMesh.Vertices[i].DrawOffset.y;
+            vertex.offset.z = _voxelMesh->DefMesh.Vertices[i].DrawOffset.z;
+
+            vertex.color[0] = _voxelMesh->DefMesh.Vertices[i].VColor.r;
+            vertex.color[1] = _voxelMesh->DefMesh.Vertices[i].VColor.g;
+            vertex.color[2] = _voxelMesh->DefMesh.Vertices[i].VColor.b;
+            vertex.color[3] = _voxelMesh->DefMesh.Vertices[i].VColor.a;
+            //
+            voxel_mesh_msg.vertices.push_back(vertex);
+        }
+
+        // Edges
+        voxel_mesh_msgs::edge line;
+        for(size_t i = 0; i < _voxelMesh->DefMesh.Lines.size(); i++) {
+            line.vi0 = _voxelMesh->DefMesh.Lines[i].vi[0];
+            line.vi1 = _voxelMesh->DefMesh.Lines[i].vi[1];
+            voxel_mesh_msg.edges.push_back(line);
+        }
+
+        //ROS_INFO("Publish Voxel Message %d", voxel_mesh_msg.vertices.size());
+        _pub_voxel_mesh.publish(voxel_mesh_msg);
     }
     return;
 }

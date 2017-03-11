@@ -1,3 +1,5 @@
+#include <rospack/rospack.h>
+
 #include "LeapMotion/camera_listener.h"
 #include "KsGlobal.h"
 
@@ -25,7 +27,7 @@ void CameraListener::onInit(const Controller& controller){
   rp.getSearchPathFromEnv(search_path);
   rp.crawl(search_path, 1);
   std::string path;
-  if (rp.find(CROS_PACKAGE_NAME,path)==true) {
+  if (rp.find(CROS_MY_ARM_PACKAGE_NAME,path)==true) {
     default_l_info_filename = path + std::string("/config/LeapMotion/leap_cal_left.yml");
     default_r_info_filename = path + std::string("/config/LeapMotion/leap_cal_right.yml");
   }

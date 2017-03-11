@@ -81,9 +81,7 @@
             <param name="use_gui" value="TRUE"/>
         </node>
         -->
-        <group unless="$(arg gazebo)">
-            <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
-        </group>
+        <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
     </group>
 
     <!-- REAL ROBOTS -->

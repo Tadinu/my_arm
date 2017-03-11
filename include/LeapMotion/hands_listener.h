@@ -4,9 +4,9 @@
 #include <iostream>
 #include <string.h>
 #include "Leap.h"
-#include "ros/ros.h"
-#include "visualization_msgs/MarkerArray.h"
-#include "geometry_msgs/PoseStamped.h"
+#include <ros/ros.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <geometry_msgs/PoseStamped.h>
 
 #include <vector>
 #include <sstream>

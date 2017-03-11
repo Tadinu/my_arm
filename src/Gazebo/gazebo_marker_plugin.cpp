@@ -1,4 +1,5 @@
 #include "Gazebo/gazebo_marker_plugin.h"
+#include "KsGlobal.h"
 
 namespace gazebo
 {
@@ -51,7 +52,7 @@ namespace gazebo
           ros::init(argc,argv,"gazebo_visual",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
         }
 
-        this->rosnode_ = new ros::NodeHandle(this->visual_namespace_);
+        this->rosnode_ = new ros::NodeHandle(std::string(CROS_MY_ARM_PACKAGE_NAME) + "/" + this->visual_namespace_);
         this->force_sub_ = this->rosnode_->subscribe("joint_states", 1000, &GazeboMarkerPlugin::VisualizeForceOnLink, this);
 
         // Listen to the update event. This event is broadcast every

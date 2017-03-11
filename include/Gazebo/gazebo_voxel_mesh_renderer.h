@@ -1,5 +1,5 @@
-#ifndef GAZEBO_VOXEL_MESH_H
-#define GAZEBO_VOXEL_MESH_H
+#ifndef GAZEBO_VOXEL_MESH_RENDERER_H
+#define GAZEBO_VOXEL_MESH_RENDERER_H
 
 #include "gazebo/physics/physics.hh"
 #include "gazebo/transport/TransportTypes.hh"
@@ -14,16 +14,24 @@
 #include "gazebo/rendering/Visual.hh"
 #include "gazebo/rendering/Scene.hh"
 
+#include <ros/ros.h>
 #include <ros/callback_queue.h>
 #include <ros/advertise_options.h>
-#include <ros/ros.h>
+#include <ros/subscribe_options.h>
 
 #include <geometry_msgs/Point.h>
 // if you want some positions of the model use this....
 #include <gazebo_msgs/ModelStates.h>
 
+// NATIVE --
+#include <thread>
+
+// BOOST --
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
+
+// QT --
+#include <QMutex>
 
 // OGRE --
 #include <OgreRoot.h>
@@ -87,15 +95,17 @@ using namespace ignition;
 using namespace ignition::rendering;
 #endif
 
+#include "my_arm/voxel_mesh_msg.h"
+
 namespace gazebo
 {
     namespace rendering
     {
-        class GazeboVoxelMesh : public SystemPlugin
+        class GazeboVoxelMeshRenderer : public SystemPlugin
         {
             public:
-                GazeboVoxelMesh();
-                virtual ~GazeboVoxelMesh();
+                GazeboVoxelMeshRenderer();
+                virtual ~GazeboVoxelMeshRenderer();
 
                 /// \brief Called after the plugin has been constructed.
                 void Load(int /*_argc*/, char ** /*_argv*/);
@@ -118,11 +128,20 @@ namespace gazebo
             private:
                 /// \brief Called every PreRender event. See the Load function.
                 void Update();
+                void voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo);
+                void queueThread();
+
+                // ROS STUFF --
+                QMutex _mMutex;
+                ros::NodeHandle* _ros_node_handle;
+                ros::Subscriber _voxel_mesh_listener;
+                ros::CallbackQueue _rosQueue;
+                std::thread rosQueueThread;
 
                 // Voxel Mesh --
                 void createVoxelMeshComplex();
-                void createVoxelMeshSimple();
-                void updateVoxelMeshSimple();
+                void createVoxelMeshSimple(bool isInitialShown);
+                void calculateVoxelMeshCollision();
 
                 // Movable Text --
                 void createMovableText(const std::string &_name,
@@ -146,7 +165,7 @@ namespace gazebo
             /// All the event connections.
             private:
                 std::vector<event::ConnectionPtr> connections;
-
+                my_arm::voxel_mesh _voxel_mesh_info;
                 // -----------------------------------------------------------
                 gazebo::rendering::ScenePtr mRenderingScene;
                 //

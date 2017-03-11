@@ -1,11 +1,27 @@
 #ifndef GAZEBO_MY_ARM_COMMANDER_PLUGIN_H
 #define GAZEBO_MY_ARM_COMMANDER_PLUGIN_H
 
+// QT
+#include <QMutex>
+
 #include <boost/bind.hpp>
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/common/common.hh>
+#include <gazebo/common/Console.hh>
+#include <gazebo/common/Time.hh>
+#include <gazebo/common/Events.hh>
+#include <gazebo/transport/TransportIface.hh>
+#include <gazebo/physics/physics.hh>
+#include <gazebo/transport/TransportTypes.hh>
+#include <gazebo/msgs/MessageTypes.hh>
+
+#include <gazebo/rendering/DynamicLines.hh>
+#include <gazebo/rendering/RenderTypes.hh>
+#include <gazebo/rendering/Visual.hh>
+#include <gazebo/rendering/Scene.hh>
+
 #include <stdio.h>
 
 // ROS
@@ -14,6 +30,23 @@
 #include <sensor_msgs/JointState.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
+
+#include "my_arm/voxel_mesh_msg.h"
+
+// OGRE --
+#include <OgreRoot.h>
+#include <OgreCamera.h>
+#include <OgreViewport.h>
+#include <OgreSceneManager.h>
+#include <OgreRenderWindow.h>
+#include <OgreConfigFile.h>
+#include <OgreException.h>
+#include <OgreEntity.h>
+#include <OgreFrameListener.h>
+#include <OgreWindowEventUtilities.h>
+#include <OgreSceneQuery.h>
+#include <OgreManualObject.h>
+//using namespace Ogre;
 
 // Usage in URDF:
 //   <gazebo>
@@ -34,30 +67,37 @@ public:
     void Load ( physics::ModelPtr _parent, sdf::ElementPtr _sdf );
     void OnUpdate ( const common::UpdateInfo & _info );
     void leapCallback(const visualization_msgs::MarkerArray&);
+    void voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo);
     void publishJointStates();
     void determineHandArrangmentOnLeapHands();
     void updateJointPosition(int jointId,
                              double position);
+    void calculateVoxelMeshCollision();
 
 private:
-    event::ConnectionPtr updateConnection;
-    physics::JointController* joint_controller_;
-    physics::WorldPtr world_;
-    physics::ModelPtr parent_;
-    std::vector<physics::JointPtr> joints_;
+    QMutex _mMutex;
+    event::ConnectionPtr _updateConnection;
+    physics::JointController* _joint_controller;
+    physics::WorldPtr _world;
+    physics::ModelPtr _model;
+    std::vector<physics::JointPtr> _joints;
 
     // ROS STUFF
-    boost::shared_ptr<ros::NodeHandle> rosnode_;
-    sensor_msgs::JointState joint_state_;
-    ros::Publisher joint_state_publisher_;
-    std::string tf_prefix_;
-    std::string robot_namespace_;
-    std::vector<std::string> joint_names_;
+    boost::shared_ptr<ros::NodeHandle> _rosnode;
+    sensor_msgs::JointState _joint_state;
+    ros::Publisher _joint_state_publisher;
+    std::string _tf_prefix;
+    std::string _robot_namespace;
+    std::vector<std::string> _joint_names;
+
+    // Voxel --
+    ros::Subscriber _voxel_mesh_listener;
+    my_arm::voxel_mesh _voxel_mesh_info;
 
     // Update Rate
-    double update_rate_;
+    double _update_rate;
     double update_period_;
-    common::Time last_update_time_;
+    common::Time _last_update_time;
 };
 
 // Register this plugin with the simulator

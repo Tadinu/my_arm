@@ -3,6 +3,7 @@
 
 #include <QtCore>
 #include <QMutex>
+#include <ros/ros.h>
 //#include "KsGlobal.h"
 //#include "Voxelyze.h"
 
@@ -18,6 +19,7 @@
 #define ROBOT_VOXELYZE
 #ifdef ROBOT_VOXELYZE
 #define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
+#define CVOXEL_MESH_TOPIC  ("voxel_mesh")
 #endif
 
 class RobotVoxelyzeAdapter : public QObject {
@@ -28,7 +30,8 @@ public:
     ~RobotVoxelyzeAdapter();
     static void deleteInstance();
 
-    void initVoxelyze(bool isShowMainWindow = true);
+    void initVoxelyze(ros::NodeHandle* nodeHandle = nullptr,
+                      bool isShowMainWindow = true);
     void emitVoxelMeshUpdated();
 
     bool loadVXA();
@@ -46,6 +49,9 @@ private:
     //
     QTimer timer;
     QMutex* _pMutex;
+
+    ros::NodeHandle* _node_handle;
+    ros::Publisher _pub_voxel_mesh;
 
     // VoxCad --
     CVX_MeshUtil* _voxelMesh;

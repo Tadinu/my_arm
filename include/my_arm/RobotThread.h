@@ -126,6 +126,7 @@ private:
     QThread * _pThread;
     QMutex* _pMutex; // std::mutex
 
+    ros::NodeHandle* _node_handle;
     ros::Subscriber _pose_listener;
     ros::Publisher  _sim_velocity;
 

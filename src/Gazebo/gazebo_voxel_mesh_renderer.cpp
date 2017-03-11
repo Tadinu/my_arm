@@ -26,28 +26,42 @@
 #include <gazebo/rendering/MovableText.hh>
 
 #include "Gazebo/gazebo_selection_box.h"
-#include "Gazebo/gazebo_voxel_mesh.h"
+#include "Gazebo/gazebo_voxel_mesh_renderer.h"
 
 #include <ros/ros.h>
-#include "my_arm/RobotVoxelyzeAdapter.h"
 #include "ros_vox_cad/Voxelyze/Utils/Mesh.h"
-
+#include "my_arm/RobotVoxelyzeAdapter.h"
+#include "KsGlobal.h"
+#include <std_msgs/Float32.h>
 using namespace std;
+
+#include <gazebo/physics/bullet/BulletMesh.hh>
+#include <gazebo/physics/ode/ODEMesh.hh>
+//#include <gazebo/physics/dart/DARTMesh.hh>
 
 namespace gazebo
 {
     namespace rendering
     {
-    GazeboVoxelMesh::GazeboVoxelMesh():
+    GazeboVoxelMeshRenderer::GazeboVoxelMeshRenderer():
+                     _ros_node_handle(nullptr),
                      mRenderingScene(nullptr),
                      mRoot(nullptr),
                      mSceneMgr(nullptr),
                      mSelectionBox(nullptr),
                      mRootSceneNode(nullptr)
     {
+        // start ros node
+        if (!ros::isInitialized())
+        {
+          int argc = 0;
+          char** argv = NULL;
+          ros::init(argc, argv,
+                    "gazebo_voxel_mesh",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
+        }
     }
 
-    GazeboVoxelMesh::~GazeboVoxelMesh()
+    GazeboVoxelMeshRenderer::~GazeboVoxelMeshRenderer()
     {
         this->connections.clear();
 #ifdef USER_CAMERA
@@ -55,38 +69,83 @@ namespace gazebo
             this->userCam->EnableSaveFrame(false);
         this->userCam.reset();
 #endif
+        // ----------------------------------
+        // Finalize the plugin
+        this->_ros_node_handle->shutdown();
+        delete this->_ros_node_handle;
     }
 
     /// \brief Called after the plugin has been constructed.
-    void GazeboVoxelMesh::Load(int /*_argc*/, char ** /*_argv*/)
+    void GazeboVoxelMeshRenderer::Load(int /*_argc*/, char ** /*_argv*/)
     {
+        if(!this->_ros_node_handle) {
+            this->_ros_node_handle = new ros::NodeHandle(std::string(CROS_MY_ARM_PACKAGE_NAME));
+#if 0
+            // Create a named topic, and subscribe to it.
+            ros::SubscribeOptions so = ros::SubscribeOptions::create<my_arm::voxel_mesh>(
+                                                              CVOXEL_MESH_TOPIC,
+                                                              1000,
+                                                              boost::bind(&GazeboVoxelMesh::voxelMeshCallback, this, _1),
+                                                              ros::VoidPtr(), &this->_rosQueue);
+            _voxel_mesh_listener = _ros_node_handle->subscribe(so);
+
+            // Spin up the queue helper thread.
+            this->rosQueueThread =
+              std::thread(std::bind(&GazeboVoxelMesh::queueThread, this));
+#else
+            _voxel_mesh_listener = _ros_node_handle->subscribe(CVOXEL_MESH_TOPIC, 1000,
+                                                               &GazeboVoxelMeshRenderer::voxelMeshCallback, this);
+#endif
+        }
+
         this->connections.push_back(
             event::Events::ConnectPreRender(
-                boost::bind(&GazeboVoxelMesh::Update, this)));
-
-        VVOXELYZE_ADAPTER()->initVoxelyze(false);
+                boost::bind(&GazeboVoxelMeshRenderer::Update, this)));
     }
 
     // \brief Called once after Load
-    void GazeboVoxelMesh::Init()
+    void GazeboVoxelMeshRenderer::Init()
     {
+
+    }
+
+    void GazeboVoxelMeshRenderer::voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo)
+    {
+        _mMutex.lock();
+        //cout << "Voxel Mesh Message" << voxelMeshInfo.vertices.size()<<endl;
+        _voxel_mesh_info = voxelMeshInfo;
+        _mMutex.unlock();
+    }
+
+    /// \brief ROS helper function that processes messages
+    void GazeboVoxelMeshRenderer::queueThread()
+    {
+        static const double timeout = 0.01;
+        while (this->_ros_node_handle->ok())
+        {
+            this->_rosQueue.callAvailable(ros::WallDuration(timeout));
+        }
     }
 
     /////////////////////////////////////////////
     /// \brief Called every PreRender event. See the Load function.
-    void GazeboVoxelMesh::Update()
+    void GazeboVoxelMeshRenderer::Update()
     {
+        // TO QUICKLY HANDLE CALLBACKS
+        //
+        ros::spinOnce();
+        // ----------------------------------------------------------------------------------------
         if(mRenderingScene == nullptr) {
             ROS_INFO("Initializing Rendering Scene...");
             mRenderingScene = gazebo::rendering::get_scene();
         }
-        ROS_INFO("WAIT UNTIL RENDERED!");
+        //ROS_INFO("WAIT UNTIL RENDERED!");
         // Wait until the scene is initialized.
         if (!mRenderingScene || !mRenderingScene->Initialized()) {
             ROS_WARN("Rendering Scene not yet initialized...!");
             return;
         }
-        ROS_INFO("SCENE RENDERED!");
+        //ROS_INFO("SCENE RENDERED!");
         // -----------------------------------------------------------------------------------------
         //
         if(mSceneMgr == nullptr) {
@@ -104,10 +163,10 @@ namespace gazebo
             //mRootSceneNode->createChildSceneNode("trajectory_visual_line")->attachObject(line_object);
 
             // Voxel Mesh
-            this->createVoxelMeshSimple();
+            this->createVoxelMeshSimple(true);
         }
         else {
-            //this->updateVoxelMeshSimple();
+            this->createVoxelMeshSimple(false);
         }
 
 #ifdef USER_CAMERA
@@ -131,7 +190,7 @@ namespace gazebo
 #endif
     }
 
-    void GazeboVoxelMesh::createSelectionBox()
+    void GazeboVoxelMeshRenderer::createSelectionBox()
     {
         if(mSelectionBox == nullptr) {
             mSelectionBox = new SelectionBox("SelectionBox");
@@ -139,7 +198,8 @@ namespace gazebo
         }
     }
 
-    void GazeboVoxelMesh::createMovableText(const std::string &_name,
+//#define RENDER_TRIANGLE
+    void GazeboVoxelMeshRenderer::createMovableText(const std::string &_name,
                                             const std::string &_text,
                                             const std::string &_fontName,
                                             float _charHeight,
@@ -153,58 +213,103 @@ namespace gazebo
         mRootSceneNode->createChildSceneNode("movable_text")->attachObject(msg);
     }
 
+    void GazeboVoxelMeshRenderer::calculateVoxelMeshCollision()
+    {
+#if 0
+        Ogre::MeshPtr voxelMesh = mManualObj->convertToMesh("voxel_mesh");
+        gazebo::physics::ODEMesh mesh;
+        gazebo::physics::ODECollisionPtr meshCollisionPtr;
+        mesh.Init(voxelMesh, meshCollisionPtr, math::Vector3(1,1,1));
+
+        gazebo::rendering::SelectionObj obj;
+        obj.InsertMesh(voxelMesh, "voxel_mesh");
+        obj.CreateDynamicLine();
+#endif
+    }
+
     // http://www.ogre3d.org/tikiwiki/ManualObject
-    void GazeboVoxelMesh::createVoxelMeshSimple()
+    void GazeboVoxelMeshRenderer::createVoxelMeshSimple(bool isInitialShown)
     {
-        // -----------------------------------------------------------------------------------
-        mManualObj = mSceneMgr->createManualObject("voxel");
-        mManualObj->setDynamic(true); // To allow future beginUpdate() to update the mesh
-        //mManualObj->estimateIndexCount(...);
-        //mManualObj->estimateVertexCount(...);
-        mManualObj->begin("BaseWhiteNoLighting", Ogre::RenderOperation::OT_TRIANGLE_LIST);
-
-        // define vertex position of index 0..3
-        mManualObj->position(-1.0, -1.0, 0.0);
-        mManualObj->position( 1.0, -1.0, 0.0);
-        mManualObj->position( 1.0,  1.0, 0.0);
-        mManualObj->position(-1.0,  1.0, 0.0);
-
-        // define usage of vertices by refering to the indexes
-        mManualObj->index(0);
-        mManualObj->index(1);
-        mManualObj->index(2);
-        mManualObj->index(3);
-        mManualObj->index(0);
-
-        mManualObj->end();
-        mRootSceneNode->createChildSceneNode("voxel_mesh")->attachObject(mManualObj);
-    }
-
-    void GazeboVoxelMesh::updateVoxelMeshSimple()
-    {
-        if(mManualObj) {
-            std::vector<CFacet> facets    = VVOXELYZE_ADAPTER()->getVoxelMeshFaces();
-            std::vector<CVertex> vertices = VVOXELYZE_ADAPTER()->getVoxelMeshVertices();
-            for (int i = 0; i < (int)facets.size(); i++) {
-                //glNormal3d(Facets[i].n.x, Facets[i].n.y, Facets[i].n.z);
-                for (int j = 0; j < 3; j++) {
-                    CVertex& CurVert = vertices[facets[i].vi[j]]; //just a local reference for readability
-                    //glColor3d(CurVert.VColor.r, CurVert.VColor.g, CurVert.VColor.b);
-
-                    // Point 1
-                    mManualObj->position(CurVert.v.x + CurVert.DrawOffset.x,
-                                         CurVert.v.y + CurVert.DrawOffset.y,
-                                         CurVert.v.z + CurVert.DrawOffset.z
-                                         );
-                }
+        _mMutex.lock();
+        //cout << "VERTEX COUNT" << _voxel_mesh_info.vertices.size();
+        {
+            // -----------------------------------------------------------------------------------
+            if(isInitialShown) {
+                mManualObj = mSceneMgr->createManualObject("voxel_object");
+                mManualObj->setDynamic(true); // To allow future beginUpdate() to update the mesh
+#ifdef RENDER_TRIANGLE
+                mManualObj->estimateIndexCount(_voxel_mesh_info.vertices.size());
+                mManualObj->estimateVertexCount(_voxel_mesh_info.vertices.size());
+                mManualObj->begin("BaseWhiteNoLighting", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+#else
+                mManualObj->begin("BaseWhiteNoLighting", Ogre::RenderOperation::OT_LINE_LIST);
+#endif
             }
-            //
-            mManualObj->beginUpdate(0);
+            else {
+                //mManualObj->clear();
+                mManualObj->beginUpdate(0);
+            }
+
+#ifdef RENDER_TRIANGLE
+            // define vertex position of index 0..3
+            for(size_t i = 0; i < _voxel_mesh_info.vertices.size(); i++) {
+                mManualObj->position(5*(_voxel_mesh_info.vertices[i].vertex.x + _voxel_mesh_info.vertices[i].offset.x),
+                                     5*(_voxel_mesh_info.vertices[i].vertex.y + _voxel_mesh_info.vertices[i].offset.y),
+                                     2 + 1*(_voxel_mesh_info.vertices[i].vertex.z + _voxel_mesh_info.vertices[i].offset.z));
+                mManualObj->normal(_voxel_mesh_info.vertices[i].normal.x,
+                                   _voxel_mesh_info.vertices[i].normal.y,
+                                   _voxel_mesh_info.vertices[i].normal.z);
+                mManualObj->colour(_voxel_mesh_info.vertices[i].color[0],
+                                   _voxel_mesh_info.vertices[i].color[1],
+                                   _voxel_mesh_info.vertices[i].color[2],
+                                   _voxel_mesh_info.vertices[i].color[3]);
+            }
+            for(size_t i = 0; i < _voxel_mesh_info.vertices.size(); i++) {
+                mManualObj->index((int)i);
+            }
+#else
+            // define vertex position of index 0..3
+            for(size_t i = 0; i < _voxel_mesh_info.edges.size(); i++) {
+                // Ver 0 --
+                voxel_mesh_msgs::vertex ver0 = _voxel_mesh_info.vertices[_voxel_mesh_info.edges[i].vi0];
+                mManualObj->position(5*(ver0.vertex.x + ver0.offset.x),
+                                     5*(ver0.vertex.y + ver0.offset.y),
+                                     5*(ver0.vertex.z + ver0.offset.z));
+                mManualObj->normal(ver0.normal.x,
+                                   ver0.normal.y,
+                                   ver0.normal.z);
+                mManualObj->colour(ver0.color[0],
+                                   ver0.color[1],
+                                   ver0.color[2],
+                                   ver0.color[3]);
+                // Ver 1 --
+                voxel_mesh_msgs::vertex ver1 = _voxel_mesh_info.vertices[_voxel_mesh_info.edges[i].vi1];
+                mManualObj->position(5*(ver1.vertex.x + ver1.offset.x),
+                                     5*(ver1.vertex.y + ver1.offset.y),
+                                     5*(ver1.vertex.z + ver1.offset.z));
+                mManualObj->normal(ver1.normal.x,
+                                   ver1.normal.y,
+                                   ver1.normal.z);
+                mManualObj->colour(ver1.color[0],
+                                   ver1.color[1],
+                                   ver1.color[2],
+                                   ver1.color[3]);
+            }
+#endif
+            // define usage of vertices by refering to the indexes
             mManualObj->end();
+
+            // ATTACH VOXEL MESH OBJECT TO THE SCENE NODE --
+            //
+            if(isInitialShown) {
+                mRootSceneNode->createChildSceneNode("voxel_mesh")->attachObject(mManualObj);
+            }
         }
+        _mMutex.unlock();
     }
 
-    void GazeboVoxelMesh::createVoxelMeshComplex()
+    // https://www.grahamedgecombe.com/blog/2011/08/05/custom-meshes-in-ogre3d
+    void GazeboVoxelMeshRenderer::createVoxelMeshComplex()
     {
         if(!mVoxelMesh.isNull())
             return;
@@ -357,7 +462,7 @@ namespace gazebo
     }
 
 #ifdef USE_GAZEBO_RENDERING
-    gazebo::rendering::CameraPtr GazeboVoxelMesh::createCamera(const gazebo::rendering::ScenePtr& scene)
+    gazebo::rendering::CameraPtr GazeboVoxelMeshRenderer::createCamera(const gazebo::rendering::ScenePtr& scene)
     {
         gazebo::rendering::CameraPtr camera = scene->CreateCamera("camera");
         camera->SetWorldPosition(ignition::math::Vector3d(0.0, 0.0, 1.5));
@@ -397,7 +502,7 @@ namespace gazebo
     }
 #endif
 
-    void GazeboVoxelMesh::startSceneViewer()
+    void GazeboVoxelMeshRenderer::startSceneViewer()
     {
         // Connect SceneManager to Gazebo
         //gazebo::common::Console::SetQuiet(false);
@@ -547,7 +652,7 @@ namespace gazebo
         }
     }
     */
-    void GazeboVoxelMesh::createMeshDecal()
+    void GazeboVoxelMeshRenderer::createMeshDecal()
     {
         mMeshDecal = new Ogre::ManualObject("MeshDecal");
         mRootSceneNode->attachObject(mMeshDecal);
@@ -583,7 +688,7 @@ namespace gazebo
     }
 
     // Update mesh decal when terrain selection happens
-    void GazeboVoxelMesh::setMeshDecal(Ogre::Real x, Ogre::Real z, Ogre::Real rad)
+    void GazeboVoxelMeshRenderer::setMeshDecal(Ogre::Real x, Ogre::Real z, Ogre::Real rad)
     {
         Ogre::Real x1 = x - rad;
         Ogre::Real z1 = z - rad;
@@ -621,7 +726,7 @@ namespace gazebo
         mMeshDecal->end();
     }
 
-    Ogre::Real GazeboVoxelMesh::getTerrainHeight(Ogre::Real x, Ogre::Real z)
+    Ogre::Real GazeboVoxelMeshRenderer::getTerrainHeight(Ogre::Real x, Ogre::Real z)
     {
         Ogre::Ray* verticalRay = new Ogre::Ray( Ogre::Vector3(x, 5000, z), Ogre::Vector3::NEGATIVE_UNIT_Y );
         mRaySceneQuery = mSceneMgr->createRayQuery(*verticalRay);
@@ -642,6 +747,6 @@ namespace gazebo
     }
 
     // Register this plugin with the simulator
-    GZ_REGISTER_SYSTEM_PLUGIN(GazeboVoxelMesh)
+    GZ_REGISTER_SYSTEM_PLUGIN(GazeboVoxelMeshRenderer)
     }
 }

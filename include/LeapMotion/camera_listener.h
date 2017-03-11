@@ -4,11 +4,10 @@
 #include <iostream>
 #include <string.h>
 #include "Leap.h"
-#include "ros/ros.h"
+#include <ros/ros.h>
 #include "sensor_msgs/Image.h"
 #include "sensor_msgs/CameraInfo.h"
 #include "camera_info_manager/camera_info_manager.h"
-#include "rospack/rospack.h"
 
 #include <boost/shared_ptr.hpp>
 #include <sstream>

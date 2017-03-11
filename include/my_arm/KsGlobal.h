@@ -241,7 +241,7 @@
 
 
 // PACKAGE NAME --
-#define CROS_PACKAGE_NAME ("my_arm")
+#define CROS_MY_ARM_PACKAGE_NAME ("my_arm")
 
 // FRAMES --
 #define CWORLD_FRAME ("world")

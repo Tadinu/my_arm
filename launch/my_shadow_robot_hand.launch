@@ -56,7 +56,7 @@
             <!-- Note : 'shadowhand_motor' is the name of the robot in shadowhand_motor.urdf.xacro! -->
             <group if="$(arg spawn_hand_model)">
                 <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
-                      args="-urdf -model shadowhand_motor -x 0.5 -y 0.5 -z 0.0 -param robot_description"/>
+                      args="-urdf -model shadowhand_motor -x 0 -y 0 -z 0.0 -param robot_description"/>
             </group>
         </group>
 

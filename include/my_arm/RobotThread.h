@@ -23,6 +23,27 @@
 #include <interactive_markers/interactive_marker_server.h>
 #include "Rviz/VMarker.h"
 
+// GAZEBO --
+#include <gazebo/gazebo.hh>
+#include <gazebo/physics/physics.hh>
+#include <gazebo/common/Plugin.hh>
+#include <gazebo/common/common.hh>
+#include <gazebo/common/Console.hh>
+#include <gazebo/common/Time.hh>
+#include <gazebo/common/Events.hh>
+#include <gazebo/common/Mesh.hh>
+#include <gazebo/transport/TransportIface.hh>
+#include <gazebo/physics/physics.hh>
+#include <gazebo/transport/TransportTypes.hh>
+#include <gazebo/msgs/MessageTypes.hh>
+#include <gazebo_msgs/ModelStates.h>
+#include <gazebo_msgs/ModelState.h>
+
+#include <gazebo/rendering/DynamicLines.hh>
+#include <gazebo/rendering/RenderTypes.hh>
+#include <gazebo/rendering/Visual.hh>
+#include <gazebo/rendering/Scene.hh>
+
 class RobotThread : public QObject {
     Q_OBJECT
 
@@ -66,6 +87,7 @@ public slots:
 
     void leapCallback(const visualization_msgs::MarkerArray&);
     void realSenseCallback(const visualization_msgs::MarkerArray&);
+    void modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
 signals:
     void newPose(double, double, double);
     void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);
@@ -129,6 +151,9 @@ private:
     ros::NodeHandle* _node_handle;
     ros::Subscriber _pose_listener;
     ros::Publisher  _sim_velocity;
+
+    // Gazebo --
+    ros::Subscriber _model_states_subscriber;
 
     // --------------------------------------------------------------------
     //

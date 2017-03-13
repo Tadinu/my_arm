@@ -40,6 +40,7 @@ namespace gazebo
 
     void GazeboMyArmCommander::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
     {
+        cout << _sdf->GetNextElement() << " " << _sdf->GetDescription();
         // Store the pointer to the model
         this->_model = _parent;
         this->_world = _parent->GetWorld();
@@ -62,6 +63,8 @@ namespace gazebo
             this->_robot_namespace += "/";
         }
         _rosnode = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME));
+        _model_states_subscriber = _rosnode->subscribe("/gazebo/model_states", 100,
+                                                       &GazeboMyArmCommander::modelStatecallback, this);
 
 #ifdef ROBOT_LEAP_HANDS
         // LEAP HANDS --
@@ -181,17 +184,66 @@ namespace gazebo
     void GazeboMyArmCommander::voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo)
     {
         _mMutex.lock();
-        std::cout << "My Arm Voxel Mesh Message" << voxelMeshInfo.vertices.size() << std::endl;
+        //std::cout << "My Arm Voxel Mesh Message" << voxelMeshInfo.vertices.size() << std::endl;
         _voxel_mesh_info = voxelMeshInfo;
         _mMutex.unlock();
     }
 
 #include <gazebo/physics/bullet/BulletMesh.hh>
 #include <gazebo/physics/ode/ODEMesh.hh>
+//#include <gazebo/physics/ModelState.hh>
 //#include <gazebo/physics/dart/DARTMesh.hh>
+     //const gazebo::physics::ModelState
+    void GazeboMyArmCommander::modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
+    {
+#if 0
+        for(size_t i = 0; i < msg->name.size(); i++) {
+            cout << "Gazebo Model State: "<< msg->name[i] <<
+                    msg->pose[i].position.x <<
+                    msg->pose[i].position.y <<
+                    msg->pose[i].position.z << endl;
+        }
+#endif
+    }
+
     void GazeboMyArmCommander::calculateVoxelMeshCollision()
     {
-        //Ogre::MeshPtr voxelMesh = mManualObj->convertToMesh("voxel_mesh");
+#if 0
+        /* (1) SINCE GAZEBO WORKS ON PRE-PROVIDED MODEL COLLISION INFORMATION IN WORLD/SDF FILE
+         * -> IT IS INFEASIBLE TO LOAD A DUMMY MODEL IN WORLD FILE & ATTACH MESH TO IT!
+         *
+         * (2) -> ANOTHER SOLUTION: A WORLD PLUGIN
+         * + GET MODEL STATE TO KNOW ABOUT ALL COLLISION INFO OF HAND,
+         * TOGETHER WITH CURRENT HAND POSE.
+         * + PUBLISH ALL THOSE INFO TO A TOPIC.
+         * + IN MY_ARM_MAIN_PROGRAM, SUBSCRIBE TO THAT TOPIC AND PASS IT TO VOXCAD.
+         * + VOXCAD CALCULATE THE COLLISION THEN DEFORM THE MESH -> PUBLISH TO VOXEL_MESH, FROM WHICH
+         * GAZEBO_VOXEL_MESH_RENDERER COULD SUBSCRIBE THEN RENDER IT ON GAZEBO.
+         */
+        _mMutex.lock();
+        common::Mesh voxelMesh;
+        common::SubMesh voxelSubMesh;
+        for(size_t i = 0; i < _voxel_mesh_info.vertices.size(); i++) {
+            voxelSubMesh.AddVertex(_voxel_mesh_info.vertices[i].vertex.x + _voxel_mesh_info.vertices[i].offset.x,
+                                   _voxel_mesh_info.vertices[i].vertex.y + _voxel_mesh_info.vertices[i].offset.y,
+                                   _voxel_mesh_info.vertices[i].vertex.z + _voxel_mesh_info.vertices[i].offset.z);
+            voxelSubMesh.AddNormal(_voxel_mesh_info.vertices[i].normal.x,
+                                   _voxel_mesh_info.vertices[i].normal.y,
+                                   _voxel_mesh_info.vertices[i].normal.z);
+        }
+
+        for(size_t i = 0; i < _voxel_mesh_info.facets.size(); i++) {
+            voxelSubMesh.AddIndex(_voxel_mesh_info.facets[i].vi0);
+            voxelSubMesh.AddIndex(_voxel_mesh_info.facets[i].vi1);
+            voxelSubMesh.AddIndex(_voxel_mesh_info.facets[i].vi2);
+        }
+
+        voxelMesh.AddSubMesh(&voxelSubMesh);
+        common::MeshManager::Instance()->AddMesh(&voxelMesh);
+
+        //physics::LinkPtr voxellink;
+        //physics::ModelPtr model = _world->GetModel(modelName);
+
         //gazebo::physics::ODEMesh mesh;
         //gazebo::physics::ODECollisionPtr meshCollisionPtr;
         //mesh.Init(voxelMesh, meshCollisionPtr, math::Vector3(1,1,1));
@@ -199,6 +251,9 @@ namespace gazebo
         //gazebo::rendering::SelectionObj obj;
         //obj.InsertMesh(voxelMesh, "voxel_mesh");
         //obj.CreateDynamicLine();
+        _mMutex.unlock();
+#else
+#endif
     }
 
     void GazeboMyArmCommander::OnUpdate (const common::UpdateInfo & _info)

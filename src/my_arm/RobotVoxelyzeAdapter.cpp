@@ -86,6 +86,7 @@ void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShow
     timer.start();
 }
 
+// void CVXS_SimGLView::Draw()
 void RobotVoxelyzeAdapter::updateVoxelMesh()
 {
     // ------------------------------------------------------------------------------------------------
@@ -97,6 +98,13 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
     }
     //_voxelMesh->printMeshVertices();
 
+    _voxCad->loadFingerVoxels();
+    std::vector<Vec3D<>> poses;
+    for(int i = 0; i < 5; i++) {
+        poses.push_back(Vec3D<>(1,1,1));
+    }
+    _voxCad->setFingerVoxelPos(poses);
+    ROS_INFO("UPDATE VOXEL---");
     static CVX_MeshUtil lastVoxelMesh;
     //if(_voxelMesh->DefMesh.Vertices.size() != lastVoxelMesh.DefMesh.Vertices.size() ||
     //   _voxelMesh->DefMesh.Lines.size()    != lastVoxelMesh.DefMesh.Lines.size()    ||

@@ -393,6 +393,8 @@ void RobotThread::runArmOperation(int armId)
     BulletServer bullet_server;
 #endif
 
+    _model_states_subscriber = _node_handle->subscribe("/gazebo/model_states", 100,
+                                                       &RobotThread::modelStatecallback, this);
     // =======================================================================================================
     // MAIN ROS SPINNING LOOP --
     //
@@ -1126,6 +1128,19 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
 void RobotThread::leapCallback(const visualization_msgs::MarkerArray&)
 {
     determineHandArrangmentOnLeapHands(CRUN_ROBOT);
+}
+
+//const gazebo::physics::ModelState
+void RobotThread::modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
+{
+#if 0
+   for(size_t i = 0; i < msg->name.size(); i++) {
+       cout << "RobotThread Model State: "<< msg->name[i] <<
+               msg->pose[i].position.x <<
+               msg->pose[i].position.y <<
+               msg->pose[i].position.z << endl;
+   }
+#endif
 }
 
 void RobotThread::realSenseCallback(const visualization_msgs::MarkerArray&)

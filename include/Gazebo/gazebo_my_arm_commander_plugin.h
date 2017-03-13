@@ -1,10 +1,16 @@
 #ifndef GAZEBO_MY_ARM_COMMANDER_PLUGIN_H
 #define GAZEBO_MY_ARM_COMMANDER_PLUGIN_H
 
-// QT
+// NATIVE --
+#include <stdio.h>
+
+// QT --
 #include <QMutex>
 
+// BOOST --
 #include <boost/bind.hpp>
+
+// GAZEBO --
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/Plugin.hh>
@@ -12,19 +18,21 @@
 #include <gazebo/common/Console.hh>
 #include <gazebo/common/Time.hh>
 #include <gazebo/common/Events.hh>
+#include <gazebo/common/Mesh.hh>
 #include <gazebo/transport/TransportIface.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/transport/TransportTypes.hh>
 #include <gazebo/msgs/MessageTypes.hh>
+#include <gazebo_msgs/ModelStates.h>
+#include <gazebo_msgs/ModelState.h>
 
 #include <gazebo/rendering/DynamicLines.hh>
 #include <gazebo/rendering/RenderTypes.hh>
 #include <gazebo/rendering/Visual.hh>
 #include <gazebo/rendering/Scene.hh>
 
-#include <stdio.h>
 
-// ROS
+// ROS --
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 #include <sensor_msgs/JointState.h>
@@ -74,6 +82,8 @@ public:
                              double position);
     void calculateVoxelMeshCollision();
 
+    void modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
+
 private:
     QMutex _mMutex;
     event::ConnectionPtr _updateConnection;
@@ -93,6 +103,9 @@ private:
     // Voxel --
     ros::Subscriber _voxel_mesh_listener;
     my_arm::voxel_mesh _voxel_mesh_info;
+
+    // Gazebo --
+    ros::Subscriber _model_states_subscriber;
 
     // Update Rate
     double _update_rate;

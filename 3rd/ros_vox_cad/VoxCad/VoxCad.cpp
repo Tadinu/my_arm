@@ -17,7 +17,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <QMessageBox>
 #include <QClipboard>
 #include <QCoreApplication>
-
+#include <assert.h>
 //#include "Dlg_EditPrim.h"
 #include "Dlg_Tensile.h"
 
@@ -696,6 +696,32 @@ void VoxCad::GetPlotRqdDataType(char* pRqdDataOut)
 
     }
 }
+
+#ifdef ducta
+void VoxCad::loadFingerVoxels()
+{
+    for(int i = 0; i < 5; i++) {
+        FingerList[i].LoadVXCFile("/home/brhm/DUC/RobotArm/src/my_arm/3rd/ros_vox_cad/Data/SingleVoxel.vxc");
+        FingerList[i].Voxel.SetVoxName(VS_BOX);
+    }
+}
+
+void VoxCad::setFingerVoxelPos(const std::vector<Vec3D<>>& poses)
+{
+    assert(poses.size() == 5);
+    for( int i = 0; i < 5; i++) {
+        glPushMatrix();
+        glTranslated(0, 0, 0);
+
+        glColor4d(0.5+i,0.5+i,0.5+i,1);
+        glScaled(0.001*i, 0.001*i, 0.001*i);
+
+        FingerList[i].Voxel.DrawVoxel(const_cast<Vec3D<>*>(&poses[i]), 0.2); //draw unit size since we scaled just now
+
+        glPopMatrix();
+    }
+}
+#endif
 
 #ifdef MY_ARM_GAZEBO_TRANSPORT
 void VoxCad::initGazeboCamera(ir::CameraPtr camera)

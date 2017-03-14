@@ -274,6 +274,16 @@ public:
 
 	double getAverageScaleVariation();
 
+#ifdef MY_ARM
+    std::vector<int> _interfaceSIndex;
+#endif
+#ifdef MY_ARM
+    void detectInterfacingVoxels(const std::vector<Vec3D<>>& poses);
+    std::vector<int> getInterfaceSIndex() {return _interfaceSIndex;}
+#endif
+#ifdef MY_ARM
+    std::vector<CVXS_Voxel*> _interfaceVoxelList;
+#endif
 protected:
 	double errorThreshold;
 	double thresholdTime;

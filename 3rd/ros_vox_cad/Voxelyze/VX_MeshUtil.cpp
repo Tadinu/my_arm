@@ -302,6 +302,33 @@ void CVX_MeshUtil::LinkSimVoxels(CVX_Sim* pSimIn, CVXS_SimGLView* pSimViewIn)
 */
 }
 
+#ifdef MY_ARM
+void CVX_MeshUtil::UpdateMeshWithInterfacingVoxels() //updates mesh based on linked FEA/Relaxation
+{
+    if (pSim){
+
+        //update colors that aren't by vertex!
+#ifdef USE_OPEN_GL
+        if (FacetToSIndex.size() != 0) {
+            std::vector<int> interfaceSIndexList = pSim->getInterfaceSIndex();
+            for(size_t i = 0; i < interfaceSIndexList.size(); i++) {
+                int sIndex = interfaceSIndexList[i];
+                for (int j=0; j<(int)DefMesh.Facets.size(); j++){
+                    if(FacetToSIndex[j] == sIndex) {
+                        DefMesh.Facets[i].FColor = pSim->VoxArray[sIndex].GetColor();
+                    }
+                }
+            }
+        }
+#endif
+
+    }
+    else if (pFEA){
+        //todo...
+    }
+}
+#endif
+
 void CVX_MeshUtil::UpdateMesh(int CurSel) //updates mesh based on linked FEA/Relaxation
 {
 

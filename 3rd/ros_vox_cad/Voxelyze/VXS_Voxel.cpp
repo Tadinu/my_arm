@@ -302,6 +302,11 @@ void CVXS_Voxel::SetColor(float r, float g, float b, float a)
 	m_Trans = a;
 }	
 
+CColor CVXS_Voxel::GetColor()
+{
+    return CColor(m_Red, m_Green, m_Blue, m_Trans);
+}
+
 void CVXS_Voxel::SetStrainDir(BondDir Bond, vfloat StrainIn)
 {
 	switch (Bond){

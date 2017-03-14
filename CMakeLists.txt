@@ -63,7 +63,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 # Definitions
-add_definitions(-DQT_XML_LIB -DQT_OPENGL_LIB -DUSE_ZLIB_COMPRESSION -DUSE_OPEN_GL -DPREC_MED)
+add_definitions(-DMY_ARM -DQT_XML_LIB -DQT_OPENGL_LIB -DUSE_ZLIB_COMPRESSION -DUSE_OPEN_GL -DPREC_MED)
 
 set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
 set(BULLET_INCLUDE "/usr/local/include/bullet")

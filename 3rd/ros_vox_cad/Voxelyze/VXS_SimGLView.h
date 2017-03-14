@@ -18,6 +18,8 @@ See <http://www.opensource.org/licenses/lgpl-3.0.html> for license details.
 #include "OpenGLInclude.h" //If not using QT's openGL system, make a header file "OpenGLInclude.h" that includes openGL library functions 
 #endif
 
+#include <QMutex>
+
 //! Defines the type of view
 enum ViewMode {
 	RVM_NONE, //!< Disable drawing for maximum simulation speed
@@ -79,6 +81,12 @@ public:
 	CColor GetCurVoxColor(int SIndex, int Selected);
 	void SetPlotSourcesRays(bool s){ PlotSourcesRays = s; }
 	void DrawPointingVector();
+#ifdef MY_ARM
+    void loadFingerVoxels();
+    void setFingerVoxelPos(const std::vector<Vec3D<>>& poses);
+    void drawFingerVoxels();
+    std::vector<Vec3D<>> getFingerVoxelPos();
+#endif
 private:
 
 	bool ViewForce; //look at force vectors?
@@ -107,6 +115,11 @@ private:
 	ViewMode CurViewMode;
 	ViewColor CurViewCol;
 	ViewVoxel CurViewVox;
+#ifdef MY_ARM
+    std::vector<CVX_Object> FingerList;
+    std::vector<Vec3D<>> _poses;
+    QMutex _voxelMutex;
+#endif
 };
 
 #endif //VX_SIMGLUTILS_H

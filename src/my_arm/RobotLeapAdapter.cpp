@@ -14,6 +14,11 @@ RobotLeapAdapter* RobotLeapAdapter::getInstance()
     return _instance;
 }
 
+bool RobotLeapAdapter::checkInstance()
+{
+    return _instance != nullptr;
+}
+
 RobotLeapAdapter::RobotLeapAdapter():
                   _camera_listener(nullptr),
                   _hands_listener(nullptr),
@@ -72,6 +77,18 @@ std::vector<std::vector<double>> RobotLeapAdapter::getFingerJointValues(int hand
 {
     QMutexLocker lock(_pMutex);
     return _hands_listener->getFingerJointValues(hand_id);
+}
+
+std::vector<QVector3D> RobotLeapAdapter::getFingerTipsPoses(int hand_id)
+{
+    QMutexLocker lock(_pMutex);
+    std::vector<QVector3D> fingerTipsPoses;
+    std::vector<Vector> tips = _hands_listener->getFingerTipsPoses(hand_id);
+    for(size_t i = 0; i < tips.size(); i++) {
+        fingerTipsPoses.push_back(QVector3D(tips[i].x, tips[i].y, tips[i].z));
+    }
+
+    return fingerTipsPoses;
 }
 
 void RobotLeapAdapter::emitFingerPosesChanged()

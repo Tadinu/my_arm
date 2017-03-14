@@ -2431,3 +2431,32 @@ double CVX_Sim::getAverageScaleVariation()
 	return averageScaleVariation;
 
 }
+
+#ifdef MY_ARM
+void CVX_Sim::detectInterfacingVoxels(const std::vector<Vec3D<>>& poses)
+{
+    _interfaceSIndex.clear();
+    _interfaceVoxelList.clear();
+    std::cout << "dtect poses:" << poses.size() << VoxArray.size() << std::endl;
+    if(VoxArray.size()) {
+        //std::cout << "VOXEL:"<< VoxArray[150].GetCurPos().x
+        //                     << VoxArray[150].GetCurPos().y
+        //                     << VoxArray[150].GetCurPos().z << std::endl;
+    }
+    for(size_t i = 0; i < poses.size(); i++) {
+        //std::cout << "POS:" << poses[i].x
+        //                    << poses[i].y
+        //                    << poses[i].z << std::endl;
+        //
+        for(size_t j = 0; j < VoxArray.size(); j++) {
+            Vec3D<> pos = VoxArray[j].GetCurPos();
+            if(pos.IsNear(poses[i]/100, 0.1)) {
+                VoxArray[j].SetColor(0,1,0,0.5);
+                _interfaceSIndex.push_back(j);
+                _interfaceVoxelList.push_back(&VoxArray[j]);
+                //std::cout << "VOXEL:"<< j << std::endl;
+            }
+        }
+    }
+}
+#endif

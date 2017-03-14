@@ -81,7 +81,9 @@ public:
 	inline void GetCornerDir(int Corner, Vec3D<>* pOut); //returns vector with component +/- 1 dependeind on which corner
 
 	void UpdateMesh(int CurSel = -1); //updates mesh based on linked FEA/Relaxation
-
+#ifdef MY_ARM
+    void UpdateMeshWithInterfacingVoxels();
+#endif
 	void Draw(void);
 
 	//misc

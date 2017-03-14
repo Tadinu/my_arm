@@ -21,10 +21,25 @@ HandList& HandsListener::getHands()
 
 FingerList HandsListener::getFingerList(int hand_id)
 {
-    assert(hand_id >= 0 && hand_id < _hands.count());
-    if(hand_id >=0 && hand_id < _hands.count()) {
-        return _hands[hand_id].fingers();
+    if(hand_id < 0 || hand_id >= _hands.count())
+        return FingerList();
+
+    return _hands[hand_id].fingers();
+}
+
+std::vector<Vector> HandsListener::getFingerTipsPoses(int hand_id)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    if(hand_id < 0 || hand_id >= _hands.count())
+        return std::vector<Vector>();
+
+    std::vector<Vector> fingerTipsPoses;
+    FingerList fingerList = getFingerList(hand_id);
+
+    for(int i = 0; i < fingerList.count(); i++) {
+        fingerTipsPoses.push_back(fingerList[i].tipPosition()); // tipVelocity
     }
+    return fingerTipsPoses;
 }
 
 std::vector<std::vector<double>> HandsListener::getFingerJointValues(int hand_id)

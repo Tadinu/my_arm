@@ -43,8 +43,74 @@ CVXS_SimGLView& CVXS_SimGLView::operator=(const CVXS_SimGLView& rGlView) //overl
     return *this;
 }
 
+#ifdef MY_ARM
+void CVXS_SimGLView::loadFingerVoxels()
+{
+    FingerList.clear();
+    for(int i = 0; i < 5; i++) {
+        FingerList.push_back(CVX_Object());
+        FingerList[i].LoadVXCFile("/home/brhm/DUC/RobotArm/src/my_arm/3rd/ros_vox_cad/Data/SingleVoxel.vxc");
+        FingerList[i].Voxel.SetVoxName(VS_BOX);
+    }
+}
+
+std::vector<Vec3D<>> CVXS_SimGLView::getFingerVoxelPos()
+{
+    QMutexLocker lock(&_voxelMutex);
+    return _poses;
+}
+
+void CVXS_SimGLView::setFingerVoxelPos(const std::vector<Vec3D<>>& poses)
+{
+    _voxelMutex.lock();
+    //assert(poses);
+    _poses.clear();
+    for(size_t i = 0; i < poses.size(); i++) {
+        _poses.push_back(poses[i]);
+    }
+    _voxelMutex.unlock();
+}
+
+void CVXS_SimGLView::drawFingerVoxels()
+{
+    _voxelMutex.lock();
+    for(size_t i = 0; i < _poses.size(); i++) {
+        glPushMatrix();
+        glTranslated(0, 0, 0);
+
+        glColor4d(0,0,1,1);
+        glScaled(0.001*i, 0.001*i, 0.001*i);
+
+        //std::cout << "D " << _poses[i].x
+        //                  << _poses[i].y
+        //                  << _poses[i].z << std::endl;
+        FingerList[i].Voxel.DrawVoxel(&_poses[i], 0.2); //draw unit size since we scaled just now
+
+        glPopMatrix();
+    }
+    _voxelMutex.unlock();
+}
+
+#endif
+
 void CVXS_SimGLView::Draw(int Selected, bool ViewSection, int SectionLayer)
 {
+#ifdef MY_ARM
+#if 1 // TEST_REDRAW_GL
+    static bool test = false;
+    if(!test) {
+        this->loadFingerVoxels();
+        std::vector<Vec3D<>> poses;
+        for(size_t i = 0; i < 5; i++) {
+            poses.push_back(Vec3D<>(i,i,i));
+        }
+        this->setFingerVoxelPos(poses);
+        test = true;
+    }
+#endif
+    this->drawFingerVoxels();
+#endif
+    // -----------------------------------------------------------------------------
     if (!pSim->IsInitalized()) return;
 
     if (CurViewMode == RVM_NONE) return;
@@ -576,6 +642,9 @@ void CVXS_SimGLView::DrawSurfMesh(int Selected)
 void CVXS_SimGLView::DrawVoxMesh(int Selected)
 {
     VoxMesh.UpdateMesh(Selected); //updates the generated mesh
+#ifdef MY_ARM
+    VoxMesh.UpdateMeshWithInterfacingVoxels();
+#endif
     VoxMesh.Draw();
 }
 

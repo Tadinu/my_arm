@@ -16,7 +16,6 @@ See <http://www.opensource.org/licenses/lgpl-3.0.html> for license details.
 #include "VX_Enums.h"
 #include "VX_Environment.h"
 
-
 class CVXS_BondInternal;
 class CVX_Sim;
 class CVXC_Material;

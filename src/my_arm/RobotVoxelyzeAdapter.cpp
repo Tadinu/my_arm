@@ -8,6 +8,8 @@
 #include "ros_vox_cad/Voxelyze/Utils/Mesh.h"
 #include "my_arm/voxel_mesh_msg.h"
 
+#include "RobotLeapAdapter.h"
+
 //#define VOXELYZE_RVIZ_MARKER
 #define UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
 #ifdef VOXELYZE_RVIZ_MARKER
@@ -61,6 +63,8 @@ void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShow
     // INIT VOXEL MESH
     //
     _voxCad = new VoxCad();
+    _voxCad->MainSim.pSimView->loadFingerVoxels();
+
     ROS_INFO("VOX_CAD START");
     bool test = loadVXA();
     if(test) {
@@ -98,13 +102,30 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
     }
     //_voxelMesh->printMeshVertices();
 
-    _voxCad->loadFingerVoxels();
-    std::vector<Vec3D<>> poses;
-    for(int i = 0; i < 5; i++) {
-        poses.push_back(Vec3D<>(1,1,1));
+#ifdef ROBOT_LEAP_HANDS// FOR NOW, ONLY SHOW FINGER TIPS IF LEAP MOTION IS AVAILABLE!
+    // Take the first hand data for convenience:
+    if(RobotLeapAdapter::checkInstance()) {
+        std::vector<Vec3D<>> voxelPoses;
+        std::vector<QVector3D> fingerTipsPoses = VLEAP_INSTANCE()->getFingerTipsPoses(0);
+
+        for(size_t i = 0; i < fingerTipsPoses.size(); i++) {
+            voxelPoses.push_back(Vec3D<>(std::abs(fingerTipsPoses[i].x()/10),
+                                         std::abs(fingerTipsPoses[i].y()/10),
+                                         std::abs(fingerTipsPoses[i].z()/10)));
+            //std::cout << "D " << fingerTipsPoses[i].x()
+            //                  << fingerTipsPoses[i].y()
+            //                  << fingerTipsPoses[i].z() << std::endl;
+        }
+
+        // Detect interfacing voxels
+        _voxCad->MainSim.detectInterfacingVoxels(voxelPoses);
+
+        // Draw
+        _voxCad->MainSim.pSimView->setFingerVoxelPos(voxelPoses);
+
     }
-    _voxCad->setFingerVoxelPos(poses);
-    ROS_INFO("UPDATE VOXEL---");
+#endif
+    //ROS_INFO("UPDATE VOXEL--");
     static CVX_MeshUtil lastVoxelMesh;
     //if(_voxelMesh->DefMesh.Vertices.size() != lastVoxelMesh.DefMesh.Vertices.size() ||
     //   _voxelMesh->DefMesh.Lines.size()    != lastVoxelMesh.DefMesh.Lines.size()    ||

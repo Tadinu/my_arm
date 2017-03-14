@@ -91,6 +91,7 @@ public:
     HandList& getHands();
     FingerList getFingerList(int hand_id);
     std::vector<std::vector<double>> getFingerJointValues(int hand_id);
+    std::vector<Vector> getFingerTipsPoses(int hand_id);
 
 private:
     static VoidCallback _emitFingerPosUpdatedCallBack;

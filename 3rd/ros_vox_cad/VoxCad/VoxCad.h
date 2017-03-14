@@ -39,8 +39,6 @@
 #include <ignition/rendering.hh>
 #endif
 
-#define ducta
-
 class CQOpenGL;
 
 //#define TINY_XML //use tiny xml library?
@@ -67,9 +65,6 @@ public:
 
     CQOpenGL* GLWindow;
     CQDM_Edit MainObj;
-#ifdef ducta
-    CQDM_Edit FingerList[5];
-#endif
     QVX_FEA MainFEA;
     QVX_Environment MainEnv;
     QVX_Sim MainSim;
@@ -129,11 +124,6 @@ public:
 
 
 public slots: //global slot repository for updating things across all windows/views...
-#ifdef ducta
-    void loadFingerVoxels();
-    void setFingerVoxelPos(const std::vector<Vec3D<>>& poses);
-#endif
-
     //File
     void New(){ForceViewMode(); MainObj.New(); ZoomExtAll(); SetWindowName("Untitled"); UpdateAllWins();}
     void OpenVXC(){ForceViewMode(); QString NewFileName; if (!MainObj.Open(&NewFileName)) return; FastModeChanged(false); CheckNumVox(); ZoomExtAll(); SetWindowName(NewFileName); UpdateAllWins();}

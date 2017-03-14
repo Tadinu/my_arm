@@ -63,7 +63,7 @@ namespace gazebo
             this->_robot_namespace += "/";
         }
         _rosnode = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME));
-        _model_states_subscriber = _rosnode->subscribe("/gazebo/model_states", 100,
+        _model_states_subscriber = _rosnode->subscribe("/gazebo/model_states", 1000,
                                                        &GazeboMyArmCommander::modelStatecallback, this);
 
 #ifdef ROBOT_LEAP_HANDS

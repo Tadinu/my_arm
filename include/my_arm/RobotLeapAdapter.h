@@ -7,6 +7,10 @@
 #include "LeapMotion/camera_listener.h"
 #include "LeapMotion/hands_listener.h"
 
+#ifdef ROBOT_LEAP_HANDS
+#define VLEAP_INSTANCE() RobotLeapAdapter::getInstance()
+#endif
+
 class RobotLeapAdapter : public QObject {
     Q_OBJECT
 
@@ -14,10 +18,12 @@ public:
     static RobotLeapAdapter* getInstance();
     ~RobotLeapAdapter();
     static void deleteInstance();
+    static bool checkInstance();
 
     void initLeapMotion(ros::NodeHandle* nodeHandle);
     HandsListener* getHandsListener() { return _hands_listener; }
     std::vector<std::vector<double>> getFingerJointValues(int hand_id);
+    std::vector<QVector3D> getFingerTipsPoses(int hand_id);
     void emitFingerPosesChanged();
 
     void emitFingerUp(const std::vector<float>& point);

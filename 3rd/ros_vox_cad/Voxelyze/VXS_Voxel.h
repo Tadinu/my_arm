@@ -80,6 +80,7 @@ public:
 
 	//display color stuff
 	void SetColor(float r, float g, float b, float a);
+    CColor GetColor();
 
 	//Poissons!
 	void SetStrainDir(BondDir Bond, vfloat StrainIn);

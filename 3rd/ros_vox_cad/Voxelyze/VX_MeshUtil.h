@@ -67,7 +67,7 @@ public:
 	CMesh DefMesh;
 	std::vector<CVertexCalc> CalcVerts; //same size (and order) as the vertices in the mesh
 	std::vector<CVertexCalc> CalcVertsAll; //Every possible vertex point! (iterating in x, y,z, size one greater than number of voxels in each dimension
-	std::vector<int> FacetToSIndex; //same size as the number of facets, contains the Simulation index of this voxel (to grab current color info!)
+    std::vector<int> FacetToSIndex; //same size as the number of facets, contains the Sicd DUc.mulation index of this voxel (to grab current color info!)
 
 
 

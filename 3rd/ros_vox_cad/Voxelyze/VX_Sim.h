@@ -275,14 +275,21 @@ public:
 	double getAverageScaleVariation();
 
 #ifdef MY_ARM
-    std::vector<int> _interfaceSIndex;
+    enum TOUCH_EVENT {
+        TOUCH_START, // CLAMP
+        TOUCH_STOP,
+        TOUCH_END,
+        TOUCH_MOVE
+    };
+    std::map<int, int> _interfaceSIndex;
+    std::vector<vfloat> _interfaceDraggingStiffness;
+    std::vector<Vec3D<>> _interfaceDraggingOffset;
+    std::vector<Vec3D<>> _interfaceInputPoint;
 #endif
 #ifdef MY_ARM
     void detectInterfacingVoxels(const std::vector<Vec3D<>>& poses);
-    std::vector<int> getInterfaceSIndex() {return _interfaceSIndex;}
-#endif
-#ifdef MY_ARM
-    std::vector<CVXS_Voxel*> _interfaceVoxelList;
+    std::map<int,int> getInterfaceSIndex() {return _interfaceSIndex;}
+    void onTouchEvent(const Vec3D<>& P, int eventId, int i);
 #endif
 protected:
 	double errorThreshold;

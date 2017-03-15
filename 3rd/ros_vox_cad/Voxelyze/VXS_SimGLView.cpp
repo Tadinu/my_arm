@@ -71,26 +71,47 @@ void CVXS_SimGLView::setFingerVoxelPos(const std::vector<Vec3D<>>& poses)
     _voxelMutex.unlock();
 }
 
+#include <thread>
 void CVXS_SimGLView::drawFingerVoxels()
 {
     _voxelMutex.lock();
-    for(size_t i = 0; i < _poses.size(); i++) {
-        glPushMatrix();
-        glTranslated(0, 0, 0);
-
-        glColor4d(0,0,1,1);
-        glScaled(0.001*i, 0.001*i, 0.001*i);
-
-        //std::cout << "D " << _poses[i].x
-        //                  << _poses[i].y
-        //                  << _poses[i].z << std::endl;
-        FingerList[i].Voxel.DrawVoxel(&_poses[i], 0.2); //draw unit size since we scaled just now
-
-        glPopMatrix();
+    static std::vector<Vec3D<>> currentPoses;
+    if(currentPoses.size() == 0) {
+        currentPoses.resize(_poses.size());
     }
+
+    // ---------------------------------------------------------------------------
+    // DRAW
+    glPushMatrix();
+    glTranslated(0, 0, 0);
+    glScaled(0.001, 0.001, 0.001);
+
+    for(size_t i = 0; i < _poses.size(); i++) {
+        Vec3D<> posDelta     = _poses[i] - currentPoses[i];
+        Vec3D<> posDeltaUnit = posDelta.Normalized()/4;
+        if(posDelta.Length() >= 1) { // !!! TO AVOID VIBRATION
+            currentPoses[i] += posDeltaUnit;
+        }
+
+        //std::cout << "D " << currentPoses[i].x
+        //                  << currentPoses[i].y
+        //                  << currentPoses[i].z << std::endl;
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if(i>=2) {
+             continue;
+        }
+        if(i == 0)
+            glColor4d(1,0,0,0.5);
+        else if(i == 1)
+            glColor4d(0,1,0,0.5);
+        else
+            glColor4d(0,0,1,0.5);
+        FingerList[i].Voxel.DrawVoxel(&currentPoses[i], 1); //draw unit size since we scaled just now
+    }
+
+    glPopMatrix();
     _voxelMutex.unlock();
 }
-
 #endif
 
 void CVXS_SimGLView::Draw(int Selected, bool ViewSection, int SectionLayer)

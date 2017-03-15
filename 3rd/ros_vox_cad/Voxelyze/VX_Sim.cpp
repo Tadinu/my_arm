@@ -2433,30 +2433,99 @@ double CVX_Sim::getAverageScaleVariation()
 }
 
 #ifdef MY_ARM
+void CVX_Sim::onTouchEvent(const Vec3D<>& P, int eventId, int i)
+{
+    if(_interfaceSIndex.find(i) != _interfaceSIndex.end() && _interfaceSIndex[i] != -1) {
+        CVXS_Voxel& interfaceVoxel = VoxArray[_interfaceSIndex[i]];
+        //
+        switch(eventId) {
+            case TOUCH_START:
+                // Dragging offset --
+                _interfaceDraggingOffset[i] = P - interfaceVoxel.GetCurPos();
+
+                // Input Point --
+                _interfaceInputPoint[i]     = P - _interfaceDraggingOffset[i];
+
+                // Dragging Stiffness --
+                _interfaceDraggingStiffness[i] = interfaceVoxel.GetLinearStiffness(); //GetEMod()*DraggingVoxel->GetNominalSize(); //E*A/L = E*L since A=L^2
+                break;
+
+            case TOUCH_STOP:
+            case TOUCH_END:
+                interfaceVoxel.SetInputForce(Vec3D<>(0,0,0));
+                _interfaceSIndex[i] = -1;
+                _interfaceDraggingStiffness[i] = 0.0;
+                break;
+
+            case TOUCH_MOVE:
+                _interfaceInputPoint[i] = P - _interfaceDraggingOffset[i];
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 void CVX_Sim::detectInterfacingVoxels(const std::vector<Vec3D<>>& poses)
 {
-    _interfaceSIndex.clear();
-    _interfaceVoxelList.clear();
-    std::cout << "dtect poses:" << poses.size() << VoxArray.size() << std::endl;
-    if(VoxArray.size()) {
-        //std::cout << "VOXEL:"<< VoxArray[150].GetCurPos().x
-        //                     << VoxArray[150].GetCurPos().y
-        //                     << VoxArray[150].GetCurPos().z << std::endl;
+    std::map<int,int>    localTouchEvents;
+    static bool initialized = false;
+    if(!initialized && poses.size()) { // Actually poses always contain 5 elements as 5 finger tip poses!
+        _interfaceInputPoint.resize(poses.size());
+        _interfaceDraggingOffset.resize(poses.size());
+        _interfaceDraggingStiffness.resize(poses.size());
+        initialized = true;
     }
+    //
     for(size_t i = 0; i < poses.size(); i++) {
         //std::cout << "POS:" << poses[i].x
         //                    << poses[i].y
         //                    << poses[i].z << std::endl;
         //
+        Vec3D<> posInput = poses[i]/1000; // -> Decides the force magnitude!
+        bool isFoundInterfacingVoxel = false;
+        //std::cout << "POSINPUT: " << i << ": "<< poses[i].x << " " << poses[i].y << " "  << poses[i].z << std::endl;
         for(size_t j = 0; j < VoxArray.size(); j++) {
-            Vec3D<> pos = VoxArray[j].GetCurPos();
-            if(pos.IsNear(poses[i]/100, 0.1)) {
-                VoxArray[j].SetColor(0,1,0,0.5);
-                _interfaceSIndex.push_back(j);
-                _interfaceVoxelList.push_back(&VoxArray[j]);
+            Vec3D<> voxPos = VoxArray[j].GetCurPos();
+            //if(j<=5)
+            //    std::cout << "VOX POS: " << j << voxPos.x << " " << voxPos.y << " "  << voxPos.z << std::endl;
+            if(voxPos.IsNear(poses[i], 5)) {
+                isFoundInterfacingVoxel = true;
+                //std::cout << "Finger "<< i<< "find an interface " << j << std::endl;
+                //
+                VoxArray[j].SetColor(0, 1, 1, 0.5);
+
+                if(_interfaceSIndex.find(i) == _interfaceSIndex.end() || (_interfaceSIndex[i] != j)) {
+                    localTouchEvents[i] = TOUCH_START;
+                }
+                else {
+                    localTouchEvents[i] = TOUCH_MOVE;
+                }
+                _interfaceSIndex[i] = j;
+                onTouchEvent(posInput, localTouchEvents[i], i);
+
                 //std::cout << "VOXEL:"<< j << std::endl;
+                break;
             }
         }
+
+        if(!isFoundInterfacingVoxel) {
+            // Push into local index list
+            localTouchEvents[i] = TOUCH_END;
+            onTouchEvent(posInput, localTouchEvents[i], i);
+            //std::cout << "VOXEL:"<< j << std::endl;
+        }
+    }
+
+    // NO POSES
+    if(!poses.size()) {
+        for(size_t i = 0; i < _interfaceSIndex.size(); i++) {
+            if(_interfaceSIndex.find(i) != _interfaceSIndex.end() && _interfaceSIndex[i] != -1) {
+                VoxArray[_interfaceSIndex[i]].SetInputForce(Vec3D<>(0,0,0));
+            }
+            _interfaceDraggingStiffness[i] = 0.0;
+        }
+        _interfaceSIndex.clear();
     }
 }
 #endif

@@ -370,6 +370,16 @@ void QVX_Sim::SimLoop(QString* pSimMessage)
             Vec3D<> Dist = DraggingVoxel->GetCurPos() - InputPoint ;
             DraggingVoxel->SetInputForce(DraggingStiffness*Dist); //F=KX
         }
+#ifdef MY_ARM
+        if(_interfaceSIndex.size()) {
+            for(int i = 0 ; i < (int)_interfaceSIndex.size(); i++) {
+                if(_interfaceSIndex[i] != -1) {
+                    Vec3D<> Dist = VoxArray[_interfaceSIndex[i]].GetCurPos() - _interfaceInputPoint[i];
+                    VoxArray[_interfaceSIndex[i]].SetInputForce(_interfaceDraggingStiffness[i]*Dist); //F=KX
+                }
+            }
+        }
+#endif
 
 //		if (tLastStatCalc.elapsed() > StatCalcNumber*30){CalcStat=true; StatCalcNumber++; /*tLastStatCalc.restart();*/}
 

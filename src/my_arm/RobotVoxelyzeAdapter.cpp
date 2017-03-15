@@ -108,21 +108,35 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
         std::vector<Vec3D<>> voxelPoses;
         std::vector<QVector3D> fingerTipsPoses = VLEAP_INSTANCE()->getFingerTipsPoses(0);
 
-        for(size_t i = 0; i < fingerTipsPoses.size(); i++) {
-            voxelPoses.push_back(Vec3D<>(std::abs(fingerTipsPoses[i].x()/10),
-                                         std::abs(fingerTipsPoses[i].y()/10),
-                                         std::abs(fingerTipsPoses[i].z()/10)));
-            //std::cout << "D " << fingerTipsPoses[i].x()
-            //                  << fingerTipsPoses[i].y()
-            //                  << fingerTipsPoses[i].z() << std::endl;
+        static std::vector<QVector3D> latestFingerTipsPoses;
+        if(latestFingerTipsPoses.size() == 0) {
+            latestFingerTipsPoses.resize(fingerTipsPoses.size());
         }
+        //
+        bool isNewTipPoses = false;
+        for(size_t i = 0; i < fingerTipsPoses.size(); i++) {
+            if((latestFingerTipsPoses[i] - fingerTipsPoses[i]).length() >= 2) {
+                isNewTipPoses = true;
+                break;
+            }
+        }
+        //
+        if(isNewTipPoses) {
+            for(size_t i = 0; i < fingerTipsPoses.size(); i++) {
+                voxelPoses.push_back(Vec3D<>(std::abs(fingerTipsPoses[i].x()/10),
+                                             std::abs(fingerTipsPoses[i].y()/10),
+                                             std::abs(fingerTipsPoses[i].z()/10)));
+                //std::cout << "D " << fingerTipsPoses[i].x()
+                //                  << fingerTipsPoses[i].y()
+                //                  << fingerTipsPoses[i].z() << std::endl;
+            }
 
-        // Detect interfacing voxels
-        _voxCad->MainSim.detectInterfacingVoxels(voxelPoses);
+            // Detect interfacing voxels
+            _voxCad->MainSim.detectInterfacingVoxels(voxelPoses);
 
-        // Draw
-        _voxCad->MainSim.pSimView->setFingerVoxelPos(voxelPoses);
-
+            // Draw
+            _voxCad->MainSim.pSimView->setFingerVoxelPos(voxelPoses);
+        }
     }
 #endif
     //ROS_INFO("UPDATE VOXEL--");

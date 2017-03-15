@@ -310,12 +310,14 @@ void CVX_MeshUtil::UpdateMeshWithInterfacingVoxels() //updates mesh based on lin
         //update colors that aren't by vertex!
 #ifdef USE_OPEN_GL
         if (FacetToSIndex.size() != 0) {
-            std::vector<int> interfaceSIndexList = pSim->getInterfaceSIndex();
+            std::map<int,int> interfaceSIndexList = pSim->getInterfaceSIndex();
             for(size_t i = 0; i < interfaceSIndexList.size(); i++) {
-                int sIndex = interfaceSIndexList[i];
-                for (int j=0; j<(int)DefMesh.Facets.size(); j++){
-                    if(FacetToSIndex[j] == sIndex) {
-                        DefMesh.Facets[i].FColor = pSim->VoxArray[sIndex].GetColor();
+                if(interfaceSIndexList.find(i) != interfaceSIndexList.end() && interfaceSIndexList[i] != -1) {
+                    int sIndex = interfaceSIndexList[i];
+                    for (int j=0; j<(int)DefMesh.Facets.size(); j++){
+                        if(FacetToSIndex[j] == sIndex) {
+                            DefMesh.Facets[i].FColor = pSim->VoxArray[sIndex].GetColor();
+                        }
                     }
                 }
             }

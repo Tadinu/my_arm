@@ -1,4 +1,7 @@
 #pragma once
+
+// QT --
+//
 #include <QApplication>
 #include <QWaitCondition>
 //#include <QReadWritelock>
@@ -6,8 +9,12 @@
 #include <QEventLoop>
 #include <QMetaObject>
 
+// ROS --
+//
 #include <ros/ros.h>
 #include <ros/console.h>
+#include <ros/common.h>
+#include <ros/cpp_common_decl.h>
 
 #if   ( (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) )
 #define K3DS_QT5
@@ -311,6 +318,8 @@ public:
 
         VBRHAND_ARM_JOINT_TOTAL
     };
+    static const char* CBRHAND_ARM_JOINTS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL];
+    static const char* CBRHAND_ARM_LINKS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1];
 
     // JACO ARM ---------------------------------------
     //
@@ -357,6 +366,7 @@ public:
 
         VJACO_ARM_JOINT_TOTAL
     };
+    static const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL];
 
     // PISA SOFT HAND ------------------------------------
     //
@@ -433,8 +443,9 @@ public:
 
         VPISA_SOFT_HAND_ARM_JOINT_TOTAL
     };
+    static const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL];
 
-    // PISA SOFT HAND ------------------------------------
+    // SHADOW HAND ------------------------------------
     //
     enum VSHADOW_HAND_ARM_JOINT {
         VSHADOW_HAND_ARM_BASE_JOINT,                      // "Root World Joint"
@@ -481,6 +492,7 @@ public:
 
         VSHADOW_HAND_ARM_JOINT_TOTAL
     };
+    static const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL];
 
 public:
     KsGlobal(QObject* parent = nullptr);

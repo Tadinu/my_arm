@@ -42,7 +42,7 @@ endif()
 
 # http://doc.qt.io/qt-5/cmake-manual.html
 set(CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
-
+message(STATUS "GAZEBO_CXX_FLAGS:" ${GAZEBO_CXX_FLAGS})
 ## http://doc.qt.io/qt-5/cmake-manual.html
 # In order for find_package to be successful, Qt 5 must be found below the CMAKE_PREFIX_PATH,
 # or the Qt5<Module>_DIR must be set in the CMake cache to the location of the Qt5WidgetsConfig.cmake

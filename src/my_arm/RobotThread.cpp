@@ -44,179 +44,6 @@ const tf::Vector3 CZ(0,0,1);
 
 const tf::Vector3 CZERO(0,0,0);
 
-const char* CBRHAND_ARM_JOINTS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL] = {
-    ("base_joint"),                // Revolute   Z : base_link <-> body1z
-    ("j2"),                        // Continuous Y : body1     <-> body10
-    ("j20"),                       // Fixed        : body10    <-> body2
-    ("j3"),                        // Continuous Y : body2     <-> body20
-    ("j30"),                       // Fixed        : body20    <-> body3
-    ("j4"),                        // Revolute   Z : body3     <-> brHand
-
-    ("finger_1_prox_joint"),
-    ("finger_1_med_joint"),
-    ("finger_1_dist_joint"),
-
-    ("finger_2_prox_joint"),
-    ("finger_2_med_joint"),
-    ("finger_2_dist_joint"),
-
-    ("finger_3_med_joint"),
-    ("finger_3_dist_joint")
-};
-
-const char* CBRHAND_ARM_LINKS[KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1] = {
-    CBASE_LINK,
-    ("body2"),
-    ("body20"),
-    ("body3"),
-    ("body30"),
-    ("body4"),
-
-    ("brHand"),
-    ("finger_1_prox_link"),
-    ("finger_1_med_liink"),
-    ("finger_1_dist_link"),
-
-    ("finger_2_prox_link"),
-    ("finger_2_med_link"),
-    ("finger_2_dist_link"),
-
-    ("finger_3_med_link"),
-    ("finger_3_dist_link")
-};
-
-const char* CPISA_SOFT_HAND_ARM_JOINTS[KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL] = {
-#ifndef USING_PISA_SOFT_HAND_ONLY
-    ("base_joint"),                // Revolute   Z : base_link <-> body1z
-    ("j2"),                        // Continuous Y : body1     <-> body10
-    ("j20"),                       // Fixed        : body10    <-> body2
-    ("j3"),                        // Continuous Y : body2     <-> body20
-    ("j30"),                       // Fixed        : body20    <-> body3
-    ("j4"),                        // Revolute   Z : body3     <-> brHand
-#endif
-    // PACMAN VERION ALREADY INCLUDES THE COUPLER, CLAMP AND BASE
-    //
-    //("softHandWrist_softHand_kuka_coupler_joint"),
-    //("softHandWrist_softHand_kuka_coupler_base_joint"),
-    //
-    //("softHand_kuka_coupler_softHand_clamp_joint"),
-    //
-
-    ("softHand_palm_joint"),
-
-    ("softHand_synergy_joint"),
-
-    ("softHand_thumb_abd_joint"),
-    ("softHand_thumb_inner_joint"),
-    ("softHand_thumb_inner_joint_mimic"),
-    ("softHand_thumb_outer_joint"),
-    ("softHand_thumb_outer_joint_mimic"),
-
-    ("softHand_index_abd_joint"),
-    ("softHand_index_inner_joint"),
-    ("softHand_index_inner_joint_mimic"),
-    ("softHand_index_middle_joint"),
-    ("softHand_index_middle_joint_mimic"),
-    ("softHand_index_outer_joint"),
-    ("softHand_index_outer_joint_mimic"),
-
-    ("softHand_middle_abd_joint"),
-    ("softHand_middle_inner_joint"),
-    ("softHand_middle_inner_joint_mimic"),
-    ("softHand_middle_middle_joint"),
-    ("softHand_middle_middle_joint_mimic"),
-    ("softHand_middle_outer_joint"),
-    ("softHand_middle_outer_joint_mimic"),
-
-    ("softHand_ring_abd_joint"),
-    ("softHand_ring_inner_joint"),
-    ("softHand_ring_inner_joint_mimic"),
-    ("softHand_ring_middle_joint"),
-    ("softHand_ring_middle_joint_mimic"),
-    ("softHand_ring_outer_joint"),
-    ("softHand_ring_outer_joint_mimic"),
-
-    ("softHand_little_abd_joint"),
-    ("softHand_little_inner_joint"),
-    ("softHand_little_inner_joint_mimic"),
-    ("softHand_little_middle_joint"),
-    ("softHand_little_middle_joint_mimic"),
-    ("softHand_little_outer_joint"),
-    ("softHand_little_outer_joint_mimic")
-};
-
-const char* CJACO_ARM_JOINTS[KsGlobal::VJACO_ARM_JOINT_TOTAL] = {
-    "jaco_arm_joint", // Fixed
-    "jaco_base_internal", // Fixed
-
-    "jaco_ring_1_joint", // Fixed
-    "jaco_arm_0_joint",  // Continuous
-    "jaco_ring_2_joint", // Fixed
-    "jaco_arm_1_joint",  // Revolute
-    "jaco_ring_3_joint", // Fixed
-    "jaco_arm_2_joint",  // Revolute
-    "jaco_ring_4_joint", // Fixed
-    "jaco_arm_3_joint",  // Continuous
-    "jaco_ring_5_joint", // Fixed
-    "jaco_arm_4_joint",  // Continuous
-    "jaco_ring_6_joint", // Fixed
-    "jaco_arm_5_joint",  // Continuous
-
-    "jaco_fingers_base_joint", // Fixed
-    "jaco_finger_mount_index_fixed", // Fixed
-    "jaco_finger_joint_0", // Revolute
-    "jaco_finger_joint_1", // Fixed
-    "jaco_finger_mount_thumb_fixed", // Fixed
-    "jaco_finger_joint_2", // Revolute
-    "jaco_finger_joint_3", // Fixed
-    "jaco_finger_mount_pinkie_fixed" // Fixed
-    "jaco_finger_joint_4", // Revolute
-    "jaco_finger_joint_5", // Fixed
-};
-
-const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL] = {
-    "rh_world_joint",                         // Fixed
-    // Forearm
-    // Wrist
-    "rh_WRJ2",                                // Revolute
-    // Palm
-    "rh_WRJ1",                                // Revolute
-
-    // Fingers
-    // Thumb
-    "rh_THJ5",                                // Thumb base, revolute
-    "rh_THJ4",                                // Thumb proximal, revolute
-    "rh_THJ3",                                // Thumb hub, revolute
-    "rh_THJ2",                                // Thumb middle, revolute
-    "rh_THJ1",                                // Thumb distal, revolute
-    "rh_THtip",                               // Thumb tip
-
-    // Index
-    "rh_FFJ4",                                // knuckle, Revolute
-    "rh_FFJ3",                                // Proximal, Revolute
-    "rh_FFJ2",                                // Standard Middle , Revolute
-    "rh_FFJ1",                                // Distal , Revolute
-
-    // Middle
-    "rh_MFJ4",                                // knuckle, Revolute
-    "rh_MFJ3",                                // Proximal, Revolute
-    "rh_MFJ2",                                // Standard Middle , Revolute
-    "rh_MFJ1",                                // Distal , Revolute
-
-    // Ring
-    "rh_RFJ4",                                // knuckle, Revolute
-    "rh_RFJ3",                                // Proximal, Revolute
-    "rh_RFJ2",                                // Standard Middle , Revolute
-    "rh_RFJ1",                                // Distal , Revolute
-
-    // Little Finger (Pinkie)
-    "rh_LFJ5",                                // lfmetacarpal, Revolute
-    "rh_LFJ4",                                // knuckle, Revolute
-    "rh_LFJ3",                                // Proximal, Revolute
-    "rh_LFJ2",                                // Standard Middle , Revolute
-    "rh_LFJ1"                                 // Distal , Revolute
-};
-
 RobotThread::RobotThread(int argc, char** pArgv, const char * topic)
             : _init_argc(argc),
               _pInit_argv(pArgv),
@@ -274,7 +101,7 @@ bool RobotThread::init()
 
     connect(_pThread, &QThread::started, this, &RobotThread::run);
     ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME);  // Name of the node specified in launch file
-    _node_handle = new ros::NodeHandle(std::string(CROS_MY_ARM_PACKAGE_NAME));
+    _node_handle = new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME);
     ros::param::set("~rigid_only", false);
     //
     if (!ros::master::check())
@@ -394,7 +221,7 @@ void RobotThread::runArmOperation(int armId)
 #endif
 
     _model_states_subscriber = _node_handle->subscribe("/gazebo/model_states", 100,
-                                                       &RobotThread::modelStatecallback, this);
+                                                       &RobotThread::gazeboModelStatecallback, this);
     // =======================================================================================================
     // MAIN ROS SPINNING LOOP --
     //
@@ -520,13 +347,13 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
         case KsGlobal::VBRHAND_ARM:
             for(size_t i = 0; i < (KsGlobal::VBRHAND_ARM_JOINT_TOTAL+1); i++) {
                 try {
-                    listener.waitForTransform(base_link_name, CBRHAND_ARM_LINKS[i],
+                    listener.waitForTransform(base_link_name, KsGlobal::CBRHAND_ARM_LINKS[i],
                                              ros::Time(0), ros::Duration(3.0)); // !!!
-                    listener.lookupTransform(base_link_name, CBRHAND_ARM_LINKS[i],
+                    listener.lookupTransform(base_link_name, KsGlobal::CBRHAND_ARM_LINKS[i],
                                              ros::Time(0), transform);
                 }
                 catch (tf::TransformException e) {
-                    ROS_ERROR("Error looking up transform of %s relative to base_link", CBRHAND_ARM_LINKS[i]);
+                    ROS_ERROR("Error looking up transform of %s relative to base_link", KsGlobal::CBRHAND_ARM_LINKS[i]);
                     ROS_ERROR("%s",e.what());
                     ros::Duration(1.0).sleep();
                     continue;
@@ -538,7 +365,7 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
                     _frame_trans[i] = transform;
                     //tf::Vector3 point(0,0,0);
                     //tf::Vector3 point_bl = transform * point;
-                    //ROS_INFO("%s: %f %f %f", CBRHAND_ARM_LINKS[i], point_bl[0], point_bl[1], point_bl[2]);
+                    //ROS_INFO("%s: %f %f %f", KsGlobal::CBRHAND_ARM_LINKS[i], point_bl[0], point_bl[1], point_bl[2]);
                 }
             }
         break;
@@ -652,9 +479,9 @@ void RobotThread::publishJointState(int robotId,
         case KsGlobal::VPISA_SOFT_HAND_ARM:
         case KsGlobal::VSHADOW_HAND_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
-                joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? CBRHAND_ARM_JOINTS[i]         :
-                                          (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? CPISA_SOFT_HAND_ARM_JOINTS[i] :
-                                          (KsGlobal::VSHADOW_HAND_ARM    == robotId) ? CSHADOWHAND_ARM_JOINTS[i]     : "";
+                joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? KsGlobal::CBRHAND_ARM_JOINTS[i]         :
+                                          (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? KsGlobal::CPISA_SOFT_HAND_ARM_JOINTS[i] :
+                                          (KsGlobal::VSHADOW_HAND_ARM    == robotId) ? KsGlobal::CSHADOWHAND_ARM_JOINTS[i]     : "";
                 joint_state.position[i] = current_joint_poses[i];
             }
 
@@ -697,7 +524,7 @@ void RobotThread::publishJointState(int robotId,
         //
         case KsGlobal::VJACO_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
-                joint_state.name[i]     = CJACO_ARM_JOINTS[i];
+                joint_state.name[i]     = KsGlobal::CJACO_ARM_JOINTS[i];
                 joint_state.position[i] = _joint_poses[i];
             }
 
@@ -1131,7 +958,7 @@ void RobotThread::leapCallback(const visualization_msgs::MarkerArray&)
 }
 
 //const gazebo::physics::ModelState
-void RobotThread::modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
+void RobotThread::gazeboModelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
 {
 #if 0
    for(size_t i = 0; i < msg->name.size(); i++) {

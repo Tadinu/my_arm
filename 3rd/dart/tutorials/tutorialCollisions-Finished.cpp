@@ -29,13 +29,21 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QtWidgets/QApplication>
+#include <QThread>
 #include <random>
 
 #include "dart/dart.hpp"
 #include "dart/gui/gui.hpp"
 
+#include "my_arm/KsGlobal.h"
 #include "my_arm/RobotVoxelyzeAdapter.h"
+#include "my_arm/RobotLeapAdapter.h"
 #include "Voxelyze/Utils/Mesh.h"
+
+#define DART_VOXEL_MESH
+#define FORCE_ON_RIGIDBODY 25.0
+#define FORCE_ON_VERTEX 1.00
 
 const double default_shape_density = 1000; // kg/m^3
 const double default_shape_height  = 0.1;  // m
@@ -66,12 +74,19 @@ const double default_spawn_range = 0.9*default_ground_width/2;
 
 const double default_restitution = 0.6;
 
-const double default_vertex_stiffness = 1000.0;
-const double default_edge_stiffness = 1.0;
+const double default_vertex_stiffness = 100.0;
+const double default_edge_stiffness = 0.0;
 const double default_soft_damping = 5.0;
 
+using namespace std;
 using namespace dart::dynamics;
 using namespace dart::simulation;
+// using namespace dart::common;
+// using namespace dart::math;
+// using namespace dart::dynamics;
+// using namespace dart::utils;
+
+SkeletonPtr createManipulator();
 
 void setupRing(const SkeletonPtr& ring)
 {
@@ -107,10 +122,36 @@ void setupRing(const SkeletonPtr& ring)
   }
 }
 
-class MyWindow : public dart::gui::SimWindow
+void gbHandleRosCallback()
+{
+    // --------------------------------------------------------------------
+    // HANDLE ROS CALLBACKS --
+    //std::cout << "Ros spinning once!";
+    ros::spinOnce();
+}
+
+class MyWindow : public dart::gui::SoftSimWindow
 {
 public:
 
+#ifdef DART_VOXEL_MESH
+    MyWindow(const WorldPtr& world,
+             const SkeletonPtr& softVoxelBody,
+             const SkeletonPtr& shadowHand)
+      : mRandomize(true),
+        mRD(),
+        mMT(mRD()),
+        mDistribution(-1.0, std::nextafter(1.0, 2.0)),
+        mOriginalSoftVoxelBody(softVoxelBody),
+        mShadowHand(shadowHand),
+        mSkelCount(0),
+        mForceOnRigidBody(Eigen::Vector3d::Zero()),
+        mForceOnVertex(Eigen::Vector3d::Zero()),
+        mImpulseDuration(0.0)
+    {
+      setWorld(world);
+    }
+#else
   MyWindow(const WorldPtr& world, const SkeletonPtr& ball,
            const SkeletonPtr& softBody, const SkeletonPtr& hybridBody,
            const SkeletonPtr& rigidChain, const SkeletonPtr& rigidRing)
@@ -127,27 +168,47 @@ public:
   {
     setWorld(world);
   }
+#endif
 
-
-  MyWindow(const WorldPtr& world, const SkeletonPtr& softVoxelBody)
-    : mRandomize(true),
-      mRD(),
-      mMT(mRD()),
-      mDistribution(-1.0, std::nextafter(1.0, 2.0)),
-      mOriginalSoftVoxelBody(softVoxelBody),
-      mSkelCount(0)
+  /// \brief
+  void timeStepping() override
   {
-    setWorld(world);
+#ifdef DART_VOXEL_MESH
+    if(mOriginalSoftVoxelBody != nullptr) {
+      dart::dynamics::SoftBodyNode* softBodyNode = mOriginalSoftVoxelBody->getSoftBodyNode(0);
+#else
+      if(mOriginalHybridBody != nullptr) {
+        dart::dynamics::SoftBodyNode* softBodyNode = mOriginalHybridBody->getSoftBodyNode(0);
+#endif
+      if(softBodyNode) {
+          softBodyNode->addExtForce(mForceOnRigidBody);
+      }
+
+      mWorld->step();
+
+      // for perturbation test
+      mImpulseDuration--;
+      if (mImpulseDuration <= 0)
+      {
+        mImpulseDuration = 0;
+        mForceOnRigidBody.setZero();
+      }
+
+      mForceOnVertex /= 2.0;
+    }
   }
 
   void keyboard(unsigned char key, int x, int y) override
   {
     switch(key)
     {
+#ifdef DART_VOXEL_MESH
       case '0':
         addObject(mOriginalSoftVoxelBody->clone());
+        mWorld->addSkeleton(mShadowHand);
+        //mWorld->addSkeleton(createManipulator());
       break;
-
+#else
       case '1':
         addObject(mOriginalBall->clone());
         break;
@@ -167,7 +228,7 @@ public:
       case '5':
         addRing(mOriginalRigidRing->clone());
         break;
-
+#endif
       case 'd':
         if(mWorld->getNumSkeletons() > 2)
           removeSkeleton(mWorld->getSkeleton(2));
@@ -181,9 +242,71 @@ public:
                   << std::endl;
         break;
 
+    case ' ':  // use space key to play or stop the motion
+      mSimulating = !mSimulating;
+      if (mSimulating)
+        mPlay = false;
+      break;
+    case 'p':  // playBack
+      mPlay = !mPlay;
+      if (mPlay)
+        mSimulating = false;
+      break;
+    case '[':  // step backward
+      if (!mSimulating)
+      {
+        mPlayFrame--;
+        if (mPlayFrame < 0)
+          mPlayFrame = 0;
+        glutPostRedisplay();
+      }
+      break;
+    case ']':  // step forwardward
+      if (!mSimulating)
+      {
+        mPlayFrame++;
+        if (mPlayFrame >= mWorld->getRecording()->getNumFrames())
+          mPlayFrame = 0;
+        glutPostRedisplay();
+      }
+      break;
+    case 'v':  // show or hide markers
+      mShowMarkers = !mShowMarkers;
+      break;
+    case 'n':
+      mShowPointMasses = !mShowPointMasses;
+      break;
+    case 'm':
+      mShowMeshs = !mShowMeshs;
+      break;
+    case 'w':  // upper right force
+      mForceOnRigidBody[0] = -FORCE_ON_RIGIDBODY;
+      mImpulseDuration = 100;
+      break;
+    case 'q':  // upper right force
+      mForceOnRigidBody[0] = FORCE_ON_RIGIDBODY;
+      mImpulseDuration = 100;
+      break;
+    case 's':  // upper left force
+      mForceOnRigidBody[1] = -FORCE_ON_RIGIDBODY;
+      mImpulseDuration = 100;
+      break;
+    case 'a':  // upper right force
+      mForceOnRigidBody[1] = FORCE_ON_RIGIDBODY;
+      mImpulseDuration = 100;
+      break;
+    case 'x':  // upper right force
+      mForceOnRigidBody[2] = -FORCE_ON_RIGIDBODY;
+      mImpulseDuration = 100;
+      break;
+    case 'z':  // upper right force
+      mForceOnRigidBody[2] = FORCE_ON_RIGIDBODY;
+      mImpulseDuration = 100;
+      break;
       default:
         SimWindow::keyboard(key, x, y);
     }
+    glutPostRedisplay();
   }
 
   void drawWorld() const override
@@ -191,6 +314,34 @@ public:
     // Make sure lighting is turned on and that polygons get filled in
     glEnable(GL_LIGHTING);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    dart::dynamics::SkeletonPtr Skeleton0 = mWorld->getSkeleton(0);
+    //
+    if(Skeleton0 != nullptr) {
+        Eigen::Vector4d color;
+        color << 0.5, 0.8, 0.6, 1.0;
+        drawSkeleton(mWorld->getSkeleton(0).get(), color, false);
+    }
+
+    // draw arrow
+#ifdef DART_VOXEL_MESH
+    if (mImpulseDuration > 0 && mOriginalSoftVoxelBody != nullptr)
+    {
+        dart::dynamics::SoftBodyNode* softBodyNode = mOriginalSoftVoxelBody->getSoftBodyNode(0);
+#else
+    if (mImpulseDuration > 0 && mOriginalHybridBody != nullptr)
+    {
+        dart::dynamics::SoftBodyNode* softBodyNode = mOriginalHybridBody->getSoftBodyNode(0);
+#endif
+        if(softBodyNode) {
+            softBodyNode->addExtForce(mForceOnRigidBody);
+            Eigen::Vector3d poa
+                = softBodyNode->getTransform() * Eigen::Vector3d(0.0, 0.0, 0.0);
+            Eigen::Vector3d start = poa - mForceOnRigidBody / 25.0;
+            double len = mForceOnRigidBody.norm() / 25.0;
+            dart::gui::drawArrow3D(start, mForceOnRigidBody, len, 0.025, 0.05);
+        }
+    }
 
     SimWindow::drawWorld();
   }
@@ -209,6 +360,86 @@ public:
     glutTimerFunc(mDisplayTimeout, refreshTimer, _val);
   }
 
+  void leapCallback(const visualization_msgs::MarkerArray&)
+  {
+    determineHandArrangmentOnLeapHands();
+  }
+
+  void updateJointPosition(int jointId, double position)
+  {
+      if(jointId < 0 || jointId >= KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL) {
+          return;
+      }
+      // -------------------------------------------------------------------
+      std::string jointName = KsGlobal::CSHADOWHAND_ARM_JOINTS[jointId];
+#if 1 // Set position using JOINT
+      std::size_t numJoints = mShadowHand->getNumJoints();
+      Joint* joint;
+      for(size_t i = 0; i < numJoints; i++) {
+          joint = mShadowHand->getJoint(i);
+          if(joint->getName() == jointName) {
+              //std::cout << "Set position for jointName" << jointName << std::endl;
+              joint->setPosition(0, position);
+              break;
+          }
+      }
+#else // Set position using DOF
+      std::size_t numDofs = mShadowHand->getNumDofs();
+      DegreeOfFreedom* dof;
+      for(size_t i = 0; i < numDofs; i++) {
+          dof = mShadowHand->getDof(i);
+          if(dof->getName() == jointName) {
+              std::cout << "Set position for jointName" << jointName << std::endl;
+              dof->setPosition(position);
+              break;
+          }
+      }
+#endif
+  }
+
+  void determineHandArrangmentOnLeapHands()
+  {
+#ifdef ROBOT_LEAP_HANDS
+      // Take the first hand data for convenience:
+      std::vector<std::vector<double>> jointValues = VLEAP_INSTANCE()->getFingerJointValues(0);
+      //std::cout << "JOINT VALUE SIZE: " << jointValues.size();
+      if(jointValues.size() > 0) {
+          //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
+          //std::cout << "Fingers joints :" << jointValues[1][0] << " " << jointValues[1][1] << " " << jointValues[1][2];
+          //updateJointPosition(KsGlobal::VSHADOW_HAND_ARM_BASE_JOINT, 0);
+          updateJointPosition(KsGlobal::VSHADOW_HAND_WRJ2, 0);
+          updateJointPosition(KsGlobal::VSHADOW_HAND_WRJ1, 0);
+
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ5, jointValues[0][0]);
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ3, qAbs(jointValues[0][1]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ2, qAbs(jointValues[0][2]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ1, qAbs(jointValues[0][2]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_TIP, qAbs(jointValues[0][2]));
+
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J4, jointValues[1][0]);
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J3, qAbs(jointValues[1][1]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J2, qAbs(jointValues[1][2]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J1, qAbs(jointValues[1][3]));
+
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J4, jointValues[2][0]);
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J3, qAbs(jointValues[2][1]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J2, qAbs(jointValues[2][2]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J1, qAbs(jointValues[2][3]));
+
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J4, -jointValues[3][0]);
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J3, qAbs(jointValues[3][1]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J2, qAbs(jointValues[3][2]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J1, qAbs(jointValues[3][3]));
+
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_4_LFJ5, qAbs(jointValues[4][0]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_4_LFJ4, -jointValues[4][0]);
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J3, qAbs(jointValues[4][1]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]));
+          updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]));
+      }
+#endif
+  }
 protected:
 
   /// Add an object to the world and toss it at the wall
@@ -222,6 +453,7 @@ protected:
       positions[4] = default_spawn_range * mDistribution(mMT);
 
     positions[5] = default_start_height;
+    std::string objectName = object->getName();
     object->getJoint(0)->setPositions(positions);
 
     // Add the object to the world
@@ -245,7 +477,7 @@ protected:
     else
     {
       // or refuse to add the object if it is in collision
-      std::cout << "The new object spawned in a collision. "
+      std::cout << "The new object " << objectName << " spawned in a collision. "
                 << "It will not be added to the world." << std::endl;
       return false;
     }
@@ -253,7 +485,7 @@ protected:
     // Create reference frames for setting the initial velocity
     Eigen::Isometry3d centerTf(Eigen::Isometry3d::Identity());
     centerTf.translation() = object->getCOM();
-    SimpleFrame center(Frame::World(), "center", centerTf);
+    dart::dynamics::SimpleFrame center(dart::dynamics::Frame::World(), "center", centerTf);
 
     // Set the velocities of the reference frames so that we can easily give the
     // Skeleton the linear and angular velocities that we want
@@ -275,7 +507,7 @@ protected:
     Eigen::Vector3d w = angular_speed * Eigen::Vector3d::UnitY();
     center.setClassicDerivatives(v, w);
 
-    SimpleFrame ref(&center, "root_reference");
+    dart::dynamics::SimpleFrame ref(&center, "root_reference");
     ref.setRelativeTransform(object->getBodyNode(0)->getTransform(&center));
 
     // Use the reference frames to set the velocity of the Skeleton's root
@@ -346,8 +578,11 @@ protected:
   /// A blueprint Skeleton that we will use to spawn soft bodies
   SkeletonPtr mOriginalSoftBody;
 
+#ifdef DART_VOXEL_MESH
   /// A blueprint Skeleton that we will use to spawn soft bodies
   SkeletonPtr mOriginalSoftVoxelBody;
+  SkeletonPtr mShadowHand;
+#endif
 
   /// A blueprint Skeleton that we will use to spawn hybrid bodies
   SkeletonPtr mOriginalHybridBody;
@@ -362,7 +597,16 @@ protected:
   /// unique names
   std::size_t mSkelCount;
 
+  /// \brief
+  Eigen::Vector3d mForceOnRigidBody;
+
+  /// \brief Number of frames for applying external force
+  int mImpulseDuration;
+
+  /// \brief
+  Eigen::Vector3d mForceOnVertex;
 };
+// End class MyWindow : public dart::gui::SimWindow
 
 /// Add a rigid body with the specified Joint type to a chain
 template<class JointType>
@@ -516,10 +760,69 @@ BodyNode* addSoftBody(const SkeletonPtr& chain, const std::string& name,
   return bn;
 }
 
+#ifdef DART_VOXEL_MESH //ducta
+SoftBodyNode::UniqueProperties makeMeshProperties(
+                                const Eigen::Vector3d& _size,
+                                const Eigen::Isometry3d& _localTransform,
+                                double _totalMass,
+                                double _vertexStiffness,
+                                double _edgeStiffness,
+                                double _dampingCoeff)
+{
+    SoftBodyNode::UniqueProperties properties(
+                  _vertexStiffness, _edgeStiffness, _dampingCoeff);
+    //----------------------------------------------------------------------------
+    // Point masses
+    //----------------------------------------------------------------------------
+    // Number of point masses
+    const std::vector<CVertex>& vertices = VVOXELYZE_ADAPTER()->getVoxelMeshVertices();
+    const std::vector<CLine>& lines      = VVOXELYZE_ADAPTER()->getVoxelMeshLines();
+    std::size_t nPointMasses = vertices.size();
+    properties.mPointProps.resize(nPointMasses);
+
+    // Mass per vertices
+    double pointMass = _totalMass / nPointMasses;
+
+    // Resting positions for each point mass
+    std::vector<Eigen::Vector3d> restingPos(nPointMasses,
+                                            Eigen::Vector3d::Zero());
+
+    for(size_t i = 0; i < nPointMasses; i++) {
+        restingPos[i] = _size.cwiseProduct(Eigen::Vector3d(vertices[i].v.x, vertices[i].v.y, vertices[i].v.z)) * 0.5;
+    }
+
+    // Point masses
+    for (std::size_t i = 0; i < nPointMasses; ++i) {
+        properties.mPointProps[i].mX0 = _localTransform * restingPos[i];
+        properties.mPointProps[i].mMass = pointMass;
+    }
+
+    //----------------------------------------------------------------------------
+    // Edges
+    //----------------------------------------------------------------------------
+    for(size_t i = 0; i < lines.size(); i++) {
+        properties.connectPointMasses(lines[i].vi[0], lines[i].vi[1]);
+    }
+
+    //----------------------------------------------------------------------------
+    // Faces
+    //----------------------------------------------------------------------------
+    const std::vector<CFacet>& facets = VVOXELYZE_ADAPTER()->getVoxelMeshFaces();
+    //
+    Eigen::Vector3i face;
+    for(size_t i = 0; i < facets.size(); i++) {
+        face[0] = facets[i].vi[0];
+        face[1] = facets[i].vi[1];
+        face[2] = facets[i].vi[2];
+        properties.addFace(face);
+    }
+
+    return properties;
+}
+
 /// Add a soft body with the specified Joint type to a chain
 template<class JointType>
 BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
-                           const std::vector<Eigen::Vector3i>& faces,
                            BodyNode* parent = nullptr)
 {
   // Set the Joint properties
@@ -537,17 +840,27 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
 
   // Set the properties of the soft body
   SoftBodyNode::UniqueProperties soft_properties;
+  double mass = 0;
   {
-      // Add Faces
-      for(size_t i = 0; i < faces.size(); i++) {
-          soft_properties.addFace(faces[i]);
-      }
-
       // Add Pointmass
-      //PointMass::Properties pointMass;
-      //for(size_t i = 0; i < RobotVoxelyzeAdapter::getInstance()->getVoxelMeshVertices().size(); i++) {
-      //    soft_properties.addPointMass(pointMass);
-      //}
+      PointMass::Properties pointMass;
+      const std::vector<CLine>& lines = VVOXELYZE_ADAPTER()->getVoxelMeshLines();
+      const std::vector<CVertex>& vertices = VVOXELYZE_ADAPTER()->getVoxelMeshVertices();
+      for(size_t i = 0; i < lines.size(); i++) {
+          // Ver 0 --
+          Vec3D<> ver0(vertices[lines[i].vi[0]].v.x + vertices[lines[i].vi[0]].DrawOffset.x,
+                       vertices[lines[i].vi[0]].v.y + vertices[lines[i].vi[0]].DrawOffset.y,
+                       vertices[lines[i].vi[0]].v.z + vertices[lines[i].vi[0]].DrawOffset.z);
+          // Ver 1 --
+          Vec3D<> ver1(vertices[lines[i].vi[1]].v.x + vertices[lines[i].vi[1]].DrawOffset.x,
+                       vertices[lines[i].vi[1]].v.y + vertices[lines[i].vi[1]].DrawOffset.y,
+                       vertices[lines[i].vi[1]].v.z + vertices[lines[i].vi[1]].DrawOffset.z);
+          mass += ver1.Dist(ver0);
+      }
+      mass *= default_shape_density * default_skin_thickness;
+      soft_properties = makeMeshProperties(
+            Eigen::Vector3d(20,20,5), Eigen::Isometry3d::Identity(),
+            mass, default_vertex_stiffness, default_edge_stiffness, default_soft_damping);
   }
 
   soft_properties.mKv = default_vertex_stiffness;
@@ -574,6 +887,7 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
 
   return bn;
 }
+#endif
 
 void setAllColors(const SkeletonPtr& object, const Eigen::Vector3d& color)
 {
@@ -654,12 +968,13 @@ SkeletonPtr createSoftBody()
   return soft;
 }
 
-SkeletonPtr createSoftVoxelMesh(const std::vector<Eigen::Vector3i>& faces)
+#ifdef DART_VOXEL_MESH
+SkeletonPtr createSoftVoxelMesh()
 {
     SkeletonPtr soft = Skeleton::create("softVoxel");
 
     // Add a soft body
-    BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "soft voxel", faces);
+    BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "soft voxel");
 
     // Add a rigid collision geometry and inertia
     double width = default_shape_height, height = 2*default_shape_width;
@@ -676,6 +991,119 @@ SkeletonPtr createSoftVoxelMesh(const std::vector<Eigen::Vector3i>& faces)
     setAllColors(soft, dart::Color::Fuchsia());
 
     return soft;
+}
+
+SkeletonPtr loadShadowHand()
+{
+#if 0
+    SkeletonPtr shadow_hand = dart::utils::SdfParser::readSkeleton(
+          DART_DATA_PATH"sdf/shadow_hand/shadow_hand.sdf"); // THIS DOES NOT WORK, THE MODEL LINKS FALL DOWN ALL!!!
+#else
+    /* !NOTE:
+     * This must resort to conversiong of xacro to urdf file since intially,
+     * Shadow Hand package does not provide an urdf file!
+     *
+     * 1. source devel/setup.sh in my_arm catkin package folder (Local package)
+     * 2. XACRO => URDF: http://docs.ros.org/diamondback/api/sr_hand/html/index.html
+     *    (xacro.py is deprecated, replaced by just xacro)
+          rosrun xacro xacro --inorder -o `rospack find my_arm`/models/shadow_hand/robots/shadowhand_motor.urdf `rospack find my_arm`/models/shadow_hand/robots/shadowhand_motor.urdf.xacro
+       3. Since DART does not understand ros package (package://my_arm/<path_to_stl> file in link's geometry mesh tag in .urdf)
+          => Replace them with absolute path to the stl file
+     */
+    //
+    // Load the Skeleton from a file
+    dart::utils::DartLoader loader;
+    SkeletonPtr shadow_hand = loader.parseSkeleton(DART_DATA_PATH"urdf/shadow_hand/shadow_hand.urdf");
+    shadow_hand->setName("ShadowHand");
+#endif
+#if 0
+    // Position its base in a reasonable way
+    Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
+    tf.translation() = Eigen::Vector3d(0.0, 0.0, 0.0);
+    shadow_hand->getJoint(0)->setTransformFromParentBodyNode(tf);
+    tf.translation() = Eigen::Vector3d(0.0, 0.0, 1.0);
+    shadow_hand->getJoint(1)->setTransformFromParentBodyNode(tf);
+
+#if 1
+    std::size_t numJoints = shadow_hand->getNumJoints();
+    std::size_t numDofs = shadow_hand->getNumDofs();
+    std::cout <<"JOINT:" << std::endl;
+    for(size_t i = 0; i < numJoints; i++) {
+        std::cout << shadow_hand->getJoint(i)->getName() << std::endl;
+        shadow_hand->getJoint(i)->setDampingCoefficient(0, 0.5);
+    }
+    std::cout <<"DOF:" << std::endl;
+    for(size_t i = 0; i < numDofs; i++) {
+        std::cout << shadow_hand->getDof(i)->getName() << std::endl;
+        shadow_hand->getDof(i)->setRestPosition(0);
+    }
+#endif
+#endif
+
+    // Get it into a useful configuration
+    //shadow_hand->getDof(1)->setPosition(0);
+    //shadow_hand->getDof(2)->setPosition(0);
+
+    return shadow_hand;
+}
+#endif
+
+SkeletonPtr createFloor()
+{
+  SkeletonPtr floor = Skeleton::create("floor");
+
+  // Give the floor a body
+  BodyNodePtr body =
+      floor->createJointAndBodyNodePair<WeldJoint>(nullptr).second;
+
+  // Give the body a shape
+  double floor_width = 10.0;
+  double floor_height = 0.01;
+  std::shared_ptr<BoxShape> box(
+        new BoxShape(Eigen::Vector3d(floor_width, floor_width, floor_height)));
+  auto shapeNode
+      = body->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(box);
+  shapeNode->getVisualAspect()->setColor(dart::Color::Black());
+
+  // Put the body into position
+  Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+  tf.translation() = Eigen::Vector3d(0.0, 0.0, -floor_height / 2.0);
+  body->getParentJoint()->setTransformFromParentBodyNode(tf);
+
+  return floor;
+}
+
+SkeletonPtr createManipulator()
+{
+  // Load the Skeleton from a file
+  dart::utils::DartLoader loader;
+  SkeletonPtr manipulator =
+      loader.parseSkeleton(DART_DATA_PATH"urdf/KR5/KR5 sixx R650.urdf");
+  manipulator->setName("manipulator");
+
+  // Position its base in a reasonable way
+  Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
+  tf.translation() = Eigen::Vector3d(-0.65, 0.0, 0.0);
+  manipulator->getJoint(0)->setTransformFromParentBodyNode(tf);
+
+  // Get it into a useful configuration
+  manipulator->getDof(1)->setPosition(140.0 * M_PI / 180.0);
+  manipulator->getDof(2)->setPosition(-140.0 * M_PI / 180.0);
+
+#if 1
+    std::size_t numJoints = manipulator->getNumJoints();
+    std::size_t numDofs = manipulator->getNumDofs();
+    std::cout <<"JOINT:" << std::endl;
+    for(size_t i = 0; i < numJoints; i++) {
+        std::cout << manipulator->getJoint(i)->getName() << std::endl;
+    }
+    std::cout <<"DOF:" << std::endl;
+    for(size_t i = 0; i < numDofs; i++) {
+        std::cout << manipulator->getDof(i)->getName() << std::endl;
+    }
+#endif
+
+  return manipulator;
 }
 
 SkeletonPtr createHybridBody()
@@ -748,34 +1176,43 @@ SkeletonPtr createWall()
   return wall;
 }
 
-#include <QtWidgets/QApplication>
-#include <QThread>
 int main(int argc, char* argv[])
 {
   QApplication app(argc, argv); // To run VoxCad
-  VVOXELYZE_ADAPTER()->initVoxelyze(false);
+
+  ros::init(argc, argv, "dart", ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
+  ros::NodeHandle* _node_handle = new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME);
+  //
+  if (!ros::master::check()) {
+      std::cout << "ROS INITIALIZATION FAILED!" << std::endl;
+      return -1; //do not start without ros.
+  }
   // -----------------------------------------------------------------------
+#if 0
+  WorldPtr world = dart::utils::SdfParser::readWorld(
+              DART_DATA_PATH"sdf/shadow_hand/shadow_hand_full.world");
+#else
   WorldPtr world = std::make_shared<World>();
+#endif
   world->addSkeleton(createGround());
   world->addSkeleton(createWall());
   //
-#if 1
+#ifdef DART_VOXEL_MESH
+  VVOXELYZE_ADAPTER()->initVoxelyze(_node_handle, false);
   QThread::msleep(1000);
-  const std::vector<CFacet>& facets = VVOXELYZE_ADAPTER()->getVoxelMeshFaces();
-  std::vector<Eigen::Vector3i> faces;
-  Eigen::Vector3i face;
-  for(size_t i = 0; i < facets.size(); i++) {
-    face[0] = facets[i].vi[0];
-    face[1] = facets[i].vi[1];
-    face[2] = facets[i].vi[2];
-
-    faces.push_back(face);
-  }
-  MyWindow window(world, createSoftVoxelMesh(faces));
+  MyWindow window(world, createSoftVoxelMesh(), loadShadowHand());
 #else
   MyWindow window(world, createBall(), createSoftBody(), createHybridBody(),
                   createRigidChain(), createRigidRing());
-#endif`
+#endif
+
+#ifdef ROBOT_LEAP_HANDS
+    // !!! REQUIRE EARLIER ros::init() !!!
+    // LEAP HANDS --
+    VLEAP_INSTANCE()->initLeapMotion(_node_handle);
+    ros::Subscriber _leap_listener = _node_handle->subscribe(CLEAP_HANDS_TOPIC, 1000,
+                                                         &MyWindow::leapCallback, &window);
+#endif
 
   std::cout << "space bar: simulation on/off" << std::endl;
   std::cout << "'1': toss a rigid ball" << std::endl;
@@ -787,10 +1224,17 @@ int main(int argc, char* argv[])
   std::cout << "\n'd': delete the oldest object" << std::endl;
   std::cout <<   "'r': toggle randomness" << std::endl;
 
+  std::cout << "space bar: simulation on/off" << std::endl;
+  std::cout << "'p': playback/stop" << std::endl;
+  std::cout << "'[' and ']': play one frame backward and forward" << std::endl;
+  std::cout << "'v': visualization on/off" << std::endl;
+  std::cout << "'q','w','a','s','z','x': programmed interaction" << std::endl;
+
   std::cout << "\nWarning: Let objects settle before tossing a new one, or the simulation could explode." << std::endl;
   std::cout <<   "         If the simulation freezes, you may need to force quit the application.\n" << std::endl;
 
   glutInit(&argc, argv);
   window.initWindow(640, 480, "Collisions");
+  glutIdleFunc(&gbHandleRosCallback);
   glutMainLoop();
 }

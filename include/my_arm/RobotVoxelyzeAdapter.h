@@ -4,6 +4,8 @@
 #include <QtCore>
 #include <QMutex>
 #include <ros/ros.h>
+#include <ros/common.h>
+#include <ros/cpp_common_decl.h>
 //#include "KsGlobal.h"
 //#include "Voxelyze.h"
 
@@ -37,6 +39,7 @@ public:
     bool loadVXA();
     const std::vector<CFacet>& getVoxelMeshFaces();
     const std::vector<CVertex>& getVoxelMeshVertices();
+    const std::vector<CLine>& getVoxelMeshLines();
 signals:
     void voxelMeshUpdated();
 

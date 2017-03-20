@@ -87,7 +87,7 @@ public slots:
 
     void leapCallback(const visualization_msgs::MarkerArray&);
     void realSenseCallback(const visualization_msgs::MarkerArray&);
-    void modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
+    void gazeboModelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
 signals:
     void newPose(double, double, double);
     void jointPosUpdated(int jointId, const QVector3D& pos, double posDelta);

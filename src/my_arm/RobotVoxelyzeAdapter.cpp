@@ -9,6 +9,7 @@
 #include "my_arm/voxel_mesh_msg.h"
 
 #include "RobotLeapAdapter.h"
+//#define VOXELYZE_LEAP_HANDS
 
 //#define VOXELYZE_RVIZ_MARKER
 #define UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
@@ -102,7 +103,7 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
     }
     //_voxelMesh->printMeshVertices();
 
-#ifdef ROBOT_LEAP_HANDS// FOR NOW, ONLY SHOW FINGER TIPS IF LEAP MOTION IS AVAILABLE!
+#if defined ROBOT_LEAP_HANDS && defined VOXELYZE_LEAP_HANDS // FOR NOW, ONLY SHOW FINGER TIPS IF LEAP MOTION IS AVAILABLE!
     // Take the first hand data for convenience:
     if(RobotLeapAdapter::checkInstance()) {
         std::vector<Vec3D<>> voxelPoses;
@@ -266,10 +267,16 @@ const std::vector<CFacet>& RobotVoxelyzeAdapter::getVoxelMeshFaces()
 
 const std::vector<CVertex>& RobotVoxelyzeAdapter::getVoxelMeshVertices()
 {
-    //_voxelMesh.DefMesh.Lines.size(),
-    //_voxelMesh.DefMesh.Vertices.size()
     if(_voxelMesh) {
         return _voxelMesh->DefMesh.Vertices;
     }
     return std::vector<CVertex>();
+}
+
+const std::vector<CLine>& RobotVoxelyzeAdapter::getVoxelMeshLines()
+{
+    if(_voxelMesh) {
+        return _voxelMesh->DefMesh.Lines;
+    }
+    return std::vector<CLine>();
 }

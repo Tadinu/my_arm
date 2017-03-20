@@ -57,8 +57,9 @@ int main(int argc, char* argv[])
 //        DART_DATA_PATH"sdf/atlas/atlas_v3_no_head.sdf");
   SkeletonPtr atlas = SdfParser::readSkeleton(
         DART_DATA_PATH"sdf/atlas/atlas_v3_no_head_soft_feet.sdf");
-  myWorld->addSkeleton(atlas);
-  myWorld->addSkeleton(ground);
+              //DART_DATA_PATH"sdf/shadow_hand/shadow_hand.sdf");
+  std::string test = myWorld->addSkeleton(atlas);
+  test = myWorld->addSkeleton(ground);
 
   // Set initial configuration for Atlas robot
   VectorXd q = atlas->getPositions();

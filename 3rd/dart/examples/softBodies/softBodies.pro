@@ -21,7 +21,7 @@ INCLUDEPATH+= /usr/include \
               $${MY_ARM_PROJ_DIR}/include        \
               $${MY_ARM_PROJ_DIR}/include/my_arm \
               $${MY_ARM_PROJ_DIR}/3rd \
-              \ ## Kinect
+              \ ## LEAP
               /home/brhm/LeapSDK/include \
               \ ## ros_vox_cad
               $${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad \
@@ -48,19 +48,27 @@ CONFIG(release, debug|release) {
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
             -lz \
-            ## \ ## Ros Kinetic --
-            ## -L/opt/ros/kinetic/lib \
-            ## -lrospack \
-            ## -lrosconsole \
-            ## -lroscpp \
-            ## -lroslib \
-            ## -lroscpp_serialization \
-            ## -lrostime \
-            ## -lrosconsole \
-            ## -linteractive_markers \
-            ## -ltf \
-            ## -ltf_conversions \
-            ## -ltf2_ros \
+            \ ## Ros Kinetic --
+            -L/opt/ros/kinetic/lib \
+            -lcpp_common \
+            -lxmlrpcpp \
+            -lrospack \
+            -lrosconsole \
+            -lrosconsole_log4cxx \
+            -lrosconsole_backend_interface \
+            -lrosconsole_bridge \
+            -lroscpp \
+            -lroslz4 \
+            -lroslib \
+            -lroscpp_serialization \
+            -lrostime \
+            -lrosconsole \
+            -lrosconsole_log4cxx \
+            -lrosconsole_backend_interface \
+            -linteractive_markers \
+            -ltf \
+            -ltf_conversions \
+            -ltf2_ros \
             ## \ ## rviz --
             ## -lrviz \
             ## \ ## moveit_visual_tools --
@@ -72,7 +80,12 @@ CONFIG(release, debug|release) {
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
-            -ldart-utils-urdf
+            -ldart-utils-urdf \
+            \ ## LEAP --
+            -L/home/brhm/LeapSDK/lib/x64 \
+            -lLeap \
+            -lcamera_info_manager \
+            -lcamera_calibration_parsers
 }
 
 CONFIG(debug, debug|release) {
@@ -85,23 +98,29 @@ CONFIG(debug, debug|release) {
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
             -lz \
-            ## \ ## Ros Kinetic
-            ## -L/opt/ros/kinetic/lib \
-            ## -lrospack \
-            ## -lrosconsole \
-            ## -lroscpp \
-            ## -lroslib \
-            ## -lroscpp_serialization \
-            ## -lrostime \
-            ## -lrosconsole \
-            ## -linteractive_markers \
-            ## -ltf \
-            ## -ltf_conversions \
-            ## -ltf2_ros \
+            \ ## Ros Kinetic --
+            -L/opt/ros/kinetic/lib \
+            -lcpp_common \
+            -lxmlrpcpp \
+            -lrospack \
+            -lrosconsole \
+            -lrosconsole_log4cxx \
+            -lrosconsole_backend_interface \
+            -lrosconsole_bridge \
+            -lroscpp \
+            -lroslib \
+            -lroslz4 \
+            -lroscpp_serialization \
+            -lrostime \
+            -lrosconsole \
+            -linteractive_markers \
+            -ltf \
+            -ltf_conversions \
+            -ltf2_ros \
             ## \ ## rviz --
             ## -lrviz \
             ## \ ## moveit_visual_tools --
-            ## -lrviz_visual_tools \
+            ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             -ldart \
@@ -109,7 +128,12 @@ CONFIG(debug, debug|release) {
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
-            -ldart-utils-urdf
+            -ldart-utils-urdf \
+            \ ## LEAP --
+            -L/home/brhm/LeapSDK/lib/x64 \
+            -lLeap \
+            -lcamera_info_manager \
+            -lcamera_calibration_parsers
 }
 
 SOURCES += Main.cpp \
@@ -129,7 +153,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 DISTFILES += \
     README.txt \
-    CMakeLists.txt
+    CMakeLists.txt \
+    ../../data/skel/softBodies.skel
 
 HEADERS += \
     MyWindow.hpp \

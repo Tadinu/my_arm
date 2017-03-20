@@ -6,41 +6,121 @@ CONFIG += c++11
 ## CONFIG -= app_bundle
 
 
-DEFINES += QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL QT_DLL PREC_MED
+DEFINES += MY_ARM QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL QT_DLL PREC_MED
 
 TARGET = robotArmController
 TEMPLATE = app
 
 CONFIG(release, debug|release) {
     message(Release)
-    LIBS += -L./opencv/lib64/ \
+    LIBS += \ ## -L/usr/lib/x86_64-linux-gnu/ \ ## qt_version_tag error (Ubuntu default conflict with Qt5.7.1) since QtCreator automatically add this!
+            -L/usr/local/lib/ \
+            -lassimp \
+            -lboost_system \
+            -lglut \
+            -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
+            -lVoxCad \
+            -lz \
+            \ ## Ros Kinetic --
+            -L/opt/ros/kinetic/lib \
+            -lcpp_common \
+            -lxmlrpcpp \
+            -lrospack \
+            -lrosconsole \
+            -lrosconsole_log4cxx \
+            -lrosconsole_backend_interface \
+            -lrosconsole_bridge \
+            -lroscpp \
+            -lroslz4 \
+            -lroslib \
+            -lroscpp_serialization \
+            -lrostime \
+            -lrosconsole \
+            -lrosconsole_log4cxx \
+            -lrosconsole_backend_interface \
+            -linteractive_markers \
+            -ltf \
+            -ltf_conversions \
+            -ltf2_ros \
+            ## \ ## rviz --
+            ## -lrviz \
+            ## \ ## moveit_visual_tools --
+            ## -lrviz_visual_tools  \
+            \ ## dart --
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -ldart \
+            -ldart-gui \
+            -ldart-planning \
+            -ldart-collision-bullet \
+            -ldart-utils \
+            -ldart-utils-urdf \
+            \ ## LEAP --
+            -L/home/brhm/LeapSDK/lib/x64 \
+            -lLeap \
+            -lcamera_info_manager \
+            -lcamera_calibration_parsers
+            \ ## OPENCV --
+            -L./opencv/lib64/ \
             -lopencv_core2413 \
             \#-lopencv_imgcodecs2413 \
             -lopencv_highgui2413 \
             -lopencv_contrib2413 \
-            -lopencv_imgproc2413 \
-
-            ##-L./3rd/dart/lib
-            ##-ldart \
-            ##-ldart-gui \
-            ##-ldart-planning \
-            ##-ldart-collision-bullet \
-            ##-ldart-utils \
-            ##-ldart-utils-urdf \
-            ##-L/usr/lib/x86_64-linux-gnu \
-            ##-lassimp \
-            ##-lboost_system \
-            ##-lglut
+            -lopencv_imgproc2413
 }
 
 CONFIG(debug, debug|release) {
     message(Debug)
-    LIBS += -L./opencv/lib64/ \
-              -lopencv_core2413d \
-              \#-lopencv_imgcodecs2413d \
-              -lopencv_highgui2413d \
-              -lopencv_contrib2413d \
-              -lopencv_imgproc2413d \
+    LIBS += \ ## -L/usr/lib/x86_64-linux-gnu/ \ ## qt_version_tag error (Ubuntu default conflict with Qt5.7.1) since QtCreator automatically add this!
+            -L/usr/local/lib/ \
+            -lassimp \
+            -lboost_system \
+            -lglut \
+            -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
+            -lVoxCad \
+            -lz \
+            \ ## Ros Kinetic --
+            -L/opt/ros/kinetic/lib \
+            -lcpp_common \
+            -lxmlrpcpp \
+            -lrospack \
+            -lrosconsole \
+            -lrosconsole_log4cxx \
+            -lrosconsole_backend_interface \
+            -lrosconsole_bridge \
+            -lroscpp \
+            -lroslib \
+            -lroslz4 \
+            -lroscpp_serialization \
+            -lrostime \
+            -lrosconsole \
+            -linteractive_markers \
+            -ltf \
+            -ltf_conversions \
+            -ltf2_ros \
+            ## \ ## rviz --
+            ## -lrviz \
+            ## \ ## moveit_visual_tools --
+            ## -lrviz_visual_tools  \
+            \ ## dart --
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -ldart \
+            -ldart-gui \
+            -ldart-planning \
+            -ldart-collision-bullet \
+            -ldart-utils \
+            -ldart-utils-urdf \
+            \ ## LEAP --
+            -L/home/brhm/LeapSDK/lib/x64 \
+            -lLeap \
+            -lcamera_info_manager \
+            -lcamera_calibration_parsers
+            \ ## OPENCV --
+            -L./opencv/lib64/ \
+            -lopencv_core2413 \
+            \#-lopencv_imgcodecs2413 \
+            -lopencv_highgui2413 \
+            -lopencv_contrib2413 \
+            -lopencv_imgproc2413
 }
 
 SOURCES += main.cpp \
@@ -112,8 +192,9 @@ INCLUDEPATH+= /usr/include \
               ./include        \
               ./include/my_arm \
               ./3rd \
-              \ ## Kinect
+              \ ## Leap
               /home/brhm/LeapSDK/include \
+              \ ## Kinect
               ./include/Kinect    \
               /usr/include/pcl-1.7 \
               \ ## RealSense
@@ -418,7 +499,8 @@ DISTFILES += \
     3rd/bullet_server/srv/AddHeightfield.srv \
     3rd/bullet_server/srv/AddImpulse.srv \
     worlds/shadowhand_full.world \
-    msg/VoxelMesh/voxel_mesh.msg
+    msg/VoxelMesh/voxel_mesh.msg \
+    models/shadow_hand/robots/shadowhand_motor.urdf
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

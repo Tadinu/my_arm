@@ -174,6 +174,7 @@ void HandsListener::onFrame(const Controller& controller) {
     //!NOTE: SOMEHOW, WHEN WE EMIT A SIGNAL HERE  INSIDE THE CALLBACK, NO SLOT WOULD BE INVOKED!
     //this->emitFingerPosUpdated();
 
+    //std::cout << "HANDS: " << _hands.count();
     for (HandList::const_iterator hl = _hands.begin(); hl != _hands.end(); ++hl) {
         // Get the first hand
         const Hand hand = *hl;
@@ -181,6 +182,7 @@ void HandsListener::onFrame(const Controller& controller) {
         // Get the Arm bone
         // Get fingers
         FingerList fingers = hand.fingers();
+        //std::cout << "FINGERS: " << fingers.count();
         for (FingerList::const_iterator fl = fingers.begin(); fl != fingers.end(); ++fl) {
             const Finger finger = *fl;
 

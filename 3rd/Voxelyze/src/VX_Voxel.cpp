@@ -13,7 +13,8 @@ See <http://www.opensource.org/licenses/lgpl-3.0.html> for license details.
 #include "VX_Material.h"
 #include "VX_Link.h"
 #include <algorithm> //for std::find
-
+#include <iostream>
+using namespace std;
 
 #include <assert.h>
 #ifdef DEBUG
@@ -177,6 +178,7 @@ void CVX_Voxel::timeStep(float dt)
 
 	if (isFloorEnabled()) floorForce(dt, &curForce); //floor force needs dt to calculate threshold to "stop" a slow voxel into static friction.
 
+    //std::cout << "A3: " << isFloorEnabled() << fricForce[0] << " " << fricForce[1] << " " << fricForce[2] << " " << endl;
 	fricForce = curForce - fricForce;
 
 	assert(!(curForce.x != curForce.x) || !(curForce.y != curForce.y) || !(curForce.z != curForce.z)); //assert non QNAN
@@ -186,14 +188,24 @@ void CVX_Voxel::timeStep(float dt)
 
 //	we need to check for friction conditions here (after calculating the translation) and stop things accordingly
 	if (isFloorEnabled() && floorPenetration() >= 0){ //we must catch a slowing voxel here since it all boils down to needing access to the dt of this timestep.
+#if defined GROUND_PLANE_XY
 		double work = fricForce.x*translate.x + fricForce.y*translate.y; //F dot disp
 		double hKe = 0.5*mat->_massInverse*(linMom.x*linMom.x + linMom.y*linMom.y); //horizontal kinetic energy
+#elif defined GROUND_PLANE_XZ
+        double work = fricForce.x*translate.x + fricForce.z*translate.z; //F dot disp
+        double hKe = 0.5*mat->_massInverse*(linMom.x*linMom.x + linMom.z*linMom.z); //horizontal kinetic energy
+#endif
 
 		if(hKe + work <= 0) setFloorStaticFriction(true); //this checks for a change of direction according to the work-energy principle
 
 		if (isFloorStaticFriction()){ //if we're in a state of static friction, zero out all horizontal motion
+#if defined GROUND_PLANE_XY
 			linMom.x = linMom.y = 0;
 			translate.x = translate.y = 0;
+#elif defined GROUND_PLANE_XZ
+            linMom.x = linMom.z = 0;
+            translate.x = translate.z = 0;
+#endif
 		}
 	}
 	else setFloorStaticFriction(false);
@@ -244,7 +256,11 @@ Vec3D<double> CVX_Voxel::force()
 	//other forces
 	if (externalExists()) totalForce += external()->force(); //external forces
 	totalForce -= velocity()*mat->globalDampingTranslateC(); //global damping f-cv
+#if defined GROUND_PLANE_XY
 	totalForce.z += mat->gravityForce(); //gravity, according to f=mg
+#elif defined GROUND_PLANE_XZ
+    totalForce.y += mat->gravityForce(); //gravity, according to f=mg
+#endif
 
 	if (isCollisionsEnabled()){
 		for (std::vector<CVX_Collision*>::iterator it=colWatch->begin(); it!=colWatch->end(); it++){
@@ -277,14 +293,25 @@ void CVX_Voxel::floorForce(float dt, Vec3D<double>* pTotalForce)
 
 	if (CurPenetration>=0){ 
 		Vec3D<double> vel = velocity();
+#if defined GROUND_PLANE_XY
 		Vec3D<double> horizontalVel(vel.x, vel.y, 0);
+#elif defined GROUND_PLANE_XZ
+        Vec3D<double> horizontalVel(vel.x, 0, vel.z);
+#endif
 		
 		float normalForce = mat->penetrationStiffness()*CurPenetration;
+#if defined GROUND_PLANE_XY
 		pTotalForce->z += normalForce - mat->collisionDampingTranslateC()*vel.z; //in the z direction: k*x-C*v - spring and damping
-
+#elif defined GROUND_PLANE_XZ
+        pTotalForce->y += normalForce - mat->collisionDampingTranslateC()*vel.y; //in the z direction: k*x-C*v - spring and damping
+#endif
 		if (isFloorStaticFriction()){ //If this voxel is currently in static friction mode (no lateral motion) 
 			assert(horizontalVel.Length2() == 0);
+#if defined GROUND_PLANE_XY
 			float surfaceForceSq = (float)(pTotalForce->x*pTotalForce->x + pTotalForce->y*pTotalForce->y); //use squares to avoid a square root
+#elif defined GROUND_PLANE_XZ
+            float surfaceForceSq = (float)(pTotalForce->x*pTotalForce->x + pTotalForce->z*pTotalForce->z); //use squares to avoid a square root
+#endif
 			float frictionForceSq = (mat->muStatic*normalForce)*(mat->muStatic*normalForce);
 		
 			if (surfaceForceSq > frictionForceSq) setFloorStaticFriction(false); //if we're breaking static friction, leave the forces as they currently have been calculated to initiate motion this time step

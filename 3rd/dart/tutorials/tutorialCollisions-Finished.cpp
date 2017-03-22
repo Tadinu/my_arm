@@ -29,8 +29,10 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QtCore>
 #include <QtWidgets/QApplication>
 #include <QThread>
+#include <QtGui/QVector3D>
 #include <random>
 
 #include "dart/dart.hpp"
@@ -39,7 +41,6 @@
 #include "my_arm/KsGlobal.h"
 #include "my_arm/RobotVoxelyzeAdapter.h"
 #include "my_arm/RobotLeapAdapter.h"
-#include "Voxelyze/Utils/Mesh.h"
 
 #define DART_VOXEL_MESH
 #define FORCE_ON_RIGIDBODY 25.0
@@ -50,7 +51,7 @@ const double default_shape_height  = 0.1;  // m
 const double default_shape_width   = 0.03; // m
 const double default_skin_thickness = 1e-3; // m
 
-const double default_start_height = 0.4;  // m
+const double default_start_height = 0;  // m
 
 const double minimum_start_v = 2.5; // m/s
 const double maximum_start_v = 4.0; // m/s
@@ -74,7 +75,7 @@ const double default_spawn_range = 0.9*default_ground_width/2;
 
 const double default_restitution = 0.6;
 
-const double default_vertex_stiffness = 100.0;
+const double default_vertex_stiffness = 500.0;
 const double default_edge_stiffness = 0.0;
 const double default_soft_damping = 5.0;
 
@@ -86,7 +87,10 @@ using namespace dart::simulation;
 // using namespace dart::dynamics;
 // using namespace dart::utils;
 
+
 SkeletonPtr createManipulator();
+SkeletonPtr loadSoftVoxelMesh();
+SkeletonPtr loadShadowHand();
 
 void setupRing(const SkeletonPtr& ring)
 {
@@ -122,60 +126,75 @@ void setupRing(const SkeletonPtr& ring)
   }
 }
 
-void gbHandleRosCallback()
-{
-    // --------------------------------------------------------------------
-    // HANDLE ROS CALLBACKS --
-    //std::cout << "Ros spinning once!";
-    ros::spinOnce();
-}
-
 class MyWindow : public dart::gui::SoftSimWindow
 {
 public:
+    dart::collision::CollisionDetectorPtr _mCollisionDetector;
 
 #ifdef DART_VOXEL_MESH
-    MyWindow(const WorldPtr& world,
-             const SkeletonPtr& softVoxelBody,
-             const SkeletonPtr& shadowHand)
+    MyWindow(const WorldPtr& world)
       : mRandomize(true),
         mRD(),
         mMT(mRD()),
         mDistribution(-1.0, std::nextafter(1.0, 2.0)),
-        mOriginalSoftVoxelBody(softVoxelBody),
-        mShadowHand(shadowHand),
         mSkelCount(0),
         mForceOnRigidBody(Eigen::Vector3d::Zero()),
         mForceOnVertex(Eigen::Vector3d::Zero()),
         mImpulseDuration(0.0)
     {
-      setWorld(world);
+        setWorld(world);
+
+        // Collision Detector
+        _mCollisionDetector = world->getConstraintSolver()->getCollisionDetector();
+
+        // Voxel Object
+        mDartSoftBody = loadSoftVoxelMesh(); /* softVoxel.skel: world->getSkeleton(1); */
+
+        // Shadow Hand
+        mShadowHand = loadShadowHand();
     }
 #else
-  MyWindow(const WorldPtr& world, const SkeletonPtr& ball,
-           const SkeletonPtr& softBody, const SkeletonPtr& hybridBody,
-           const SkeletonPtr& rigidChain, const SkeletonPtr& rigidRing)
-    : mRandomize(true),
-      mRD(),
-      mMT(mRD()),
-      mDistribution(-1.0, std::nextafter(1.0, 2.0)),
-      mOriginalBall(ball),
-      mOriginalSoftBody(softBody),
-      mOriginalHybridBody(hybridBody),
-      mOriginalRigidChain(rigidChain),
-      mOriginalRigidRing(rigidRing),
-      mSkelCount(0)
-  {
-    setWorld(world);
-  }
+    MyWindow(const WorldPtr& world, const SkeletonPtr& ball,
+             const SkeletonPtr& softBody, const SkeletonPtr& hybridBody,
+             const SkeletonPtr& rigidChain, const SkeletonPtr& rigidRing)
+      : mRandomize(true),
+        mRD(),
+        mMT(mRD()),
+        mDistribution(-1.0, std::nextafter(1.0, 2.0)),
+        mOriginalBall(ball),
+        mOriginalSoftBody(softBody),
+        mOriginalHybridBody(hybridBody),
+        mOriginalRigidChain(rigidChain),
+        mOriginalRigidRing(rigidRing),
+        mSkelCount(0)
+    {
+        setWorld(world);
+    }
 #endif
+
+    void doIdleTasks()
+    {
+        if(RobotVoxelyzeAdapter::checkInstance()) {
+            //std::cout << "Rebuild Dart soft voxel body" << std::endl;
+            mDartSoftBody.reset();
+            mDartSoftBody = loadSoftVoxelMesh();
+            // ----------------------------------------------------------------
+            //VVOXELYZE_ADAPTER()->doVoxelyzeTimeStep();
+            VVOXELYZE_ADAPTER()->updateVoxelMesh();
+        }
+
+        // --------------------------------------------------------------------
+        // HANDLE ROS CALLBACKS --
+        //std::cout << "Ros spinning once!";
+        ros::spinOnce();
+    }
 
   /// \brief
   void timeStepping() override
   {
 #ifdef DART_VOXEL_MESH
-    if(mOriginalSoftVoxelBody != nullptr) {
-      dart::dynamics::SoftBodyNode* softBodyNode = mOriginalSoftVoxelBody->getSoftBodyNode(0);
+    if(mDartSoftBody != nullptr) {
+      dart::dynamics::SoftBodyNode* softBodyNode = mDartSoftBody->getSoftBodyNode(0);
 #else
       if(mOriginalHybridBody != nullptr) {
         dart::dynamics::SoftBodyNode* softBodyNode = mOriginalHybridBody->getSoftBodyNode(0);
@@ -204,9 +223,15 @@ public:
     {
 #ifdef DART_VOXEL_MESH
       case '0':
-        addObject(mOriginalSoftVoxelBody->clone());
+    {
+        // Dart Soft Body is just the agent for Voxelyze soft voxel mesh,
+        // therefore not added into the world
+        //mWorld->addSkeleton(mDartSoftBody->clone());
+
+        // Add ShadowHand just to interact with the floor?...To be updated later!
         mWorld->addSkeleton(mShadowHand);
         //mWorld->addSkeleton(createManipulator());
+    }
       break;
 #else
       case '1':
@@ -315,19 +340,21 @@ public:
     glEnable(GL_LIGHTING);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+#if 0
+    // Draw Ground --
     dart::dynamics::SkeletonPtr Skeleton0 = mWorld->getSkeleton(0);
-    //
     if(Skeleton0 != nullptr) {
         Eigen::Vector4d color;
         color << 0.5, 0.8, 0.6, 1.0;
         drawSkeleton(mWorld->getSkeleton(0).get(), color, false);
     }
+#endif
 
-    // draw arrow
+    // Draw Arrow --
 #ifdef DART_VOXEL_MESH
-    if (mImpulseDuration > 0 && mOriginalSoftVoxelBody != nullptr)
+    if (mImpulseDuration > 0 && mDartSoftBody != nullptr)
     {
-        dart::dynamics::SoftBodyNode* softBodyNode = mOriginalSoftVoxelBody->getSoftBodyNode(0);
+        dart::dynamics::SoftBodyNode* softBodyNode = mDartSoftBody->getSoftBodyNode(0);
 #else
     if (mImpulseDuration > 0 && mOriginalHybridBody != nullptr)
     {
@@ -343,7 +370,25 @@ public:
         }
     }
 
+    // VOXEL MESH --
+#ifdef VOXELYZE_PURE
+    if(RobotVoxelyzeAdapter::checkInstance()) {
+        VVOXELYZE_ADAPTER()->drawVoxelMesh();
+    }
+#endif
+
+
+    // SHADOW HAND --
+    //drawSkeleton(mShadowHand.get());
+
+    // DART SOFT BODY -- (AGENT FOR VOXEL MESH from VVOXELYZE_ADAPTER())
+    if(mDartSoftBody != nullptr)
+       drawSkeleton(mDartSoftBody.get());
+
+#if 1
+    // WORLD --
     SimWindow::drawWorld();
+#endif
   }
 
   void displayTimer(int _val) override
@@ -363,6 +408,40 @@ public:
   void leapCallback(const visualization_msgs::MarkerArray&)
   {
     determineHandArrangmentOnLeapHands();
+
+    determineHandObjectCollision();
+  }
+
+  void determineHandObjectCollision()
+  {
+      auto shapeNodes       = mShadowHand->getRootBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>();
+      const auto& meshShape = static_cast<const MeshShape*>(shapeNodes[0]->getShape().get());
+      aiMesh** mesh         = meshShape->getMesh()->mMeshes;
+      //cout << "Hand Volume: " << meshShape->getVolume();
+      // Look through the collisions to see if the new object would start in
+      // collision with something
+      auto worldCollisionGroup      = mWorld->getConstraintSolver()->getCollisionGroup();
+      auto voxelMeshCollisionGroup  = _mCollisionDetector->createCollisionGroup(mDartSoftBody.get());
+      auto shadowHandCollisionGroup = _mCollisionDetector->createCollisionGroup(mShadowHand.get());
+
+      dart::collision::CollisionOption option;
+      dart::collision::CollisionResult result;
+      bool collision = voxelMeshCollisionGroup->collide(shadowHandCollisionGroup.get(), option, &result);
+
+      size_t collisionCount = result.getNumContacts();
+      //    cout << "Collision Count" << collisionCount << endl;
+      for(size_t i = 0; i < collisionCount; ++i)
+      {
+          const dart::collision::Contact& contact = result.getContact(i);
+#ifdef VOXELYZE_PURE
+          //if(i == 0) {
+            VVOXELYZE_ADAPTER()->updateVoxelCollisionInfo(QVector3D(contact.point[0], contact.point[1], contact.point[2]),
+                                                          QVector3D(contact.force[0], contact.force[1], contact.force[2]));
+            //break;
+          //}
+#endif
+          //cout << contact.point[0] << "-" << contact.point[1] << "-" << contact.point[2] << endl;
+      }
   }
 
   void updateJointPosition(int jointId, double position)
@@ -580,7 +659,7 @@ protected:
 
 #ifdef DART_VOXEL_MESH
   /// A blueprint Skeleton that we will use to spawn soft bodies
-  SkeletonPtr mOriginalSoftVoxelBody;
+  SkeletonPtr mDartSoftBody;
   SkeletonPtr mShadowHand;
 #endif
 
@@ -771,6 +850,7 @@ SoftBodyNode::UniqueProperties makeMeshProperties(
 {
     SoftBodyNode::UniqueProperties properties(
                   _vertexStiffness, _edgeStiffness, _dampingCoeff);
+#ifdef VOX_CAD
     //----------------------------------------------------------------------------
     // Point masses
     //----------------------------------------------------------------------------
@@ -816,7 +896,60 @@ SoftBodyNode::UniqueProperties makeMeshProperties(
         face[2] = facets[i].vi[2];
         properties.addFace(face);
     }
+#else if defined VOXELYZE_PURE
+    //----------------------------------------------------------------------------
+    // Point masses
+    //----------------------------------------------------------------------------
+    // Number of point masses
+    const std::vector<float>& vertices = VVOXELYZE_ADAPTER()->getVoxelMeshVertices();
+    const std::vector<int>& lines      = VVOXELYZE_ADAPTER()->getVoxelMeshLines();
+    const std::vector<int>& quads      = VVOXELYZE_ADAPTER()->getVoxelMeshQuads();
+    std::size_t nPointMasses = vertices.size()/3;
+    properties.mPointProps.resize(nPointMasses);
 
+    // Mass per vertices
+    double pointMass = _totalMass / nPointMasses;
+
+    // Resting positions for each point mass
+    std::vector<Eigen::Vector3d> restingPos(nPointMasses,
+                                            Eigen::Vector3d::Zero());
+
+    for(size_t i = 0; i < nPointMasses; i++) {
+        restingPos[i] = _size.cwiseProduct(Eigen::Vector3d(vertices[3*i], vertices[3*i+1], vertices[3*i+2])) * 0.5;
+    }
+
+    // Point masses
+    for (std::size_t i = 0; i < nPointMasses; ++i) {
+        properties.mPointProps[i].mX0   = _localTransform * restingPos[i];
+        properties.mPointProps[i].mMass = pointMass;
+    }
+
+    //----------------------------------------------------------------------------
+    // Edges
+    //----------------------------------------------------------------------------
+    size_t lineCount = lines.size()/2;
+    for(size_t i = 0; i < lineCount; i++) {
+        properties.connectPointMasses(lines[2*i], lines[2*i+1]);
+    }
+
+    //----------------------------------------------------------------------------
+    // Faces
+    //----------------------------------------------------------------------------
+    //
+    Eigen::Vector3i face;
+    int qCount = quads.size()/4;
+    for(size_t i = 0; i < qCount; i++) {
+        face[0] = quads[4*i];
+        face[1] = quads[4*i+1];
+        face[2] = quads[4*i+2];
+        properties.addFace(face);
+
+        face[0] = quads[4*i+2];
+        face[1] = quads[4*i+3];
+        face[2] = quads[4*i];
+        properties.addFace(face);
+    }
+#endif
     return properties;
 }
 
@@ -844,6 +977,7 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
   {
       // Add Pointmass
       PointMass::Properties pointMass;
+#ifdef VOX_CAD
       const std::vector<CLine>& lines = VVOXELYZE_ADAPTER()->getVoxelMeshLines();
       const std::vector<CVertex>& vertices = VVOXELYZE_ADAPTER()->getVoxelMeshVertices();
       for(size_t i = 0; i < lines.size(); i++) {
@@ -857,9 +991,22 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
                        vertices[lines[i].vi[1]].v.z + vertices[lines[i].vi[1]].DrawOffset.z);
           mass += ver1.Dist(ver0);
       }
+#else if defined VOXELYZE_PURE
+      const std::vector<int>& lines      = VVOXELYZE_ADAPTER()->getVoxelMeshLines();
+      const std::vector<float>& vertices = VVOXELYZE_ADAPTER()->getVoxelMeshVertices();
+      int lCount = lines.size()/2;
+      for(int i = 0; i < lCount; i++) {
+          // Ver 0 --
+          Vec3D<> ver0(vertices[3*lines[2*i]], vertices[3*lines[2*i]+1], vertices[3*lines[2*i]+2]);
+          // Ver 1 --
+          Vec3D<> ver1(vertices[3*lines[2*i+1]], vertices[3*lines[2*i+1]+1], vertices[3*lines[2*i+1]+2]);
+          mass += ver1.Dist(ver0);
+      }
+#endif
       mass *= default_shape_density * default_skin_thickness;
+      QVector3D size = VVOXELYZE_ADAPTER()->getVoxelMeshSize();
       soft_properties = makeMeshProperties(
-            Eigen::Vector3d(20,20,5), Eigen::Isometry3d::Identity(),
+            Eigen::Vector3d(size.x(), size.y(), size.z()), Eigen::Isometry3d::Identity(),
             mass, default_vertex_stiffness, default_edge_stiffness, default_soft_damping);
   }
 
@@ -882,12 +1029,12 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
   // Make the shape transparent
   auto visualAspect = bn->getShapeNodesWith<VisualAspect>()[0]->getVisualAspect();
   Eigen::Vector4d color = visualAspect->getRGBA();
-  color[3] = 0.4;
+  color[3] = 0.8;
   visualAspect->setRGBA(color);
 
   return bn;
 }
-#endif
+#endif // DART_VOXEL_MESH
 
 void setAllColors(const SkeletonPtr& object, const Eigen::Vector3d& color)
 {
@@ -969,26 +1116,22 @@ SkeletonPtr createSoftBody()
 }
 
 #ifdef DART_VOXEL_MESH
-SkeletonPtr createSoftVoxelMesh()
+SkeletonPtr loadSoftVoxelMesh()
 {
     SkeletonPtr soft = Skeleton::create("softVoxel");
 
+    //Eigen::Vector6d positions(Eigen::Vector6d::Zero());
+    //positions[4] = 1;
+    //mOriginalSoftVoxelBody->setPositions(positions);
+
     // Add a soft body
     BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "soft voxel");
+    setAllColors(soft, dart::Color::Gray());
 
-    // Add a rigid collision geometry and inertia
-    double width = default_shape_height, height = 2*default_shape_width;
-    Eigen::Vector3d dims(width, width, height);
-    dims *= 0.6;
-    std::shared_ptr<BoxShape> box = std::make_shared<BoxShape>(dims);
-    bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(box);
-
-    Inertia inertia;
-    inertia.setMass(default_shape_density * box->getVolume());
-    inertia.setMoment(box->computeInertia(inertia.getMass()));
-    bn->setInertia(inertia);
-
-    setAllColors(soft, dart::Color::Fuchsia());
+    Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
+    //Eigen::Vector3d axis = Eigen::Vector3d::UnitX(); // Any vector in the X/Y plane can be used
+    tf.translation() = Eigen::Vector3d(0, 0, 0);
+    soft->getJoint(0)->setTransformFromParentBodyNode(tf);
 
     return soft;
 }
@@ -1016,15 +1159,14 @@ SkeletonPtr loadShadowHand()
     SkeletonPtr shadow_hand = loader.parseSkeleton(DART_DATA_PATH"urdf/shadow_hand/shadow_hand.urdf");
     shadow_hand->setName("ShadowHand");
 #endif
-#if 0
+#if 1
     // Position its base in a reasonable way
     Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
-    tf.translation() = Eigen::Vector3d(0.0, 0.0, 0.0);
+    //Eigen::Vector3d axis = Eigen::Vector3d::UnitZ(); // Any vector in the X/Y plane can be used
+    //tf.rotate(Eigen::AngleAxisd(M_PI/2, axis));
+    tf.translation() = Eigen::Vector3d(0.05, 0.08, -0.25);
     shadow_hand->getJoint(0)->setTransformFromParentBodyNode(tf);
-    tf.translation() = Eigen::Vector3d(0.0, 0.0, 1.0);
-    shadow_hand->getJoint(1)->setTransformFromParentBodyNode(tf);
-
-#if 1
+#if 0
     std::size_t numJoints = shadow_hand->getNumJoints();
     std::size_t numDofs = shadow_hand->getNumDofs();
     std::cout <<"JOINT:" << std::endl;
@@ -1176,6 +1318,15 @@ SkeletonPtr createWall()
   return wall;
 }
 
+// ==================================================================================================
+MyWindow* gbWindow = nullptr;
+void gbDoIdleTasks()
+{
+    if(gbWindow) {
+        gbWindow->doIdleTasks();
+    }
+}
+
 int main(int argc, char* argv[])
 {
   QApplication app(argc, argv); // To run VoxCad
@@ -1192,26 +1343,50 @@ int main(int argc, char* argv[])
   WorldPtr world = dart::utils::SdfParser::readWorld(
               DART_DATA_PATH"sdf/shadow_hand/shadow_hand_full.world");
 #else
-  WorldPtr world = std::make_shared<World>();
+  // load a skeleton file
+  // create and initialize the world
+  dart::simulation::WorldPtr myWorld
+      = dart::utils::SkelParser::readWorld(
+        DART_DATA_PATH"skel/softVoxel_2.skel");
+  assert(myWorld != nullptr);
+
+  for(std::size_t i=0; i<myWorld->getNumSkeletons(); ++i)
+  {
+    dart::dynamics::SkeletonPtr skel = myWorld->getSkeleton(i);
+    for(std::size_t j=0; j<skel->getNumBodyNodes(); ++j)
+    {
+      dart::dynamics::BodyNode* bn = skel->getBodyNode(j);
+      Eigen::Vector3d color = dart::Color::Random();
+      auto shapeNodes = bn->getShapeNodesWith<dart::dynamics::VisualAspect>();
+      for(auto shapeNode : shapeNodes)
+        shapeNode->getVisualAspect(true)->setColor(color);
+    }
+  }
+
+  //WorldPtr world = std::make_shared<World>();
+  //myWorld->addSkeleton(createGround());
+  //myWorld->addSkeleton(createWall());
 #endif
-  world->addSkeleton(createGround());
-  world->addSkeleton(createWall());
+
   //
 #ifdef DART_VOXEL_MESH
   VVOXELYZE_ADAPTER()->initVoxelyze(_node_handle, false);
   QThread::msleep(1000);
-  MyWindow window(world, createSoftVoxelMesh(), loadShadowHand());
+  gbWindow = new MyWindow(myWorld);
+#ifdef VOX_CAD
+  VVOXELYZE_ADAPTER()->deleteInstance();
+#endif
 #else
   MyWindow window(world, createBall(), createSoftBody(), createHybridBody(),
                   createRigidChain(), createRigidRing());
 #endif
 
 #ifdef ROBOT_LEAP_HANDS
-    // !!! REQUIRE EARLIER ros::init() !!!
+    // !!! REQUIRE ros::init() EARLIER !!!
     // LEAP HANDS --
     VLEAP_INSTANCE()->initLeapMotion(_node_handle);
     ros::Subscriber _leap_listener = _node_handle->subscribe(CLEAP_HANDS_TOPIC, 1000,
-                                                         &MyWindow::leapCallback, &window);
+                                                         &MyWindow::leapCallback, gbWindow);
 #endif
 
   std::cout << "space bar: simulation on/off" << std::endl;
@@ -1234,7 +1409,7 @@ int main(int argc, char* argv[])
   std::cout <<   "         If the simulation freezes, you may need to force quit the application.\n" << std::endl;
 
   glutInit(&argc, argv);
-  window.initWindow(640, 480, "Collisions");
-  glutIdleFunc(&gbHandleRosCallback);
+  gbWindow->initWindow(640, 480, "Collisions");
+  glutIdleFunc(&gbDoIdleTasks);
   glutMainLoop();
 }

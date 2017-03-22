@@ -6,7 +6,7 @@
       <DtFrac>0.106</DtFrac>
     </Integration>
     <Damping>
-      <BondDampingZ>0</BondDampingZ>
+      <BondDampingZ>1.72</BondDampingZ>
       <ColDampingZ>1.38</ColDampingZ>
       <SlowDampingZ>0.0275423</SlowDampingZ>
     </Damping>
@@ -16,7 +16,7 @@
       <CollisionHorizon>3</CollisionHorizon>
     </Collisions>
     <Features>
-      <MaxVelLimitEnabled>0</MaxVelLimitEnabled>
+      <MaxVelLimitEnabled>1</MaxVelLimitEnabled>
       <MaxVoxVelLimit>0.1</MaxVoxVelLimit>
       <BlendingEnabled>0</BlendingEnabled>
       <XMixRadius>0</XMixRadius>

@@ -20,8 +20,8 @@
           <pose frame=''>0 0 0.092 0 -0 0</pose>
           <geometry>
             <cylinder>
-              <length>0.184</length>
-              <radius>0.07</radius>
+              <length>0.0184</length>
+              <radius>0.007</radius>
             </cylinder>
           </geometry>
           <surface>
@@ -42,7 +42,7 @@
           <pose frame=''>0 -0.01 0.181 0 0.78 0</pose>
           <geometry>
             <box>
-              <size>0.07 0.07 0.07</size>
+              <size>0.007 0.007 0.007</size>
             </box>
           </geometry>
           <surface>
@@ -63,7 +63,7 @@
           <pose frame=''>0 0 0 0 -0 0</pose>
           <geometry>
             <mesh>
-              <scale>1 1 1</scale>
+              <scale>0.1 0.1 0.1</scale>
               <uri>/home/brhm/DUC/RobotArm/src/my_arm/meshes/shadow_hand/hand/forearm.dae</uri>
             </mesh>
           </geometry>
@@ -88,12 +88,12 @@
             <upper>0</upper>
           </limit>
           <dynamics>
-            <damping>0</damping>
+            <damping>0.1</damping>
             <friction>0</friction>
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
           <xyz>0 0 1</xyz>
         </axis>
       </joint>
@@ -256,7 +256,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -505,7 +505,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -608,7 +608,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -711,7 +711,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -856,7 +856,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -965,7 +965,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1067,7 +1067,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1170,7 +1170,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1273,7 +1273,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1418,7 +1418,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1527,7 +1527,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1630,7 +1630,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1733,7 +1733,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1878,7 +1878,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -1987,7 +1987,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2090,7 +2090,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2193,7 +2193,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2338,7 +2338,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2447,7 +2447,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2548,7 +2548,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2651,7 +2651,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2752,7 +2752,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2876,7 +2876,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>
@@ -2985,7 +2985,7 @@
             <spring_reference>0</spring_reference>
             <spring_stiffness>0</spring_stiffness>
           </dynamics>
-          <use_parent_model_frame>1</use_parent_model_frame>
+          <use_parent_model_frame>0</use_parent_model_frame>
         </axis>
         <physics>
           <provide_feedback>1</provide_feedback>

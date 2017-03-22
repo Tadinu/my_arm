@@ -48,9 +48,10 @@ void CVXS_SimGLView::loadFingerVoxels()
 {
     FingerList.clear();
     for(int i = 0; i < 5; i++) {
-        FingerList.push_back(CVX_Object());
-        FingerList[i].LoadVXCFile("/home/brhm/DUC/RobotArm/src/my_arm/3rd/ros_vox_cad/Data/SingleVoxel.vxc");
-        FingerList[i].Voxel.SetVoxName(VS_BOX);
+        CVX_Object fingerObject;
+        fingerObject.LoadVXCFile("/home/brhm/DUC/RobotArm/src/my_arm/3rd/ros_vox_cad/Data/SingleVoxel.vxc");
+        fingerObject.Voxel.SetVoxName(VS_BOX);
+        FingerList.push_back(fingerObject);
     }
 }
 
@@ -129,7 +130,7 @@ void CVXS_SimGLView::Draw(int Selected, bool ViewSection, int SectionLayer)
         test = true;
     }
 #endif
-    this->drawFingerVoxels();
+    //this->drawFingerVoxels();
 #endif
     // -----------------------------------------------------------------------------
     if (!pSim->IsInitalized()) return;

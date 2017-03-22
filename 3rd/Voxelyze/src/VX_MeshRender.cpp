@@ -138,14 +138,19 @@ void CVX_MeshRender::generateMesh()
 	updateMesh();
 }
 
-std::vector<float> CVX_MeshRender::getVertices()
+const std::vector<float>& CVX_MeshRender::getVertices()
 {
     return vertices;
 }
 
-std::vector<int> CVX_MeshRender::getEdges()
+const std::vector<int>& CVX_MeshRender::getEdges()
 {
     return lines;
+}
+
+const std::vector<int>& CVX_MeshRender::getQuads()
+{
+    return quads;
 }
 
 //updates all the modal properties: offsets, quadColors, quadNormals.

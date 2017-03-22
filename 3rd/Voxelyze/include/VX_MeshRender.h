@@ -36,10 +36,11 @@ public:
 	void updateMesh(viewColoring colorScheme = MATERIAL, CVoxelyze::stateInfoType stateType = CVoxelyze::DISPLACEMENT); //!< Updates the mesh according to the current state of the linked voxelyze object and the coloring scheme specified by the arguments. @param[in] colorScheme The coloring scheme. @param[in] stateType If colorScheme = STATE_INFO, this argument determines the state to color the object according to. Only kinetic energy, strain energy, displacement, and pressure are currently supported.
 
 	void saveObj(const char* filePath); //!< Save the current deformed mesh as an obj file to the path specified. Coloring is not supported yet. @param[in] filePath File path to save the obj file as. Creates or overwrites.
-	void glDraw(); //!< Executes openGL drawing commands to draw this mesh in an Open GL window if USE_OPEN_GL is defined.
+    void glDraw(); //!< Executes openGL drawing commands to draw this mesh in an Open GL window if USE_OPEN_GL is defined.
 
-    std::vector<float> getVertices();
-    std::vector<int> getEdges();
+    const std::vector<float>& getVertices();
+    const std::vector<int>& getEdges();
+    const std::vector<int>& getQuads();
 private:
 	CVoxelyze* vx;
 

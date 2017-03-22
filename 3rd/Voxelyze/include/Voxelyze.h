@@ -130,6 +130,10 @@ public:
 	void enableCollisions(bool enabled = true); //!< Enables or disables a collision watcher that results in voxels resisting penetration with one another. This may slow down the simulation significantly. @param[in] enabled If true, enables the collision detection. Otherwise disables it.
 	bool isCollisionsEnabled(void) const {return collisions;} //!< Returns a boolean value indication if the collision watcher is enabled or not.
 
+#ifdef MY_ARM
+    std::vector<Vec3D<>> detectExternalCollision(float threshRadiusSq, const Vec3D<>& pos);
+#endif
+
 	//info
 	float stateInfo(stateInfoType info, valueType type); //!< Returns a specific piece of information about the current state of the simulation. This method is not gaurenteed threadafe. @param[in] info The class of information desired. @param[in] type The type of the value to be returned.
 

@@ -5,8 +5,7 @@ CONFIG += c++11
 
 TARGET = tutorials
 TEMPLATE = app
-DEFINES += MY_ARM QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL PREC_MED ## QT_DLL // For VoxCad
-
+DEFINES += MY_ARM VOXELYZE_PURE QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL PREC_MED USE_OMP ## QT_DLL // VOX_CAD For VoxCad, USE_OMP & VOXELYZE_PURE, PARDISO_5 for Voxelyze
 MY_ARM_PROJ_DIR = /home/brhm/DUC/RobotArm/src/my_arm
 INCLUDEPATH+= /usr/include \
               /usr/local/include \
@@ -29,6 +28,12 @@ INCLUDEPATH+= /usr/include \
               $${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/VoxCad \
               $${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/Voxelyze \
               $${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/Voxelyze/Utils \
+              \ ## Voxelyze
+              $${MY_ARM_PROJ_DIR}/3rd/Voxelyze/include \
+              $${MY_ARM_PROJ_DIR}/3rd/Voxelyze/include\rapidjson \
+              $${MY_ARM_PROJ_DIR}/3rd/Voxelyze/include\rapidjson\error \
+              $${MY_ARM_PROJ_DIR}/3rd/Voxelyze/include\rapidjson\internal \
+              $${MY_ARM_PROJ_DIR}/3rd/Voxelyze/include\rapidjson\msinttypes \
               \ ## bullet_server
               $${MY_ARM_PROJ_DIR}/3rd/bullet_server/include \
               \ ## dart
@@ -45,8 +50,12 @@ CONFIG(release, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
+            \ ## VOXELYZE --
+            -L$${MY_ARM_PROJ_DIR}/3rd/Voxelyze/lib \
+            -lVoxelyze \
             -lz \
             \ ## Ros Kinetic --
             -L/opt/ros/kinetic/lib \
@@ -95,8 +104,12 @@ CONFIG(debug, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
+            \ ## VOXELYZE --
+            -L$${MY_ARM_PROJ_DIR}/3rd/Voxelyze/lib \
+            -lVoxelyze \
             -lz \
             \ ## Ros Kinetic --
             -L/opt/ros/kinetic/lib \
@@ -168,4 +181,9 @@ DISTFILES += \
     CMakeLists.txt \
     ../data/sdf/shadow_hand/shadow_hand.sdf \
     ../data/sdf/shadow_hand/shadow_hand_full.world \
-    ../data/urdf/shadow_hand/shadow_hand.urdf
+    ../data/urdf/shadow_hand/shadow_hand.urdf \
+    ../data/skel/soft_cubes.skel \
+    ../data/skel/soft_open_chain.skel \
+    ../data/skel/softBodies.skel \
+    ../data/skel/softVoxel.skel \
+    ../data/skel/softVoxel_2.skel

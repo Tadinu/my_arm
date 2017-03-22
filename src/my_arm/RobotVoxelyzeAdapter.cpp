@@ -3,9 +3,7 @@
 #include <QThread>
 #include <QVector3D>
 #include "RobotVoxelyzeAdapter.h"
-#include "ros_vox_cad/VoxCad/QVX_Interfaces.h"
-#include "ros_vox_cad/Voxelyze/VX_MeshUtil.h"
-#include "ros_vox_cad/Voxelyze/Utils/Mesh.h"
+
 #include "my_arm/voxel_mesh_msg.h"
 
 #include "RobotLeapAdapter.h"
@@ -28,11 +26,18 @@ RobotVoxelyzeAdapter* RobotVoxelyzeAdapter::getInstance()
 }
 
 RobotVoxelyzeAdapter::RobotVoxelyzeAdapter():
-                      _pMutex(new QMutex(QMutex::Recursive)),
-                      _voxCad(nullptr), _voxelMesh(nullptr)
+                      _pMutex(new QMutex(QMutex::Recursive))
+#if defined VOX_CAD
+                    , _voxCad(nullptr), _voxelMesh(nullptr)
+#elif defined VOXELYZE_PURE
+                    ,_voxelMutex(new QMutex(QMutex::Recursive)),
+                    _voxelCollisionPos(Vec3D<>(0,0,0)),
+                    _voxelCollisionForce(Vec3D<>(0,0,0)),
+                    _voxelyze(nullptr),_voxelMeshRender(nullptr)
+#endif
 {
     timer.setInterval(500);
-#ifdef UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
+#if defined VOX_CAD && defined UPDATE_VOXEL_MESH_USING_LOCAL_TIMER
     QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(updateVoxelMesh()));
 #endif
 }
@@ -40,16 +45,27 @@ RobotVoxelyzeAdapter::RobotVoxelyzeAdapter():
 RobotVoxelyzeAdapter::~RobotVoxelyzeAdapter()
 {
     _pMutex->tryLock(500);
-    delete _voxCad; _voxCad = nullptr;
-
-    _pMutex->unlock(); // infutile if tryLock() failed!
-    delete _pMutex;
+#ifdef VOX_CAD
+    _voxCad->EnterVMMode(VoxCad::VM_3DVIEW);
+    V_DELETE_POINTER(_voxCad);
+#elif defined VOXELYZE_PURE
+    _voxelMutex->tryLock(500);
+    V_DELETE_POINTER(_voxelyze);
+    V_DELETE_POINTER(_voxelMeshRender);
+    V_DELETE_POINTER(_voxelMutex);
+#endif
+    V_DELETE_POINTER(_pMutex);  // infutile if tryLock() failed!
 }
 
 void RobotVoxelyzeAdapter::deleteInstance()
 {
     delete _instance;
     _instance = nullptr;
+}
+
+bool RobotVoxelyzeAdapter::checkInstance()
+{
+    return _instance != nullptr;
 }
 
 void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShowMainWindow)
@@ -60,9 +76,11 @@ void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShow
     if(_node_handle) {
         _pub_voxel_mesh = _node_handle->advertise<my_arm::voxel_mesh>(CVOXEL_MESH_TOPIC, 1000);
     }
+
     // -------------------------------------------------------------------------------------------------------
     // INIT VOXEL MESH
     //
+#ifdef VOX_CAD
     _voxCad = new VoxCad();
     _voxCad->MainSim.pSimView->loadFingerVoxels();
 
@@ -89,11 +107,29 @@ void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShow
     this->updateVoxelMesh();
     //-------------------------------------------------------------------------------------------------
     timer.start();
+#elif defined VOXELYZE_PURE
+    // Voxelyze
+    _voxelyze = new CVoxelyze(0.01); //100mm voxels
+    _voxelyze->enableFloor(true);
+    _voxelyze->enableCollisions();
+    _voxelyze->setGravity();
+
+    // Voxel Material
+    _voxelMaterial = _voxelyze->addMaterial(1000000, 1000); //A material with stiffness E=1MPa and density 1000Kg/m^3
+    _voxelMaterial->setGlobalDamping(0.0001f);
+
+    // 1- CANTILEVERBEAM
+    //this->makeCantileverBeam();
+
+    // 2- VOXEL MESH
+    this->makeVoxelMesh();
+#endif
 }
 
 // void CVXS_SimGLView::Draw()
 void RobotVoxelyzeAdapter::updateVoxelMesh()
 {
+#ifdef VOX_CAD
     // ------------------------------------------------------------------------------------------------
     if(_voxelMesh == nullptr && _voxCad->MainSim.pSimView != nullptr) {
         _voxelMesh = &_voxCad->MainSim.pSimView->VoxMesh;
@@ -101,6 +137,9 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
     if(_voxelMesh == nullptr) {
         return;
     }
+
+    //std::string test;
+    //_voxCad->MainObj.GetVXCInfoStr(&test);
     //_voxelMesh->printMeshVertices();
 
 #if defined ROBOT_LEAP_HANDS && defined VOXELYZE_LEAP_HANDS // FOR NOW, ONLY SHOW FINGER TIPS IF LEAP MOTION IS AVAILABLE!
@@ -220,6 +259,32 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
         //ROS_INFO("Publish Voxel Message %d", voxel_mesh_msg.vertices.size());
         _pub_voxel_mesh.publish(voxel_mesh_msg);
     }
+#elif defined VOXELYZE_PURE
+    _voxelMutex->lock();
+    std::vector<Vec3D<>> collidedVoxelIndex = _voxelyze->detectExternalCollision(_voxelyze->voxelSize()*_voxelyze->voxelSize(), // Compared with length2
+                                                                                 _voxelCollisionPos);
+
+    if(collidedVoxelIndex.size()) {
+        //cout << "Voxel collided count: " << collidedVoxelIndex.size()
+        //     << " " << _voxelCollisionForce.x
+        //     << " " << _voxelCollisionForce.y
+        //     << " " << _voxelCollisionForce.z << endl;
+#if 1
+        for(size_t i = 0; i < collidedVoxelIndex.size(); i++) {
+            _voxelyze->voxel(collidedVoxelIndex[i].x, collidedVoxelIndex[i].y, collidedVoxelIndex[i].z)
+                     ->external()->setForce(0, -100, 0);
+                     //->external()->setForce(_voxelCollisionForce.x, _voxelCollisionForce.y, _voxelCollisionForce.z);
+        }
+#else
+    _voxelyze->voxel(8)
+             ->external()->setForce(0, -100, 0); //pulls Voxel 3 downward with 1 Newton of force.
+#endif
+    }
+    _voxelMeshRender->updateMesh(CVX_MeshRender::STATE_INFO, CVoxelyze::DISPLACEMENT);
+    _voxelTimeStep = _voxelyze->recommendedTimeStep();
+    this->doVoxelyzeTimeStep();
+    _voxelMutex->unlock();
+#endif
     return;
 }
 
@@ -249,6 +314,7 @@ CVX_Voxel* RobotVoxelyzeAdapter::queryVoxelMesh()
 }
 #endif
 
+#ifdef VOX_CAD
 bool RobotVoxelyzeAdapter::loadVXA()
 {
     QString fileName;
@@ -280,3 +346,99 @@ const std::vector<CLine>& RobotVoxelyzeAdapter::getVoxelMeshLines()
     }
     return std::vector<CLine>();
 }
+#elif defined VOXELYZE_PURE
+const std::vector<float>& RobotVoxelyzeAdapter::getVoxelMeshVertices()
+{
+    return _voxelMeshRender->getVertices();
+}
+
+const std::vector<int>& RobotVoxelyzeAdapter::getVoxelMeshLines()
+{
+    return _voxelMeshRender->getEdges();
+}
+
+const std::vector<int>& RobotVoxelyzeAdapter::getVoxelMeshQuads()
+{
+    return _voxelMeshRender->getQuads();
+}
+
+#endif
+
+#ifdef VOXELYZE_PURE
+void RobotVoxelyzeAdapter::updateVoxelCollisionInfo(const QVector3D& pos, const QVector3D& force)
+{
+    _voxelMutex->lock();
+    _voxelCollisionPos   = Vec3D<>(pos.x(), pos.y(), pos.z());
+    _voxelCollisionForce = Vec3D<>(force.x(), force.y(), force.z());
+    _voxelMutex->unlock();
+}
+
+void RobotVoxelyzeAdapter::drawVoxelMesh()
+{
+    _voxelMeshRender->glDraw();
+}
+
+void RobotVoxelyzeAdapter::doVoxelyzeTimeStep()
+{
+    // The time step helps create the interval between each time of force applying, to let the object make use of its
+    // damping ratio to return to its equilibrium before taking the force affect again!
+    //just above break of static friction
+    //cout << "Time step: " << _voxelTimeStep << endl;
+    for (int l=0; l<500; l++) {
+        // updateCollisions() called here-in!
+        _voxelyze->doTimeStep(1.69e-5);
+    }
+}
+
+void RobotVoxelyzeAdapter::makeCantileverBeam()
+{
+    std::vector<CVX_Voxel*> voxelList; voxelList.reserve(3);
+    voxelList.push_back(_voxelyze->setVoxel(_voxelMaterial, 0, 5, 5)); //Voxel at index x=0, y=0. z=0
+    voxelList.push_back(_voxelyze->setVoxel(_voxelMaterial, 1, 5, 5));
+    voxelList.push_back(_voxelyze->setVoxel(_voxelMaterial, 2, 5, 5)); //Beam extends in the +X direction
+
+    // Initial Voxel Status Setup:
+    voxelList[0]->external()->setFixedAll(); //Fixes all 6 degrees of freedom with an external condition on Voxel 1
+    //voxelList[2]->external()->setForce(0, 0, -5); //pulls Voxel 3 downward with 1 Newton of force.
+
+    // Calculate time step based on voxel list info
+    _voxelTimeStep = _voxelyze->recommendedTimeStep();
+
+    // Generate mesh
+    //
+    _voxelMeshRender = new CVX_MeshRender(_voxelyze); // generateMesh() called here-in!
+    //std::vector<float> gbVoxelMeshVertices = _voxelMeshRender->getVertices();
+    //std::vector<int> gbVoxelMeshEdges      = _voxelMeshRender->getEdges();
+}
+
+void RobotVoxelyzeAdapter::makeVoxelMesh()
+{
+    int x = 10, y = 1, z = 20;
+    std::vector<CVX_Voxel*> voxelList; voxelList.reserve(x*y*z);
+    for(int i = 0; i < x; i++) {
+        for(int j = y-1; j < y; j++) {
+            for(int k = 0; k < z; k++) {
+                voxelList.push_back(_voxelyze->setVoxel(_voxelMaterial, i, j, k)); //Voxel at index x=0, y=0. z=0
+            }
+        }
+    }
+    _voxelTimeStep = _voxelyze->recommendedTimeStep();
+
+    // Generate mesh
+    //
+    _voxelMeshRender = new CVX_MeshRender(_voxelyze); // generateMesh() called here-in!
+    cout << "VOXEL MESH POS" << _voxelyze->voxel(0)->position().x << " - " <<
+                                _voxelyze->voxel(0)->position().y << " - " <<
+                                _voxelyze->voxel(0)->position().z << endl;
+    //std::vector<float> gbVoxelMeshVertices = _voxelMeshRender->getVertices();
+    //std::vector<int> gbVoxelMeshEdges      = _voxelMeshRender->getEdges();
+}
+
+QVector3D RobotVoxelyzeAdapter::getVoxelMeshSize()
+{
+    return QVector3D(20*_voxelyze->voxelSize() * (_voxelyze->indexMaxX()-_voxelyze->indexMinX()+1),
+                     200*_voxelyze->voxelSize() * (_voxelyze->indexMaxY()-_voxelyze->indexMinY()+1),
+                     10*_voxelyze->voxelSize() * (_voxelyze->indexMaxZ()-_voxelyze->indexMinZ()+1));
+}
+
+#endif

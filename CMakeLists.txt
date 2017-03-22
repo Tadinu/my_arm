@@ -63,7 +63,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 # Definitions
-add_definitions(-DMY_ARM -DQT_XML_LIB -DQT_OPENGL_LIB -DUSE_ZLIB_COMPRESSION -DUSE_OPEN_GL -DPREC_MED)
+add_definitions(-DMY_ARM -DVOX_CAD -DQT_XML_LIB -DQT_OPENGL_LIB -DUSE_ZLIB_COMPRESSION -DUSE_OPEN_GL -DPREC_MED -DUSE_OMP) ##  -DUSE_OMP, -DVOXELYZE_PURE -DPARDISO_5 for Voxelyze
 
 set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
 set(BULLET_INCLUDE "/usr/local/include/bullet")
@@ -703,8 +703,8 @@ endif()
 include_directories(##3rd/Voxelyze/include
                     ##3rd/Voxelyze/include/rapidjson
                     )
-target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
-target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/Voxelyze/lib/libvoxelyze.0.9.a)
+target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/Voxelyze/lib/libVoxelyze.so)
+target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/Voxelyze/lib/libVoxelyze.so)
 # Voxelyze --
 
 # VoxCad ++

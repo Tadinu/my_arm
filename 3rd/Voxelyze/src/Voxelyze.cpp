@@ -749,6 +749,25 @@ void CVoxelyze::regenerateCollisions(float threshRadiusSq)
 	collisionsStale = false; //good to go!
 }
 
+#ifdef MY_ARM
+std::vector<Vec3D<>> CVoxelyze::detectExternalCollision(float threshRadiusSq, const Vec3D<>& pos)
+{
+    std::vector<Vec3D<>> collidedIndexList;
+    //
+    //check each combo of voxels and add a collision where necessary
+    for (std::vector<CVX_Voxel*>::iterator it=voxelsList.begin(); it != voxelsList.end(); it++) {
+        if ((pos-(*it)->pos).Length2() > threshRadiusSq) { //discard anything outside the watch radius
+            continue;
+        }
+        else {
+            collidedIndexList.push_back(Vec3D<>((*it)->indexX(), (*it)->indexY(), (*it)->indexZ()));
+        }
+    }
+
+    return collidedIndexList;
+}
+#endif
+
 float CVoxelyze::stateInfo(stateInfoType info, valueType type)
 {
 	float returnVal = 0;

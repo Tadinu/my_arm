@@ -30,7 +30,7 @@
 
 // ROBOT_VOXELYZE --
 //
-//#define ROBOT_VOXELYZE
+#define ROBOT_VOXELYZE
 #ifdef ROBOT_VOXELYZE
 #define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
 #endif

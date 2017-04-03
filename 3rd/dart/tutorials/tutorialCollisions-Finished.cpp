@@ -43,6 +43,7 @@
 #include "my_arm/RobotLeapAdapter.h"
 
 #define DART_VOXEL_MESH
+#define WORK_IN_WORLD
 #define FORCE_ON_RIGIDBODY 25.0
 #define FORCE_ON_VERTEX 1.00
 
@@ -87,9 +88,11 @@ using namespace dart::simulation;
 // using namespace dart::dynamics;
 // using namespace dart::utils;
 
-
-SkeletonPtr createManipulator();
+#define CDART_SOFT_BODY_NAME ("DartSoftBody")
 SkeletonPtr loadSoftVoxelMesh();
+#define CMANIPULATOR_NAME ("Manipulator")
+SkeletonPtr createManipulator();
+#define CSHADOW_HAND_NAME ("ShadowHand")
 SkeletonPtr loadShadowHand();
 
 void setupRing(const SkeletonPtr& ring)
@@ -143,6 +146,9 @@ public:
         mImpulseDuration(0.0)
     {
         setWorld(world);
+        dart::gui::SoftSimWindow::mShowMarkers = false;
+        dart::gui::SoftSimWindow::mShowPointMasses = false;
+        dart::gui::SoftSimWindow::mShowMeshs = false;
 
         // Collision Detector
         _mCollisionDetector = world->getConstraintSolver()->getCollisionDetector();
@@ -176,8 +182,10 @@ public:
     {
         if(RobotVoxelyzeAdapter::checkInstance()) {
             //std::cout << "Rebuild Dart soft voxel body" << std::endl;
+            mWorld->removeSkeleton(mDartSoftBody);
             mDartSoftBody.reset();
             mDartSoftBody = loadSoftVoxelMesh();
+            mWorld->addSkeleton(mDartSoftBody);
             // ----------------------------------------------------------------
             //VVOXELYZE_ADAPTER()->doVoxelyzeTimeStep();
             VVOXELYZE_ADAPTER()->updateVoxelMesh();
@@ -224,13 +232,15 @@ public:
 #ifdef DART_VOXEL_MESH
       case '0':
     {
+#ifdef WORK_IN_WORLD
         // Dart Soft Body is just the agent for Voxelyze soft voxel mesh,
         // therefore not added into the world
-        //mWorld->addSkeleton(mDartSoftBody->clone());
+        mWorld->addSkeleton(mDartSoftBody);
 
         // Add ShadowHand just to interact with the floor?...To be updated later!
         mWorld->addSkeleton(mShadowHand);
         //mWorld->addSkeleton(createManipulator());
+#endif
     }
       break;
 #else
@@ -256,7 +266,7 @@ public:
 #endif
       case 'd':
         if(mWorld->getNumSkeletons() > 2)
-          removeSkeleton(mWorld->getSkeleton(2));
+            removeSkeleton(mWorld->getSkeleton(2));
         std::cout << "Remaining objects: " << mWorld->getNumSkeletons()-2
                   << std::endl;
         break;
@@ -345,8 +355,8 @@ public:
     dart::dynamics::SkeletonPtr Skeleton0 = mWorld->getSkeleton(0);
     if(Skeleton0 != nullptr) {
         Eigen::Vector4d color;
-        color << 0.5, 0.8, 0.6, 1.0;
-        drawSkeleton(mWorld->getSkeleton(0).get(), color, false);
+        color << 0.5, 0.5, 0.5, 0.5;
+        drawSkeleton(mWorld->getSkeleton(0).get()); //, color, false);
     }
 #endif
 
@@ -377,17 +387,15 @@ public:
     }
 #endif
 
-
-    // SHADOW HAND --
-    //drawSkeleton(mShadowHand.get());
-
-    // DART SOFT BODY -- (AGENT FOR VOXEL MESH from VVOXELYZE_ADAPTER())
-    if(mDartSoftBody != nullptr)
-       drawSkeleton(mDartSoftBody.get());
-
-#if 1
+#if 0 // def WORK_IN_WORLD
     // WORLD --
     SimWindow::drawWorld();
+#else
+    // SHADOW HAND --
+    drawSkeleton(mShadowHand.get());
+
+    // DART SOFT BODY -- (AGENT FOR VOXEL MESH from VVOXELYZE_ADAPTER())
+    //drawSkeleton(mDartSoftBody.get());
 #endif
   }
 
@@ -429,18 +437,24 @@ public:
       bool collision = voxelMeshCollisionGroup->collide(shadowHandCollisionGroup.get(), option, &result);
 
       size_t collisionCount = result.getNumContacts();
-      //    cout << "Collision Count" << collisionCount << endl;
+      if(collisionCount == 0) {
+        return;
+      }
+
+      //cout << "Collision Count" << collisionCount << endl;
       for(size_t i = 0; i < collisionCount; ++i)
       {
           const dart::collision::Contact& contact = result.getContact(i);
 #ifdef VOXELYZE_PURE
-          //if(i == 0) {
+          if(i == 0) {
             VVOXELYZE_ADAPTER()->updateVoxelCollisionInfo(QVector3D(contact.point[0], contact.point[1], contact.point[2]),
                                                           QVector3D(contact.force[0], contact.force[1], contact.force[2]));
             //break;
-          //}
+          }
 #endif
-          //cout << contact.point[0] << "-" << contact.point[1] << "-" << contact.point[2] << endl;
+          //cout << "-" << contact.point[0] << "-" << contact.point[1] << "-" << contact.point[2] << endl
+          if(contact.force[0] != 0 || contact.force[1] != 0 || contact.force[2] != 0)
+              cout  << "Force: " << contact.force[0] << "-" << contact.force[1] << "-" << contact.force[2] << endl;
       }
   }
 
@@ -850,7 +864,7 @@ SoftBodyNode::UniqueProperties makeMeshProperties(
 {
     SoftBodyNode::UniqueProperties properties(
                   _vertexStiffness, _edgeStiffness, _dampingCoeff);
-#ifdef VOX_CAD
+#if defined VOX_CAD
     //----------------------------------------------------------------------------
     // Point masses
     //----------------------------------------------------------------------------
@@ -896,7 +910,7 @@ SoftBodyNode::UniqueProperties makeMeshProperties(
         face[2] = facets[i].vi[2];
         properties.addFace(face);
     }
-#else if defined VOXELYZE_PURE
+#elif defined VOXELYZE_PURE
     //----------------------------------------------------------------------------
     // Point masses
     //----------------------------------------------------------------------------
@@ -1118,14 +1132,14 @@ SkeletonPtr createSoftBody()
 #ifdef DART_VOXEL_MESH
 SkeletonPtr loadSoftVoxelMesh()
 {
-    SkeletonPtr soft = Skeleton::create("softVoxel");
+    SkeletonPtr soft = Skeleton::create(CDART_SOFT_BODY_NAME);
 
     //Eigen::Vector6d positions(Eigen::Vector6d::Zero());
     //positions[4] = 1;
     //mOriginalSoftVoxelBody->setPositions(positions);
 
     // Add a soft body
-    BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "soft voxel");
+    BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "Dart Soft Voxel");
     setAllColors(soft, dart::Color::Gray());
 
     Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
@@ -1157,7 +1171,7 @@ SkeletonPtr loadShadowHand()
     // Load the Skeleton from a file
     dart::utils::DartLoader loader;
     SkeletonPtr shadow_hand = loader.parseSkeleton(DART_DATA_PATH"urdf/shadow_hand/shadow_hand.urdf");
-    shadow_hand->setName("ShadowHand");
+    shadow_hand->setName(CSHADOW_HAND_NAME);
 #endif
 #if 1
     // Position its base in a reasonable way

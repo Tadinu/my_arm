@@ -25,6 +25,8 @@
 #include <gazebo/msgs/MessageTypes.hh>
 #include <gazebo_msgs/ModelStates.h>
 #include <gazebo_msgs/ModelState.h>
+#include <gazebo_msgs/ContactsState.h>
+#include <gazebo_msgs/ContactState.h>
 
 #include <gazebo/rendering/DynamicLines.hh>
 #include <gazebo/rendering/RenderTypes.hh>
@@ -82,8 +84,8 @@ public:
                              double position);
     void calculateVoxelMeshCollision();
 
-    void modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
-
+    void modelStateCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
+    void rosBumperCallback(const gazebo_msgs::ContactsState::ConstPtr& msg);
 private:
     QMutex _mMutex;
     event::ConnectionPtr _updateConnection;
@@ -91,6 +93,7 @@ private:
     physics::WorldPtr _world;
     physics::ModelPtr _model;
     std::vector<physics::JointPtr> _joints;
+    std::vector<physics::LinkPtr>  _links;
 
     // ROS STUFF
     boost::shared_ptr<ros::NodeHandle> _rosnode;
@@ -106,6 +109,7 @@ private:
 
     // Gazebo --
     ros::Subscriber _model_states_subscriber;
+    std::vector<ros::Subscriber> _ros_bumper_subscribers;
 
     // Update Rate
     double _update_rate;

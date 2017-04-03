@@ -9,7 +9,7 @@
 
         <skeleton name="ground skeleton">
             <body name="ground">
-                <transformation>0 -0.0375 0 0 0 0</transformation>
+                <transformation>0 -0.005 0 0 0 0</transformation>
                 <visualization_shape>
                     <transformation>0 0 0 0 0 0</transformation>
                     <geometry>
@@ -23,7 +23,7 @@
                     <transformation>0 0 0 0 0 0</transformation>
                     <geometry>
                         <box>
-                            <size>2.5 0.05 2.5</size>
+                            <size>2.5 0.01 2.5</size>
                         </box>
                     </geometry>
                 </collision_shape>                                

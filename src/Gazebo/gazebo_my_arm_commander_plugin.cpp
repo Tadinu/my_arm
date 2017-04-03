@@ -64,8 +64,64 @@ namespace gazebo
         }
         _rosnode = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME));
         _model_states_subscriber = _rosnode->subscribe("/gazebo/model_states", 1000,
-                                                       &GazeboMyArmCommander::modelStatecallback, this);
+                                                       &GazeboMyArmCommander::modelStateCallback, this);
 
+        // Contact state info
+        /*
+        /contacts/rh_palm
+
+        /contacts/rh_ff/distal
+        /contacts/rh_ff/knuckle
+        /contacts/rh_ff/middle
+        /contacts/rh_ff/proximal
+
+        /contacts/rh_lf/distal
+        /contacts/rh_lf/knuckle
+        /contacts/rh_lf/metacarpal
+        /contacts/rh_lf/middle
+        /contacts/rh_lf/proximal
+
+        /contacts/rh_mf/distal
+        /contacts/rh_mf/knuckle
+        /contacts/rh_mf/middle
+        /contacts/rh_mf/proximal
+
+        /contacts/rh_rf/distal
+        /contacts/rh_rf/knuckle
+        /contacts/rh_rf/middle
+        /contacts/rh_rf/proximal
+
+        /contacts/rh_th/base
+        /contacts/rh_th/distal
+        /contacts/rh_th/hub
+        /contacts/rh_th/middle
+        /contacts/rh_th/proximal
+        */
+        for(size_t i = 0; i < 23; i++) {
+            std::string linkName = KsGlobal::CSHADOWHAND_ARM_LINKS[i];
+            if (i == 0) { // PALM
+                _ros_bumper_subscribers.push_back(_rosnode->subscribe(linkName, 1000,
+                                                                      &GazeboMyArmCommander::rosBumperCallback, this));
+            }
+            else {
+                std::string linkPrefix = linkName.substr(0, 5);
+                std::string linkAffix = linkName.substr(5);
+                std::string topicName = "/contacts/" + linkPrefix + "/" + linkAffix;
+                _ros_bumper_subscribers.push_back(_rosnode->subscribe(topicName, 1000,
+                                                                      &GazeboMyArmCommander::rosBumperCallback, this));
+            }
+        }
+
+        /*
+         * /gazebo/link_states
+           /gazebo/model_states
+           /gazebo/bumper_states
+           /gazebo/parameter_descriptions
+           /gazebo/parameter_updates
+           /gazebo/ros_bumper
+           /gazebo/set_link_state
+           /gazebo/set_model_state
+         */
 #ifdef ROBOT_LEAP_HANDS
         // LEAP HANDS --
         VLEAP_INSTANCE()->initLeapMotion(_rosnode.get());
@@ -105,12 +161,15 @@ namespace gazebo
         }
         _last_update_time = this->_world->GetSimTime();
 
-        for ( unsigned int i = 0; i< _joint_names.size(); i++ ) {
-            _joints.push_back (this->_model->GetJoint(_joint_names[i]));
+        _links  = this->_model->GetLinks();
+        for(size_t i = 0; i < _joint_names.size(); i++) {
+            // Do this to make use of self-defined jointId in KsGlobal
+            _joints.push_back(this->_model->GetJoint(_joint_names[i]));
             ROS_INFO_NAMED("joint_state_publisher", "GazeboMyArmCommander is going to publish joint: %s", _joint_names[i].c_str() );
         }
 
-        ROS_INFO_NAMED("joint_state_publisher", "Starting GazeboMyArmCommander Plugin (ns = %s)!, parent name: %s", this->_robot_namespace.c_str(), _model->GetName ().c_str() );
+        ROS_INFO_NAMED("joint_state_publisher", "Starting GazeboMyArmCommander Plugin (ns = %s)!, parent name: %s",
+                       this->_robot_namespace.c_str(), _model->GetName ().c_str());
 
         _tf_prefix = tf::getPrefixParam ( *_rosnode );
         _joint_state_publisher = _rosnode->advertise<sensor_msgs::JointState>("joint_states", 1000);
@@ -129,7 +188,12 @@ namespace gazebo
                                                    double position)
     {
         if(_joints[jointId] != nullptr) {
-            this->_joint_controller->SetJointPosition(this->_model->GetJoint(_joints[jointId]->GetName()), position);
+            this->_joint_controller->SetJointPosition(_joints[jointId], position);
+            //std::cout << "Joint: "       << _joints[jointId]->GetName()      << std::endl
+            //          << "- Damping:   " << _joints[jointId]->GetDamping(0)  << std::endl
+            //          << "- Stiffness: " << _joints[jointId]->GetStiffness(0)<< std::endl
+            //          << "- Force: "     << _joints[jointId]->GetForce(0)    << std::endl
+            //          << "- Velocity: "  << _joints[jointId]->GetVelocity(0) << std::endl;
         }
     }
 
@@ -194,7 +258,7 @@ namespace gazebo
 //#include <gazebo/physics/ModelState.hh>
 //#include <gazebo/physics/dart/DARTMesh.hh>
      //const gazebo::physics::ModelState
-    void GazeboMyArmCommander::modelStatecallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
+    void GazeboMyArmCommander::modelStateCallback(const gazebo_msgs::ModelStates::ConstPtr& msg)
     {
 #if 0
         for(size_t i = 0; i < msg->name.size(); i++) {
@@ -204,6 +268,56 @@ namespace gazebo
                     msg->pose[i].position.z << endl;
         }
 #endif
+    }
+
+    void GazeboMyArmCommander::rosBumperCallback(const gazebo_msgs::ContactsState::ConstPtr& msg)
+    {
+#if 1
+        //int a;
+        //a = sizeof(msg);
+        //std::stringstream ss;
+        //ss << a;
+        //ROS_INFO("The size of recieved ContactState message is: %d", a);
+        if(msg->states.size() == 0)
+            return;
+#endif
+        //geometry_msgs::Vector3 force  = msg->states[0].total_wrench.force;
+        //geometry_msgs::Vector3 torque = msg->states[0].total_wrench.torque;
+        //std::cout<< msg->states[0].contact_positions.size() << " - Force : " << force.x <<std::endl;
+        //std::cout<< std::string(msg->states[0].collision1_name) << std::endl;
+        //std::cout<< std::string(msg->states[0].collision2_name) << std::endl;
+        // info
+        // collision1_name
+        // collision2_name
+        // wrenches
+        // total_wrench
+        // contact_positions
+        // contact_normals
+        // depths
+
+        for (size_t i = 0; i < msg->states.size(); ++i)
+        {
+            if(msg->states[i].collision2_name.find("unit") == std::string::npos)
+                continue;
+            //
+            std::cout << "State size: " << msg->states.size() << std::endl;
+            std::cout << "Collision between[" << msg->states[i].collision1_name
+                      << "] and [" << msg->states[i].collision2_name << "]\n";
+
+            for (size_t j = 0; j < msg->states[i].contact_positions.size(); ++j)
+            {
+                std::cout << j << "  Position:"
+                          << msg->states[i].contact_positions[j].x << " "
+                          << msg->states[i].contact_positions[j].y << " "
+                          << msg->states[i].contact_positions[j].z << "\n";
+                std::cout << "   Normal:"
+                          << msg->states[i].contact_normals[j].x<< " "
+                          << msg->states[i].contact_normals[j].y<< " "
+                          << msg->states[i].contact_normals[j].z<< "\n";
+                std::cout << "   Depth:" << msg->states[i].depths[j] << "\n";
+            }
+            std::cout << " ------------------------------------- " << std::endl;
+        }
     }
 
     void GazeboMyArmCommander::calculateVoxelMeshCollision()
@@ -268,6 +382,12 @@ namespace gazebo
         if ( seconds_since_last_update > update_period_ ) {
 #if 1
             determineHandArrangmentOnLeapHands();
+            //std::cout << "--------------------------------------------------"<< std::endl;
+            //for(size_t i = 0; i < _links.size(); i++) {
+            //    std::cout << "Link: "        << _links[i]->GetSensorName(0)   << std::endl
+            //              << "World force:"  << _links[i]->GetWorldForce().z  << std::endl
+            //              << "World torque:" << _links[i]->GetWorldTorque().z << std::endl;
+            //}
 #else
             // Publish Joint States
             publishJointStates();

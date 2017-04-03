@@ -492,6 +492,7 @@ public:
 
         VSHADOW_HAND_ARM_JOINT_TOTAL
     };
+    static const char* CSHADOWHAND_ARM_LINKS[];
     static const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL];
 
 public:

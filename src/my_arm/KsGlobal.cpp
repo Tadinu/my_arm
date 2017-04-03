@@ -184,6 +184,44 @@ const char* KsGlobal::CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TO
     "rh_LFJ1"                                 // Distal , Revolute
 };
 
+const char* KsGlobal::CSHADOWHAND_ARM_LINKS[] = {
+    //"rh_forearm", // No sensor
+    //"rh_wrist",   // No sensor
+    "rh_palm",
+
+    // FF
+    "rh_ffknuckle",
+    "rh_ffproximal",
+    "rh_ffmiddle",
+    "rh_ffdistal",
+
+    // LF
+    "rh_ffmetacarpal",
+    "rh_ffknuckle",
+    "rh_ffproximal",
+    "rh_ffmiddle",
+    "rh_ffdistal",
+
+    // MF
+    "rh_mfknuckle",
+    "rh_mfproximal",
+    "rh_mfmiddle",
+    "rh_mfdistal",
+
+    // RF
+    "rh_rfknuckle",
+    "rh_rfproximal",
+    "rh_rfmiddle",
+    "rh_rfdistal",
+
+     // TH
+    "rh_thbase",
+    "rh_thproximal",
+    "rh_thhub",
+    "rh_thmiddle",
+    "rh_thdistal"
+};
+
 KsGlobal* KsGlobal::_instance  = nullptr;
 QApplication* KsGlobal::_ksApp = nullptr;
 QObject* KsGlobal::_k3dQMLCom  = nullptr;

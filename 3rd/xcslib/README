@@ -1,0 +1,9 @@
+INSTALLATION
+All the information for the installation is included in the document manual.pdf
+
+CODE DOCUMENTATION
+The code documentation generated using doxygen can be found in docs/html
+
+BUILDING OPTIONS
+For information about the several make options, type "make"
+

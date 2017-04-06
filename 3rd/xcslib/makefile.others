@@ -1,0 +1,68 @@
+#	MAKEFILE FOR XCS
+#
+#	generates different versions of XCS
+#
+#	multiplexer:	standard XCS with multiplexer problems
+#
+#	maze:		standard XCS with maze problems
+#
+
+EXECUTABLES=`find . -maxdepth 1 -type f -perm +a+x`
+OBJECTS=$(wildcard ./*.o ./extra/*.o ./pf/*.o)
+DOCS=$(wildcard ./docs/html/*.html ./docs/html/*.png)
+BAK = $(wildcard ./*~)
+EXECUTION=$(wildcard pop_state.* statistics.* *.gz popul.* steps.* report.* AVERAGE.* average.*)
+
+nothing:
+	@echo ""
+	@echo make all
+	@echo make multiplexer
+	@echo make parity
+	@echo make countones
+	@echo make woods
+	@echo make woods2
+	@echo make fsm
+	@echo ""
+	@echo ""
+	@echo ""
+
+#
+#	CLEANING
+#
+clean:
+	@\rm -f $(OBJECTS) $(BAK) $(DOCS)
+
+clean-all:
+	@\rm -f $(OBJECTS) $(BAK) $(EXECUTABLES) *.gz
+	@\rm -f example/*/*.gz statistics.* trace.* steps.* perf.* popul.* report.* system_error.* AVERAGE.* average.*
+
+
+.PHONY: docs clean clean-all
+
+#
+#	CODE DOCUMENTATION
+#
+docs:
+	doxygen make/xcs-docs.ini
+
+INSTALL=$(HOME)/bin
+
+#
+#	BOOLEAN MULTIPLEXER
+#
+
+
+all: parity woods2 fsm
+	@cd utility; make install; cd ..; mv $(EXECUTABLES) $(INSTALL)
+
+parity:
+	make clean
+	make -f make/xcs.make ENVIRONMENT=parity_env VERSION=par 
+
+woods2:
+	make clean
+	make -f make/xcs.make VERSION=woods2 ENVIRONMENT=woods2_env ACTIONS=binary_action  
+
+fsm:
+	make clean
+	make -f make/xcs.make VERSION=fsm ENVIRONMENT=fsm_env ACTIONS=binary_action  

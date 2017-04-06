@@ -4,3 +4,5 @@
 ui_*
 moc_*
 Makefile
+*.so
+*.so.*

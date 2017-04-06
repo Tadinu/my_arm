@@ -1,0 +1,71 @@
+<random>
+	seed = 123
+</random>
+	
+<condition::ternary>
+	condition size = 16
+	dontcare probability = 0.6
+	mutate with dontcare = on
+	crossover method = 2
+	mutation method = 1
+</condition::ternary>
+
+<action::binary>
+	number of bits = 3
+</action::binary>
+
+<environment::woods>
+	map = woods1.map
+	binary sensors = on
+	slide probability = 0
+</environment::woods>
+
+<classifier_system>
+      population size = 1600
+        learning rate = 0.2
+      discount factor = 0.7
+    covering strategy = action_based 0
+  discovery component = on
+             theta GA = 25
+crossover probability = 0.8
+ mutation probability = 0.04
+         epsilon zero = 10
+                   vi = 5
+                alpha = 0.1
+      prediction init = 10.0
+           error init = 0.0
+         fitness init = 0.01
+        set size init = 1
+      population init = empty
+ exploration strategy = SEMIUNIFORM:1.0
+    deletion strategy = ACCURACY-BASED
+         theta delete = 20
+         theta GA sub = 20
+         theta AS sub = 100
+       GA subsumption = on
+       AS subsumption = off
+   update error first = off
+              use MAM = on
+GA tournament selection = off
+      tournament size = 0.4
+</classifier_system>
+
+<experiments>
+	first experiment = 0
+	number of experiments = 10
+        first problem = 0
+        number of learning problems = 2000
+	number of condensation problems = 0
+        number of test problems = 0
+	test environment = on
+	save state every = 0
+        trace experiments = on
+        save population state = on
+        save population report = on
+        save experiment state = on
+	trace time = on
+	compact mode = off
+	save statistics every = 100
+        save learning problems = on
+	maximum number of steps = 1000
+</experiments>

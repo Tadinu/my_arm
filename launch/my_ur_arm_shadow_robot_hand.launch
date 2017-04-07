@@ -1,0 +1,132 @@
+<launch>
+    <!-- http://shadow-robot.readthedocs.io/en/latest/generated/sr_interface/sr_robot_launch/README.html#shadow-hand-only -->
+    <arg name="gazebo" default="true"/> <!-- Else the simulation is Rviz -->
+    <arg name="spawn_hand_model" default="true"/>
+
+    <!-- Loads the robot description -->
+    <arg name="robot_description" default="$(find my_arm)/models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited.urdf.xacro"/>
+    <!-- This launch file is for shadow hand only -->
+    <arg name="hand_id" default="rh"/>
+    <arg name="side" default="right"/>
+    <!-- set to false if you want to use real robots, true if you need the gazebo simulation -->
+    <arg name="sim" default="true"/>
+    <!-- Set to true for debugging -->
+    <arg name="debug" default="false"/>
+    <arg name="verbose" default="true" />
+    <!-- Set to true to spawn trajectory controllers for the hands(the trajectory controller overwrites continuously the joint position command, preventing direct control via topics-->
+    <arg name="hand_trajectory" default="true"/>
+    <!-- Set to true to spawn the position controllers for the hands-->
+    <arg name="hand_ctrl" default="false"/>
+    <!-- Set to true to use pwm, false for torque -->
+    <arg name="pwm_control" default="true"/>
+    <!-- Serial number of the hand to be used-->
+    <arg name="hand_serial" default="1322"/>
+
+    <!-- Allows to specify the ethernet interface/s to be used for ethercat devices. It defaults to the value of the env var ETHERCAT_PORT
+         More than one interface can be specified by concatenating them using underscore as a separator (e.g eth1_eth2_eth3) -->
+    <arg name="eth_port" default="$(optenv ETHERCAT_PORT eth0)"/>
+    <!-- Set to true to allow planning trajectories-->
+    <arg name="use_moveit" default="false"/>
+    <!-- Set to false if you want to start without guis -->
+    <arg name="gui" default="true"/>
+
+    <!-- these are the arguments you can pass this launch file, for example paused:=true -->
+    <arg name="use_sim_time" default="true"/>
+    <arg name="headless" default="false"/>
+
+    <arg name="robot_config_file" default="$(find sr_multi_moveit_config)/config/robot_configs/right_sh_ur10.yaml"/>
+
+    <!-- ARM -->
+    <arg name="arm_controller" default="$(find my_arm)/config/$(arg side)_ur_arm_controller.yaml"/>
+
+    <!-- SIMULATED ROBOTS -->
+    <group if="$(arg sim)">
+        <!-- Load the URDF/XACRO into the ROS Parameter Server -->
+        <param name="robot_description"
+               command="$(find xacro)/xacro --inorder '$(arg robot_description)'"/>
+
+        <param name ="/use_sim_time" value="true"/>
+        <!-- For GAZEBO -->
+        <group if="$(arg gazebo)">
+            <arg name="world_name" value="$(find my_arm)/worlds/shadowhand.world"/>
+            <arg name="paused" value="false"/>
+            <include file="$(find gazebo_ros)/launch/empty_world.launch">
+                <env name="GAZEBO_RESOURCE_PATH" value="$(env GAZEBO_RESOURCE_PATH):$(find my_arm)"/>
+                <arg name="world_name" default="$(arg world_name)"/>
+                <arg name="gui" default="$(arg gui)"/>
+                <arg name="paused" value="$(arg paused)"/>
+                <arg name="debug" value="$(arg debug)"/>
+                <arg name="verbose" value="$(arg verbose)" />
+                <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+                <arg name="headless" value="$(arg headless)"/>
+            </include>
+            <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
+            <!-- Note : 'ur10srh' is the name of the robot in left_srhand_ur10_joint_limited.urdf.xacro! -->
+            <group if="$(arg spawn_hand_model)">
+                <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+                      args="-urdf -model ur10srh -x 0 -y 0 -z 0.1 -param robot_description"/>
+            </group>
+        </group>
+
+        <!--
+        <rosparam command="load" file="$(find sr_description)/hand/config/$(arg hand_id)_controller_gazebo.yaml"/>
+        <include file="$(find ros_ethercat_model)/launch/joint_state_publisher.launch" />
+
+        <param name="/hand/mapping/$(arg hand_serial)" value="$(arg hand_id)"/>
+        <param name="/hand/joint_prefix/$(arg hand_serial)" value="$(arg hand_id)_"/>
+        -->
+
+        <!-- For RViz: Pending...
+        <group unless="$(arg gazebo)">
+            <remap from="/my_arm/joint_states" to="/joint_states"/>
+        </group>
+        -->
+
+        <!-- Robot state publisher -->
+        <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
+            <param name="publish_frequency" type="double" value="50.0" />
+            <param name="tf_prefix" type="string" value="" />
+            <!-- <remap from="/joint_states" to="my_arm/joint_states" /> -->
+        </node>
+
+        <!-- send fake joint values -->
+        <!--
+        <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" >
+            <param name="use_gui" value="TRUE"/>
+        </node>
+        -->
+        <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
+    </group>
+
+    <!-- REAL ROBOTS -->
+    <!-- the path to the mapping files -->
+    <group unless="$(arg sim)">
+        <arg name="mapping_path" default="$(find sr_edc_launch)/mappings/default_mappings/rh_E_v3.yaml"/>
+        <include file="$(find sr_edc_launch)/sr_edc.launch">
+            <arg name="debug" value="$(arg debug)"/>
+            <arg name="eth_port" value="$(arg eth_port)"/>
+            <arg name="robot_description" value="$(arg robot_description)"/>
+            <arg name="pwm_control" value="$(arg pwm_control)"/>
+            <arg name="hand_serial" value="$(arg hand_serial)"/>
+            <arg name="hand_id" value="$(arg hand_id)"/>
+            <arg name="mapping_path" value="$(arg mapping_path)"/>
+        </include>
+    </group>
+
+    <!-- MOVEIT -->
+    <group if="$(arg use_moveit)">
+        <include file="$(find sr_moveit_hand_config)/launch/moveit_planning_and_execution.launch">
+            <arg name="load_robot_description" value="false"/>
+            <arg name="gui" default="$(arg gui)"/>
+        </include>
+        <include file="$(find sr_moveit_hand_config)/launch/default_warehouse_db.launch"/>
+    </group>
+
+    <!-- Trajectory controller -->
+    <group if="$(arg hand_ctrl)">
+        <node name="$(arg hand_id)_trajectory_controller" pkg="sr_utilities" type="trajectory_controller_spawner.py" output="screen">
+            <param name="hand_trajectory" value ="$(arg hand_trajectory)"/>
+            <param name="wait_for" value ="/calibrated" unless="$(arg sim)"/>
+        </node>
+    </group>
+</launch>

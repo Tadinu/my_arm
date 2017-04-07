@@ -222,6 +222,64 @@ const char* KsGlobal::CSHADOWHAND_ARM_LINKS[] = {
     "rh_thdistal"
 };
 
+const char* KsGlobal::CSHADOWHAND_UR_ARM_JOINTS[KsGlobal::VSHADOW_HAND_UR_ARM_JOINT_TOTAL] = {
+    "world_joint",                            // Fixed
+
+    // Arm to Hand
+    //"ra_arm_to_hand",                         // Fixed
+
+    "ra_shoulder_pan_joint",                  // Revolute
+    "ra_shoulder_lift_joint",                 // Revolute
+    "ra_elbow_joint",                         // Revolute
+    "ra_wrist_1_joint",                       // Revolute
+    "ra_wrist_2_joint",                       // Revolute
+    "ra_wrist_3_joint",                       // Revolute
+
+    //"ra_ee_fixed_joint",                      // Fixed
+    //"ra_base_link-base_fixed_joint",          // Fixed
+    //"ra_wrist_3_link-tool0_fixed_joint",      // Fixed
+
+    // Forearm
+    // Wrist
+    "rh_WRJ2",                                // Revolute
+    // Palm
+    "rh_WRJ1",                                // Revolute
+
+    // Fingers
+    // Thumb
+    "rh_THJ5",                                // Thumb base, revolute
+    "rh_THJ4",                                // Thumb proximal, revolute
+    "rh_THJ3",                                // Thumb hub, revolute
+    "rh_THJ2",                                // Thumb middle, revolute
+    "rh_THJ1",                                // Thumb distal, revolute
+    "rh_THtip",                               // Thumb tip
+
+    // Index
+    "rh_FFJ4",                                // knuckle, Revolute
+    "rh_FFJ3",                                // Proximal, Revolute
+    "rh_FFJ2",                                // Standard Middle , Revolute
+    "rh_FFJ1",                                // Distal , Revolute
+
+    // Middle
+    "rh_MFJ4",                                // knuckle, Revolute
+    "rh_MFJ3",                                // Proximal, Revolute
+    "rh_MFJ2",                                // Standard Middle , Revolute
+    "rh_MFJ1",                                // Distal , Revolute
+
+    // Ring
+    "rh_RFJ4",                                // knuckle, Revolute
+    "rh_RFJ3",                                // Proximal, Revolute
+    "rh_RFJ2",                                // Standard Middle , Revolute
+    "rh_RFJ1",                                // Distal , Revolute
+
+    // Little Finger (Pinkie)
+    "rh_LFJ5",                                // lfmetacarpal, Revolute
+    "rh_LFJ4",                                // knuckle, Revolute
+    "rh_LFJ3",                                // Proximal, Revolute
+    "rh_LFJ2",                                // Standard Middle , Revolute
+    "rh_LFJ1"                                 // Distal , Revolute
+};
+
 KsGlobal* KsGlobal::_instance  = nullptr;
 QApplication* KsGlobal::_ksApp = nullptr;
 QObject* KsGlobal::_k3dQMLCom  = nullptr;

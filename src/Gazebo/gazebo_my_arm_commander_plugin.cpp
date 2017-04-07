@@ -8,6 +8,10 @@
 #include "RobotVoxelyzeAdapter.h"
 #include "KsGlobal.h"
 
+// ROBOT TO RUN
+#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_UR_ARM)
+//#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
+
 #define CROBOT_NAME_SPACE_TAG ("robotNamespace")
 #define CJOINT_NAME_TAG       ("jointName")
 #define CUPDATE_RATE_TAG      ("updateRate")
@@ -187,56 +191,152 @@ namespace gazebo
     void GazeboMyArmCommander::updateJointPosition(int jointId,
                                                    double position)
     {
-        if(_joints[jointId] != nullptr) {
-            this->_joint_controller->SetJointPosition(_joints[jointId], position);
-            //std::cout << "Joint: "       << _joints[jointId]->GetName()      << std::endl
-            //          << "- Damping:   " << _joints[jointId]->GetDamping(0)  << std::endl
-            //          << "- Stiffness: " << _joints[jointId]->GetStiffness(0)<< std::endl
-            //          << "- Force: "     << _joints[jointId]->GetForce(0)    << std::endl
-            //          << "- Velocity: "  << _joints[jointId]->GetVelocity(0) << std::endl;
+        if(_joints[jointId] == nullptr) {
+            return;
         }
+        //
+        this->_joint_controller->SetJointPosition(_joints[jointId], position);
+        //std::cout << "Joint: "       << _joints[jointId]->GetName()      << std::endl
+        //          << "- Damping:   " << _joints[jointId]->GetDamping(0)  << std::endl
+        //          << "- Stiffness: " << _joints[jointId]->GetStiffness(0)<< std::endl
+        //          << "- Force: "     << _joints[jointId]->GetForce(0)    << std::endl
+        //          << "- Velocity: "  << _joints[jointId]->GetVelocity(0) << std::endl;
     }
 
-    void GazeboMyArmCommander::determineHandArrangmentOnLeapHands()
+    void GazeboMyArmCommander::applyJointForce(int jointId,
+                                               double force)
+    {
+        if(_joints[jointId] == nullptr) {
+            return;
+        }
+        // apply the force on the joint
+        this->_joints[jointId]->SetForce(0, force);
+#if 0
+        // compute the steptime for the PID
+        common::Time currTime = this->model->GetWorld()->GetSimTime();
+        common::Time stepTime = currTime - this->prevUpdateTime;
+        this->prevUpdateTime  = currTime;
+
+        // set the current position of the joint, and the target position,
+        // and the maximum effort limit
+        double pos_curr = this->_joints[jointId]->GetAngle(0).Radian();
+        double max_cmd = this->joint_max_effort;
+
+        // calculate the error between the current position and the target one
+        double pos_err = pos_curr - pos_target;
+
+        // compute the effort via the PID, which you will apply on the joint
+        double effort_cmd = this->jointPID.Update(pos_err, stepTime);
+
+        // check if the effort is larger than the maximum permitted one
+        effort_cmd = effort_cmd > max_cmd ? max_cmd :
+                    (effort_cmd < -max_cmd ? -max_cmd : effort_cmd);
+
+        // apply the force on the joint
+        this->_joints[jointId]->SetForce(0, effort_cmd);
+#endif
+    }
+
+    void GazeboMyArmCommander::determineHandArrangmentOnLeapHands(int armId)
     {
 #ifdef ROBOT_LEAP_HANDS
         // Take the first hand data for convenience:
         std::vector<std::vector<double>> jointValues = VLEAP_INSTANCE()->getFingerJointValues(0);
 
         if(jointValues.size() > 0) {
-            //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
+            switch(armId) {
+            case KsGlobal::VSHADOW_HAND_ARM:
 
-            //updateJointPosition(KsGlobal::VSHADOW_HAND_ARM_BASE_JOINT, 0);
-            updateJointPosition(KsGlobal::VSHADOW_HAND_WRJ2, 0);
-            updateJointPosition(KsGlobal::VSHADOW_HAND_WRJ1, 0);
+                //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
 
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ5, jointValues[0][0]);
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ3, qAbs(jointValues[0][1]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ2, qAbs(jointValues[0][2]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ1, qAbs(jointValues[0][2]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_TIP, qAbs(jointValues[0][2]));
+                //updateJointPosition(KsGlobal::VSHADOW_HAND_ARM_BASE_JOINT, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_WRJ2, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_WRJ1, 0);
 
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J4, jointValues[1][0]);
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J3, qAbs(jointValues[1][1]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J2, qAbs(jointValues[1][2]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J1, qAbs(jointValues[1][3]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ5, jointValues[0][0]);
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ3, qAbs(jointValues[0][1]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ2, qAbs(jointValues[0][2]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_THJ1, qAbs(jointValues[0][2]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_THUMB_TIP, qAbs(jointValues[0][2]));
 
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J4, jointValues[2][0]);
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J3, qAbs(jointValues[2][1]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J2, qAbs(jointValues[2][2]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J1, qAbs(jointValues[2][3]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J4, jointValues[1][0]);
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J3, qAbs(jointValues[1][1]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J2, qAbs(jointValues[1][2]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_1_J1, qAbs(jointValues[1][3]));
 
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J4, -jointValues[3][0]);
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J3, qAbs(jointValues[3][1]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J2, qAbs(jointValues[3][2]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J1, qAbs(jointValues[3][3]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J4, jointValues[2][0]);
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J3, qAbs(jointValues[2][1]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J2, qAbs(jointValues[2][2]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_2_J1, qAbs(jointValues[2][3]));
 
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_4_LFJ5, qAbs(jointValues[4][0]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_4_LFJ4, -jointValues[4][0]);
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J3, qAbs(jointValues[4][1]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]));
-            updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J4, -jointValues[3][0]);
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J3, qAbs(jointValues[3][1]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J2, qAbs(jointValues[3][2]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_3_J1, qAbs(jointValues[3][3]));
+
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_4_LFJ5, qAbs(jointValues[4][0]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_4_LFJ4, -jointValues[4][0]);
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J3, qAbs(jointValues[4][1]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]));
+                updateJointPosition(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]));
+                break;
+
+            case KsGlobal::VSHADOW_HAND_UR_ARM:
+                //ROS_INFO("Fingers joints: %f %f %f", jointValues[1][0], jointValues[1][1], jointValues[1][2]);
+                //applyJointForce(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 100);
+
+                //updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_BASE_JOINT, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, qAbs(jointValues[0][2]));
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT, -M_PI/2);
+
+                int jointId = KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT;
+                double a = this->_joint_controller->GetPositions()[_joint_names[jointId]];
+                //std::cout << "Joint: "       << _joints[jointId]->GetName()      << std::endl
+                //          << "- Damping:   " << _joints[jointId]->GetDamping(0)  << std::endl
+                //          << "- Stiffness: " << _joints[jointId]->GetStiffness(0)<< std::endl
+                //          << "- Force: "     << _joints[jointId]->GetForce(0)    << std::endl
+                //          << "- Velocity: "  << _joints[jointId]->GetVelocity(0) << std::endl;
+                //
+                //ROS_INFO("ABC: %f/n", a);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT, -M_PI/2);
+
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, M_PI);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_2_JOINT, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_3_JOINT, 0);
+
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ2, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ1, 0);
+
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ5, jointValues[0][0]);
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ3, qAbs(jointValues[0][1]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ2, qAbs(jointValues[0][2]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ1, qAbs(jointValues[0][2]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_TIP, qAbs(jointValues[0][2]));
+
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_1_J4, jointValues[1][0]);
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_1_J3, qAbs(jointValues[1][1]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_1_J2, qAbs(jointValues[1][2]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_1_J1, qAbs(jointValues[1][3]));
+
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_2_J4, jointValues[2][0]);
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_2_J3, qAbs(jointValues[2][1]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_2_J2, qAbs(jointValues[2][2]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_2_J1, qAbs(jointValues[2][3]));
+
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_3_J4, -jointValues[3][0]);
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_3_J3, qAbs(jointValues[3][1]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_3_J2, qAbs(jointValues[3][2]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_3_J1, qAbs(jointValues[3][3]));
+
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_4_LFJ5, qAbs(jointValues[4][0]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_4_LFJ4, -jointValues[4][0]);
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_4_J3, qAbs(jointValues[4][1]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_4_J2, qAbs(jointValues[4][2]));
+                updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_4_J1, qAbs(jointValues[4][3]));
+                break;
+            }
         }
 #endif
     }
@@ -381,7 +481,7 @@ namespace gazebo
         double seconds_since_last_update = ( current_time - _last_update_time ).Double();
         if ( seconds_since_last_update > update_period_ ) {
 #if 1
-            determineHandArrangmentOnLeapHands();
+            determineHandArrangmentOnLeapHands(CRUN_ROBOT);
             //std::cout << "--------------------------------------------------"<< std::endl;
             //for(size_t i = 0; i < _links.size(); i++) {
             //    std::cout << "Link: "        << _links[i]->GetSensorName(0)   << std::endl

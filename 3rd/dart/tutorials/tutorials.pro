@@ -50,6 +50,7 @@ CONFIG(release, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            ##-lfcl \ ## Open Flexible Collision library
             \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
@@ -84,6 +85,9 @@ CONFIG(release, debug|release) {
             ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            ## https://dartsim.github.io/install_dart_on_ubuntu.html
+            ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
+            ##
             -ldart \
             -ldart-gui \
             -ldart-planning \
@@ -104,6 +108,7 @@ CONFIG(debug, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            ##-lfcl \ ## Open Flexible Collision library
             \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
@@ -136,6 +141,9 @@ CONFIG(debug, debug|release) {
             ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            ## https://dartsim.github.io/install_dart_on_ubuntu.html
+            ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
+            ##
             -ldart \
             -ldart-gui \
             -ldart-planning \

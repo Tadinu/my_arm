@@ -68,7 +68,6 @@
 //       </plugin>
 //   </gazebo>
 
-
 namespace gazebo {
 class GazeboMyArmCommander : public ModelPlugin {
 public:
@@ -79,9 +78,11 @@ public:
     void leapCallback(const visualization_msgs::MarkerArray&);
     void voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo);
     void publishJointStates();
-    void determineHandArrangmentOnLeapHands();
+    void determineHandArrangmentOnLeapHands(int armId);
     void updateJointPosition(int jointId,
                              double position);
+    void applyJointForce(int jointId,
+                         double force);
     void calculateVoxelMeshCollision();
 
     void modelStateCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);

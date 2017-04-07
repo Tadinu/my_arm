@@ -507,7 +507,44 @@ DISTFILES += \
     3rd/bullet_server/srv/AddImpulse.srv \
     worlds/shadowhand_full.world \
     msg/VoxelMesh/voxel_mesh.msg \
-    models/shadow_hand/robots/shadowhand_motor.urdf
+    models/shadow_hand/robots/shadowhand_motor.urdf \
+    models/shadow_hand/ur_arm_hand/for_moveit/srhand_ur10arm.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/for_moveit/README.md \
+    models/shadow_hand/ur_arm_hand/left_srhand_ur5_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/left_srhand_ur5.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/left_srhand_ur10_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/left_srhand_ur10.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_extra_lite_ur5_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_lite_ur5_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_lite_ur5.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_lite_ur10_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur5_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur5.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur10_biotacs.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur10_bt_sp_biotacs.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited_biotacs.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/right_srhand_ur10.urdf.xacro \
+    launch/my_ur_arm_shadow_robot_hand.launch \
+    ../../../../../../opt/ros/kinetic/share/ur_description/urdf/ur10.urdf.xacro \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/warehouse_trajectory_mapping.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/sr_bimanual.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/sr_left_ur5arm_hand.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/sr_left_ur10arm_hand.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/sr_right_ur5arm_hand.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/sr_right_ur10arm_hand.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/sr_ur_arm_hand.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/srhand.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/trajectory_services.launch \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/gazebo/controller/hand_controllers_gazebo.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/gazebo/controller/la_trajectory_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/gazebo/controller/ra_trajectory_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/la_trajectory_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/left_ur_arm_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/lh_trajectory_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/ra_trajectory_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/rh_trajectory_controller.yaml \
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/right_ur_arm_controller.yaml
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

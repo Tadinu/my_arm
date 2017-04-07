@@ -16,7 +16,7 @@
 #include "bullet_server.h"
 
 // ROBOT TO RUN
-#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
+#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_UR_ARM)
 //#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
 
 // NODE --
@@ -101,7 +101,14 @@ bool RobotThread::init()
 
     connect(_pThread, &QThread::started, this, &RobotThread::run);
     ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME);  // Name of the node specified in launch file
+    // !NOTE:
+    // IF U WANT YOUR PUBLISHERS WORK ALSO FOR RVIZ, OF WHICH THE DEFAULT TOPI AS /joint_states,
+    // -> NO PACKAGE NAME SHOULD BE USED HERE!
+#ifdef MY_ARM_RVIZ
+    _node_handle = new ros::NodeHandle();
+#else
     _node_handle = new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME);
+#endif
     ros::param::set("~rigid_only", false);
     //
     if (!ros::master::check())
@@ -173,6 +180,13 @@ void RobotThread::poseCallback(const nav_msgs::Odometry & msg)
     Q_EMIT newPose(_xPos, _yPos, _aPos);
 }//callback method to update the robot's position.
 
+const char* RobotThread::baseLinkName(int armId)
+{
+    return KsGlobal::VSHADOW_HAND_ARM    == armId ? "rh_forearm" :   // Refer to shadowhand_motor.urdf.xacro
+           KsGlobal::VSHADOW_HAND_UR_ARM == armId ? "ra_base_link" : // Refer to left_srhand_ur10_joint_limited.urdf.xacro
+                                                    CBASE_LINK;
+}
+
 void RobotThread::runArmOperation(int armId)
 {
 #if 1 // ducta ++
@@ -232,7 +246,8 @@ void RobotThread::runArmOperation(int armId)
     _jointNo = KsGlobal::VBRHAND_ARM         == armId ? KsGlobal::VBRHAND_ARM_JOINT_TOTAL         :
                KsGlobal::VJACO_ARM           == armId ? KsGlobal::VJACO_ARM_JOINT_TOTAL           :
                KsGlobal::VPISA_SOFT_HAND_ARM == armId ? KsGlobal::VPISA_SOFT_HAND_ARM_JOINT_TOTAL :
-               KsGlobal::VSHADOW_HAND_ARM    == armId ? KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL    : 0;
+               KsGlobal::VSHADOW_HAND_ARM    == armId ? KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL    :
+               KsGlobal::VSHADOW_HAND_UR_ARM == armId ? KsGlobal::VSHADOW_HAND_UR_ARM_JOINT_TOTAL : 0;
     if(_jointNo <= 0) {
         ROS_ERROR_ONCE("The robot has no joint???");
         return;
@@ -240,8 +255,7 @@ void RobotThread::runArmOperation(int armId)
 
     // -------------------------------------------------------------------------------------------------------
     // ROBOT --
-    const char* base_link_name = KsGlobal::VSHADOW_HAND_ARM    == armId ? "rh_forearm" :
-                                                                          CBASE_LINK;
+    const char* base_link_name = this->baseLinkName(armId);
     //
     // message declarations
     sensor_msgs::JointState joint_state;
@@ -339,8 +353,7 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
     QMutex * pMutex = new QMutex();
     pMutex->lock();
     tf::StampedTransform transform;
-    const char* base_link_name = KsGlobal::VSHADOW_HAND_ARM == robotId ? "rh_forearm" :
-                                                                         CBASE_LINK;
+    const char* base_link_name = this->baseLinkName(robotId);
     //
     static bool flag = false;
     switch(robotId) {
@@ -478,10 +491,12 @@ void RobotThread::publishJointState(int robotId,
         case KsGlobal::VBRHAND_ARM:
         case KsGlobal::VPISA_SOFT_HAND_ARM:
         case KsGlobal::VSHADOW_HAND_ARM:
+        case KsGlobal::VSHADOW_HAND_UR_ARM:
             for(size_t i = 0; i < _jointNo; i++) {
                 joint_state.name[i]     = (KsGlobal::VBRHAND_ARM         == robotId) ? KsGlobal::CBRHAND_ARM_JOINTS[i]         :
                                           (KsGlobal::VPISA_SOFT_HAND_ARM == robotId) ? KsGlobal::CPISA_SOFT_HAND_ARM_JOINTS[i] :
-                                          (KsGlobal::VSHADOW_HAND_ARM    == robotId) ? KsGlobal::CSHADOWHAND_ARM_JOINTS[i]     : "";
+                                          (KsGlobal::VSHADOW_HAND_ARM    == robotId) ? KsGlobal::CSHADOWHAND_ARM_JOINTS[i]     :
+                                          (KsGlobal::VSHADOW_HAND_UR_ARM == robotId) ? KsGlobal::CSHADOWHAND_UR_ARM_JOINTS[i]  : "";
                 joint_state.position[i] = current_joint_poses[i];
             }
 
@@ -930,6 +945,49 @@ void RobotThread::determineHandArrangmentOnLeapHands(int armId)
         rotateJoint(KsGlobal::VSHADOW_FINGER_4_J3, qAbs(jointValues[4][1]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_4_J2, qAbs(jointValues[4][2]), false);
         rotateJoint(KsGlobal::VSHADOW_FINGER_4_J1, qAbs(jointValues[4][3]), false);
+        break;
+
+    case KsGlobal::VSHADOW_HAND_UR_ARM:
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_BASE_JOINT, 0, false);
+
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT, -M_PI/2, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT, -M_PI/2, false);
+
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, M_PI, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_2_JOINT, 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_3_JOINT, 0, false);
+
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ2, 0, false);
+        rotateJoint(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ1, 0, false);
+
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ5, jointValues[0][0], false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ3, qAbs(jointValues[0][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ2, qAbs(jointValues[0][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ1, qAbs(jointValues[0][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_THUMB_TIP, qAbs(jointValues[0][2]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_1_J4, jointValues[1][0], false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_1_J3, qAbs(jointValues[1][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_1_J2, qAbs(jointValues[1][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_1_J1, qAbs(jointValues[1][3]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_2_J4, jointValues[2][0], false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_2_J3, qAbs(jointValues[2][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_2_J2, qAbs(jointValues[2][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_2_J1, qAbs(jointValues[2][3]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_3_J4, -jointValues[3][0], false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_3_J3, qAbs(jointValues[3][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_3_J2, qAbs(jointValues[3][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_3_J1, qAbs(jointValues[3][3]), false);
+
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_4_LFJ5, qAbs(jointValues[4][0]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_4_LFJ4, -jointValues[4][0], false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_4_J3, qAbs(jointValues[4][1]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_4_J2, qAbs(jointValues[4][2]), false);
+        rotateJoint(KsGlobal::VSHADOW_UR_FINGER_4_J1, qAbs(jointValues[4][3]), false);
         break;
 
     case KsGlobal::VBRHAND_ARM:

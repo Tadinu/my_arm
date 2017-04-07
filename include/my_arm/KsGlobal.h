@@ -245,7 +245,7 @@
 #define V_QVECTOR3D_2TF(qVector)   (tf::Vector3(qVector.x(), qVector.y(), qVector.z()))
 // ----------------------------------------------------------------------------------
 // ROS COMMON DEFINE
-
+#define MY_ARM_RVIZ
 
 // PACKAGE NAME --
 #define CROS_MY_ARM_PACKAGE_NAME ("my_arm")
@@ -285,10 +285,11 @@ public:
     };
 
     enum VROBOT_TYPE {
-        VBRHAND_ARM         = 0x01,
-        VJACO_ARM           = 0x02,
-        VPISA_SOFT_HAND_ARM = 0x03,
-        VSHADOW_HAND_ARM    = 0x04
+        VBRHAND_ARM          = 0x01,
+        VJACO_ARM            = 0x02,
+        VPISA_SOFT_HAND_ARM  = 0x03,
+        VSHADOW_HAND_ARM     = 0x04,
+        VSHADOW_HAND_UR_ARM  = 0x08
     };
 
     // BRHAND ARM ----------------------------------------
@@ -495,6 +496,69 @@ public:
     static const char* CSHADOWHAND_ARM_LINKS[];
     static const char* CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL];
 
+    // UR ARM - SHADOW HAND ------------------------------------
+    //
+    enum VSHADOW_HAND_UR_ARM_JOINT {
+        VSHADOW_HAND_UR_ARM_BASE_JOINT,                      // "Root World Joint"
+
+        // UR Arm
+        // Arm to Hand
+        //VSHADOW_HAND_UR_ARM_TO_HAND,                      // Arm to Hand, Fixed
+
+        VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT,              // Revolute
+        VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT,             // Revolute
+        VSHADOW_HAND_UR_ARM_ELBOW_JOINT,                     // Revolute
+        VSHADOW_HAND_UR_ARM_WRIST_1_JOINT,                   // Revolute
+        VSHADOW_HAND_UR_ARM_WRIST_2_JOINT,                   // Revolute
+        VSHADOW_HAND_UR_ARM_WRIST_3_JOINT,                   // Revolute
+
+        //VSHADOW_HAND_UR_ARM_EE_FIXED_JOINT,                  // Fixed
+        //VSHADOW_HAND_UR_ARM_BASE_LINK_BASE_FIXED_JOINT,      // Fixed
+        //VSHADOW_HAND_UR_ARM_WRIST_3_LINK_TOOL0_FIXED_JOINT,  // Fixed
+
+        // Forearm
+        // Wrist
+        VSHADOW_HAND_UR_ARM_WRJ2,                            // Revolute
+        // Palm
+        VSHADOW_HAND_UR_ARM_WRJ1,                            // Revolute
+
+        // Fingers
+        // Thumb
+        VSHADOW_UR_FINGER_THUMB_THJ5,                        // Thumb base, revolute
+        VSHADOW_UR_FINGER_THUMB_THJ4,                        // Thumb proximal, revolute
+        VSHADOW_UR_FINGER_THUMB_THJ3,                        // Thumb hub, revolute
+        VSHADOW_UR_FINGER_THUMB_THJ2,                        // Thumb middle, revolute
+        VSHADOW_UR_FINGER_THUMB_THJ1,                        // Thumb distal, revolute
+        VSHADOW_UR_FINGER_THUMB_TIP,                         // Thumb tip
+
+        // Index
+        VSHADOW_UR_FINGER_1_J4,                              // knuckle, Revolute
+        VSHADOW_UR_FINGER_1_J3,                              // Proximal, Revolute
+        VSHADOW_UR_FINGER_1_J2,                              // Standard Middle , Revolute
+        VSHADOW_UR_FINGER_1_J1,                              // Distal , Revolute
+
+        // Middle
+        VSHADOW_UR_FINGER_2_J4,                              // knuckle, Revolute
+        VSHADOW_UR_FINGER_2_J3,                              // Proximal, Revolute
+        VSHADOW_UR_FINGER_2_J2,                              // Standard Middle , Revolute
+        VSHADOW_UR_FINGER_2_J1,                              // Distal , Revolute
+
+        // Ring
+        VSHADOW_UR_FINGER_3_J4,                              // knuckle, Revolute
+        VSHADOW_UR_FINGER_3_J3,                              // Proximal, Revolute
+        VSHADOW_UR_FINGER_3_J2,                              // Standard Middle , Revolute
+        VSHADOW_UR_FINGER_3_J1,                              // Distal , Revolute
+
+        // Little Finger (Pinkie)
+        VSHADOW_UR_FINGER_4_LFJ5,                            // lfmetacarpal, Revolute
+        VSHADOW_UR_FINGER_4_LFJ4,                            // knuckle, Revolute
+        VSHADOW_UR_FINGER_4_J3,                              // Proximal, Revolute
+        VSHADOW_UR_FINGER_4_J2,                              // Standard Middle , Revolute
+        VSHADOW_UR_FINGER_4_J1,                              // Distal , Revolute
+
+        VSHADOW_HAND_UR_ARM_JOINT_TOTAL
+    };
+    static const char* CSHADOWHAND_UR_ARM_JOINTS[KsGlobal::VSHADOW_HAND_UR_ARM_JOINT_TOTAL];
 public:
     KsGlobal(QObject* parent = nullptr);
     static KsGlobal* getInstance();

@@ -75,7 +75,20 @@ DISTFILES += \
     utility/makefile \
     make/xcs-docs.ini \
     make/xcs.make \
-    make/xcsf.make
+    make/xcsf.make \
+    examples/6-multiplexer/confsys.mp6 \
+    examples/11-multiplexer/confsys.mp11 \
+    examples/20-multiplexer/confsys.mp20 \
+    examples/37-multiplexer/confsys.mp37 \
+    examples/70-multiplexer/confsys.mp70 \
+    examples/fsm/confsys.fsm \
+    examples/functions/confsys.sin \
+    examples/gridworlds/confsys.gw \
+    examples/parity/confsys.par20-5 \
+    examples/woods1/confsys.woods1 \
+    examples/woods1/woods1.map \
+    examples/woods2/confsys.woods2 \
+    examples/woods2/woods2.map
 
 HEADERS += \
     action_base.hpp \

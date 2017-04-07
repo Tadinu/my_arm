@@ -767,6 +767,7 @@ target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdart.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils-urdf.so
                                          assimp
                                          glut
+                                         ##fcl
                                          )
 target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdart.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-gui.so
@@ -776,6 +777,7 @@ target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdar
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils-urdf.so
                                          assimp
                                          glut
+                                         ##fcl
                                          )
 # DART --
 

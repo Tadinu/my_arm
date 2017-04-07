@@ -30,11 +30,9 @@
 
 // ROBOT_VOXELYZE --
 //
-#define ROBOT_VOXELYZE
-#ifdef ROBOT_VOXELYZE
-#define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
-#endif
+//#define ROBOT_VOXELYZE
 
+#define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
 #define CVOXEL_MESH_TOPIC  ("voxel_mesh")
 class RobotVoxelyzeAdapter : public QObject {
     Q_OBJECT

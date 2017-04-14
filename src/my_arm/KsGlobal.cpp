@@ -342,3 +342,10 @@ void KsGlobal::clearWaitingInfo()
 }
 
 QApplication* KsGlobal::ksApp()                     { return _ksApp;}
+
+const char* KsGlobal::baseLinkName(int armId)
+{
+    return KsGlobal::VSHADOW_HAND_ARM    == armId ? "rh_forearm" :   // Refer to shadowhand_motor.urdf.xacro
+           KsGlobal::VSHADOW_HAND_UR_ARM == armId ? "ra_base_link" : // Refer to left_srhand_ur10_joint_limited.urdf.xacro
+                                                    CBASE_LINK;
+}

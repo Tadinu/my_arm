@@ -38,6 +38,18 @@
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 #include <sensor_msgs/JointState.h>
+//#include <pcl_ros/point_cloud.h>
+
+// PCL --
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_cloud.h>
+//#include <pcl/common/common.h>
+//#include <pcl/point_types.h>
+//#include <pcl/point_types_conversion.h>
+
+#include <pcl_conversions/pcl_conversions.h>
+#include <sensor_msgs/PointCloud2.h>
+
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 
@@ -78,11 +90,17 @@ public:
     void leapCallback(const visualization_msgs::MarkerArray&);
     void voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo);
     void publishJointStates();
+    void publishPointCloud();
     void determineHandArrangmentOnLeapHands(int armId);
     void updateJointPosition(int jointId,
                              double position);
     void applyJointForce(int jointId,
-                         double force);
+                         const double& force);
+    void setJointVelocityPID(int jointId,
+                             const common::PID& pid);
+    void setJointVelocity(int jointId,
+                          const double& vel);
+
     void calculateVoxelMeshCollision();
 
     void modelStateCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
@@ -90,7 +108,7 @@ public:
 private:
     QMutex _mMutex;
     event::ConnectionPtr _updateConnection;
-    physics::JointController* _joint_controller;
+    physics::JointControllerPtr _joint_controller;
     physics::WorldPtr _world;
     physics::ModelPtr _model;
     std::vector<physics::JointPtr> _joints;
@@ -100,9 +118,11 @@ private:
     boost::shared_ptr<ros::NodeHandle> _rosnode;
     sensor_msgs::JointState _joint_state;
     ros::Publisher _joint_state_publisher;
+    ros::Publisher _point_cloud_publisher;
     std::string _tf_prefix;
     std::string _robot_namespace;
     std::vector<std::string> _joint_names;
+    sensor_msgs::PointCloud2 _contact_point_cloud;
 
     // Voxel --
     ros::Subscriber _voxel_mesh_listener;
@@ -111,6 +131,13 @@ private:
     // Gazebo --
     ros::Subscriber _model_states_subscriber;
     std::vector<ros::Subscriber> _ros_bumper_subscribers;
+    /// \brief A PID controller for the joint.
+    common::PID _model_pid;
+    /// \brief A node used for transport
+    //transport::NodePtr node;
+
+    /// \brief A subscriber to a named topic.
+    //transport::SubscriberPtr sub;
 
     // Update Rate
     double _update_rate;

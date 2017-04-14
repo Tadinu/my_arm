@@ -65,8 +65,10 @@ set(CMAKE_AUTOMOC ON)
 # Definitions
 add_definitions(-DMY_ARM -DVOX_CAD -DQT_XML_LIB -DQT_OPENGL_LIB -DUSE_ZLIB_COMPRESSION -DUSE_OPEN_GL -DPREC_MED -DUSE_OMP) ##  -DUSE_OMP, -DVOXELYZE_PURE -DPARDISO_5 for Voxelyze
 
+set(SYSTEM_LIB_DIR "/usr/lib/x86_64-linux-gnu/")
 set(ROS_KINETIC_INCLUDE "/opt/ros/kinetic/include")
 set(BULLET_INCLUDE "/usr/local/include/bullet")
+
 
 ##TEST VAR
 ##message("CATKIN DIRS " $ENV{librealsense_INCLUDE_DIRS} $ENV{librealsense_LIBRARY_DIRS})
@@ -754,7 +756,6 @@ target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/ros_vox_cad/lib
 # Bullet --
 
 # DART ++
-## Dart --
 include_directories(3rd/dart
                     3rd/dart/build
                     )
@@ -780,6 +781,16 @@ target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdar
                                          ##fcl
                                          )
 # DART --
+
+# PCL ++
+include_directories(/usr/include/pcl-1.7)
+target_link_libraries(robotArmController       ${SYSTEM_LIB_DIR}/libpcl_common.so)
+target_link_libraries(robotArmController       ${SYSTEM_LIB_DIR}/libpcl_features.so)
+##target_link_libraries(robotArmController       ${SYSTEM_LIB_DIR}/libpcl_apps.so)
+target_link_libraries(gazeboRobotArmController ${SYSTEM_LIB_DIR}/libpcl_common.so)
+target_link_libraries(gazeboRobotArmController ${SYSTEM_LIB_DIR}/libpcl_features.so)
+##target_link_libraries(gazeboRobotArmController ${SYSTEM_LIB_DIR}/libpcl_apps.so)
+# PCL --
 
 # Ignition Rendering ++
 ##if(libignition-rendering_FOUND)

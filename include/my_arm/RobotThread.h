@@ -61,7 +61,6 @@ public:
 
     void poseCallback(const nav_msgs::Odometry & msg);
     void runArmOperation(int armId);
-    const char* baseLinkName(int armId);
     std::string getRobotNodeName(int armId);
     void SetSpeed(double speed, double angle);
     void setPose(QList<double> to_set);

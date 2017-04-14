@@ -39,7 +39,6 @@ namespace gazebo
     GazeboMyArmCommander::~GazeboMyArmCommander()
     {
         _rosnode->shutdown();
-        V_DELETE_POINTER(_joint_controller);
     }
 
     void GazeboMyArmCommander::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
@@ -48,7 +47,7 @@ namespace gazebo
         // Store the pointer to the model
         this->_model = _parent;
         this->_world = _parent->GetWorld();
-        this->_joint_controller = new physics::JointController(this->_model);
+        this->_joint_controller = _parent->GetJointController(); //new physics::JointController(this->_model);
 
         //ROS_INFO("Joint count: %d", parent_->GetJointCount());
         this->_robot_namespace = _model->GetName();
@@ -177,6 +176,7 @@ namespace gazebo
 
         _tf_prefix = tf::getPrefixParam ( *_rosnode );
         _joint_state_publisher = _rosnode->advertise<sensor_msgs::JointState>("joint_states", 1000);
+        _point_cloud_publisher = _rosnode->advertise<sensor_msgs::PointCloud2>("contact_points", 1000);
 
         _last_update_time = this->_world->GetSimTime();
 
@@ -195,7 +195,7 @@ namespace gazebo
             return;
         }
         //
-        this->_joint_controller->SetJointPosition(_joints[jointId], position);
+        _joint_controller->SetJointPosition(_joints[jointId], position);
         //std::cout << "Joint: "       << _joints[jointId]->GetName()      << std::endl
         //          << "- Damping:   " << _joints[jointId]->GetDamping(0)  << std::endl
         //          << "- Stiffness: " << _joints[jointId]->GetStiffness(0)<< std::endl
@@ -203,14 +203,56 @@ namespace gazebo
         //          << "- Velocity: "  << _joints[jointId]->GetVelocity(0) << std::endl;
     }
 
+    void GazeboMyArmCommander::setJointVelocityPID(int jointId,
+                                                   const common::PID& pid) {
+        if(_joints[jointId] == nullptr) {
+            return;
+        }
+#if 0
+        std::map<std::string, physics::JointPtr> joints = this->_joint_controller->GetJoints();
+        std::cout << "Joints SIZE: " << joints.size() << std::endl;
+        for (auto const& x : joints)
+        {
+            std::cout << x.first  // string (key)
+                      //<< ':'
+                      //<< x.second // string's value
+                      << std::endl ;
+        }
+        std::map<std::string, physics::JointPtr>::iterator it;
+        for ( it = joints.begin(); it != joints.end(); it++ )
+        {
+            std::cout << it->first  // string (key)
+                      << ':'
+                      << it->second   // string's value
+                      << std::endl ;
+        }
+#endif
+        // Apply the P-controller to the joint.
+        //this->_model->GetJoint(_joints[jointId]->GetScopedName())->SetVelocity(0);
+        //std::cout << "Joint PID: " << _joints[jointId]->GetScopedName() << std::endl;
+        _joint_controller->SetVelocityPID(_joints[jointId]->GetScopedName(), pid);
+    }
+
+    void GazeboMyArmCommander::setJointVelocity(int jointId,
+                                                const double& vel)
+    {
+        if(_joints[jointId] == nullptr) {
+            return;
+        }
+
+        // Set the joint's target velocity.
+        //std::cout << "Joint VEL: " << _joints[jointId]->GetScopedName() << std::endl;
+        _joint_controller->SetVelocityTarget(_joints[jointId]->GetScopedName(), vel);
+    }
+
     void GazeboMyArmCommander::applyJointForce(int jointId,
-                                               double force)
+                                               const double& force)
     {
         if(_joints[jointId] == nullptr) {
             return;
         }
         // apply the force on the joint
-        this->_joints[jointId]->SetForce(0, force);
+        _joints[jointId]->SetForce(0, force);
 #if 0
         // compute the steptime for the PID
         common::Time currTime = this->model->GetWorld()->GetSimTime();
@@ -301,7 +343,7 @@ namespace gazebo
                 //ROS_INFO("ABC: %f/n", a);
                 updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT, -M_PI/2);
 
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, M_PI);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, 0);
                 updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_2_JOINT, 0);
                 updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_3_JOINT, 0);
 
@@ -395,29 +437,42 @@ namespace gazebo
         // contact_normals
         // depths
 
+        _mMutex.lock();
         for (size_t i = 0; i < msg->states.size(); ++i)
         {
-            if(msg->states[i].collision2_name.find("unit") == std::string::npos)
-                continue;
+            //if(msg->states[i].collision2_name.find("unit") == std::string::npos)
+            //    continue;
             //
-            std::cout << "State size: " << msg->states.size() << std::endl;
-            std::cout << "Collision between[" << msg->states[i].collision1_name
-                      << "] and [" << msg->states[i].collision2_name << "]\n";
+            //std::cout << "State size: " << msg->states.size() << std::endl;
+            //std::cout << "Collision between[" << msg->states[i].collision1_name
+            //          << "] and [" << msg->states[i].collision2_name << "]\n";
 
+            pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+            //
+            point_cloud->width  = msg->states[i].contact_positions.size();
+            point_cloud->height = 1;
             for (size_t j = 0; j < msg->states[i].contact_positions.size(); ++j)
             {
-                std::cout << j << "  Position:"
-                          << msg->states[i].contact_positions[j].x << " "
-                          << msg->states[i].contact_positions[j].y << " "
-                          << msg->states[i].contact_positions[j].z << "\n";
-                std::cout << "   Normal:"
-                          << msg->states[i].contact_normals[j].x<< " "
-                          << msg->states[i].contact_normals[j].y<< " "
-                          << msg->states[i].contact_normals[j].z<< "\n";
-                std::cout << "   Depth:" << msg->states[i].depths[j] << "\n";
+                point_cloud->points.push_back(pcl::PointXYZ(msg->states[i].contact_positions[j].x,
+                                                            msg->states[i].contact_positions[j].y,
+                                                            msg->states[i].contact_positions[j].z));
+
+                //std::cout << j << "  Position:"
+                //          << msg->states[i].contact_positions[j].x << " "
+                //          << msg->states[i].contact_positions[j].y << " "
+                //          << msg->states[i].contact_positions[j].z << "\n";
+                //std::cout << "   Normal:"
+                //          << msg->states[i].contact_normals[j].x<< " "
+                //          << msg->states[i].contact_normals[j].y<< " "
+                //          << msg->states[i].contact_normals[j].z<< "\n";
+                //std::cout << "   Depth:" << msg->states[i].depths[j] << "\n";
             }
-            std::cout << " ------------------------------------- " << std::endl;
+            //std::cout << " ------------------------------------- " << std::endl;
+
+            //Convert the point cloud to ROS message
+            pcl::toROSMsg (*point_cloud, _contact_point_cloud);
         }
+        _mMutex.unlock();
     }
 
     void GazeboMyArmCommander::calculateVoxelMeshCollision()
@@ -475,6 +530,8 @@ namespace gazebo
         // TO QUICKLY HANDLE CALLBACKS
         //
         ros::spinOnce();
+        //
+        this->publishPointCloud();
         // ------------------------------------------------------------------------------
         // Apply a small linear velocity to the model.
         common::Time current_time = this->_world->GetSimTime();
@@ -488,6 +545,10 @@ namespace gazebo
             //              << "World force:"  << _links[i]->GetWorldForce().z  << std::endl
             //              << "World torque:" << _links[i]->GetWorldTorque().z << std::endl;
             //}
+
+            // --------------------------------------------------------------------------
+            // Setup a P-controller, with a gain of 0.1.
+            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, common::PID(0.1, 0, 0));
 #else
             // Publish Joint States
             publishJointStates();
@@ -510,7 +571,7 @@ namespace gazebo
                 math::Angle angle        = _joints[i]->GetAngle(0);
                 _joint_state.name[i]     = _joints[i]->GetName();
                 _joint_state.position[i] = angle.Radian() ;
-                //ROS_INFO("JOINT: %d %s %f", i, _joint_state_.name[i].c_str(), _joint_state_.position[i]);
+                //ROS_INFO("JOINT: %d %s %f", i, _joint_state.name[i].c_str(), _joint_state.position[i]);
             }
             else {
                 ROS_INFO("JOINT NULL: %d", i);
@@ -519,7 +580,30 @@ namespace gazebo
         _joint_state_publisher.publish(_joint_state);
     }
 
+    void GazeboMyArmCommander::publishPointCloud()
+    {
+        _mMutex.lock();
+        _contact_point_cloud.header.frame_id = KsGlobal::baseLinkName(CRUN_ROBOT);
+        _contact_point_cloud.header.stamp    = ros::Time(ros::Time::now().toNSec());
+        _point_cloud_publisher.publish(_contact_point_cloud);
+        _mMutex.unlock();
+    }
 
     // =========================================================================================================
     //
 }
+
+/*
+I understood it ,so I will describe here for anyone who have a trouble. In order to execute a example_voxelgrid.cpp, I had to input three command on three terminals. As an additional information, I use a kinect.
+
+roslaunch openni_launch openni.launch
+rosrun my_pcl_tutorial example input:=/camera/depth/points
+rosrun rviz rviz
+
+The Input on the second sentence means a topic that is shown with rostopic list. On Rviz, you have to change some parameters.
+
+Fixed Frame: map -> camera_link
+PointCloud2/Topic: /output
+
+This output on above means 37 line in example_voxelgrid.cpp. The results of executing the preceding statement are shown below.
+*/

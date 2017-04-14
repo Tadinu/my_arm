@@ -180,13 +180,6 @@ void RobotThread::poseCallback(const nav_msgs::Odometry & msg)
     Q_EMIT newPose(_xPos, _yPos, _aPos);
 }//callback method to update the robot's position.
 
-const char* RobotThread::baseLinkName(int armId)
-{
-    return KsGlobal::VSHADOW_HAND_ARM    == armId ? "rh_forearm" :   // Refer to shadowhand_motor.urdf.xacro
-           KsGlobal::VSHADOW_HAND_UR_ARM == armId ? "ra_base_link" : // Refer to left_srhand_ur10_joint_limited.urdf.xacro
-                                                    CBASE_LINK;
-}
-
 void RobotThread::runArmOperation(int armId)
 {
 #if 1 // ducta ++
@@ -255,7 +248,7 @@ void RobotThread::runArmOperation(int armId)
 
     // -------------------------------------------------------------------------------------------------------
     // ROBOT --
-    const char* base_link_name = this->baseLinkName(armId);
+    const char* base_link_name = KsGlobal::baseLinkName(armId);
     //
     // message declarations
     sensor_msgs::JointState joint_state;
@@ -353,7 +346,7 @@ void RobotThread::detectFrameTransforms(int robotId, const tf::TransformListener
     QMutex * pMutex = new QMutex();
     pMutex->lock();
     tf::StampedTransform transform;
-    const char* base_link_name = this->baseLinkName(robotId);
+    const char* base_link_name = KsGlobal::baseLinkName(robotId);
     //
     static bool flag = false;
     switch(robotId) {

@@ -203,6 +203,7 @@ INCLUDEPATH+= /usr/include \
               /home/brhm/LeapSDK/include \
               \ ## Kinect
               ./include/Kinect    \
+              \ ## pcl
               /usr/include/pcl-1.7 \
               \ ## RealSense
               ./include/RealSense \

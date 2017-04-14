@@ -579,6 +579,8 @@ public:
         return min + t*(max-min);
     }
 
+    static const char* baseLinkName(int armId);
+
 signals:
 
 private: 

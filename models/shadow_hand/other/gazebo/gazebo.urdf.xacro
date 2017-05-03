@@ -3,10 +3,60 @@
 xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
 xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
 
+    <!--
+    <xacro:arg name="robot_components_namespace" default="my_arm"/>
+    <xacro:arg name="trajectory_param_namespace" default="my_arm"/>
+    <xacro:arg name="use_ros_control" default="false"/>
+    <xacro:arg name="add_transmission_pos" default="false"/>
+    <xacro:arg name="add_transmission_vel" default="false"/>
+    <xacro:arg name="load_grasp_fix" default="false"/>
+    -->
+
     <gazebo>
-        <!-- !NOTEE : MODEL PLUGIN TYPE ONLY -->
         <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+            <robotNamespace></robotNamespace>
             <robotSimType>sr_gazebo_sim/SrGazeboHWSim</robotSimType>
         </plugin>
     </gazebo>
+    <!-- !NOTEE : MODEL PLUGIN TYPE ONLY -->
+    <!--
+    <xacro:if value="$(arg use_ros_control)">
+        <gazebo>
+            <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+                <robotNamespace></robotNamespace>
+                <robotSimType>sr_gazebo_sim/SrGazeboHWSim</robotSimType>
+            </plugin>
+        </gazebo>
+    </xacro:if>
+    -->
+
+    <!--
+    <xacro:unless value="$(arg use_ros_control)">
+        <gazebo>
+            <plugin name="gz_joint_control" filename="libgazebo_joint_control.so">
+                <robot_components_namespace>
+                </robot_components_namespace>
+            </plugin>
+            <plugin name="gz_joint_state_client" filename="libgazebo_joint_state_client.so">
+                <robot_components_namespace>
+                </robot_components_namespace>
+            </plugin>
+            <plugin name="gz_joint_state_publisher" filename="libgazebo_joint_state_publisher.so">
+                <robot_components_namespace>
+                </robot_components_namespace>
+            </plugin>
+            <plugin name="gz_joint_trajectory_server" filename="libgazebo_joint_trajectory_server.so">
+                <robot_components_namespace>
+                </robot_components_namespace>
+                <trajectory_param_namespace>
+                </trajectory_param_namespace>
+            </plugin>
+        </gazebo>
+    </xacro:unless>
+    -->
+
+    <!--
+    <xacro:if value="$(arg load_grasp_fix)">
+    </xacro:if>
+    -->
 </robot>

@@ -17,7 +17,7 @@
     <xacro:include filename="$(find my_arm)/models/shadow_hand/hand/full_hand.urdf.xacro"/>
     <xacro:include filename="$(find my_arm)/models/shadow_hand/other/gazebo/gazebo.urdf.xacro"/>
 
-    <xacro:shadowhand muscletrans="false" muscle="false" bio="true" bt_sp="false" ubi="false" eli="false" reflect="1.0"
+    <xacro:shadowhand muscletrans="false" muscle="false" bio="true" bt_sp="false" ubi="false" eli="false" reflect="1.0" lf="true"
                       prefix="rh_"/>
 
     <joint name="arm_to_hand" type="fixed">

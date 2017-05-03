@@ -176,7 +176,16 @@ SOURCES += main.cpp \
     src/Gazebo/gazebo_marker_plugin.cpp \
     src/my_arm/RobotDartAdapter.cpp \
     src/Gazebo/gazebo_selection_box.cpp \
-    src/Gazebo/gazebo_voxel_mesh_renderer.cpp
+    src/Gazebo/gazebo_voxel_mesh_renderer.cpp \
+    src/shadow_hand/link_joints.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointControl.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointControlLocalImpl.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointControlLocalImplRegistration.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointStateClient.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointStatePublisher.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointTrajectoryServer.cpp \
+    3rd/joint-control-pkgs/gazebo_joint_control/src/JointController.cpp \
+    3rd/joint-control-pkgs/joint_trajectory_execution/src/TrajectoryActionServer.cpp
 
 RESOURCES += qml.qrc
 
@@ -545,7 +554,79 @@ DISTFILES += \
     ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/lh_trajectory_controller.yaml \
     ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/ra_trajectory_controller.yaml \
     ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/rh_trajectory_controller.yaml \
-    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/right_ur_arm_controller.yaml
+    ../../../../../../opt/ros/kinetic/share/sr_robot_launch/config/right_ur_arm_controller.yaml \
+    scripts/shadow_hand/advanced/sr_latching_example.py \
+    scripts/shadow_hand/advanced/sr_link_joints_example.py \
+    scripts/shadow_hand/advanced/sr_publisher_example.py \
+    scripts/shadow_hand/advanced/sr_subscriber_example.py \
+    scripts/shadow_hand/arm_examples/sr_left_arm_examples.py \
+    scripts/shadow_hand/arm_examples/sr_right_arm_examples.py \
+    scripts/shadow_hand/arm_examples/sr_right_arm_follow_waypoints.py \
+    scripts/shadow_hand/hand_and_arm_examples/sr_basic_left_hand_arm_example.py \
+    scripts/shadow_hand/hand_and_arm_examples/sr_basic_right_hand_arm_example.py \
+    scripts/shadow_hand/hand_and_arm_examples/sr_bottle_example.py \
+    scripts/shadow_hand/hand_and_arm_examples/sr_left_pick_place_example.py \
+    scripts/shadow_hand/hand_and_arm_examples/sr_print_joints_position.py \
+    scripts/shadow_hand/hand_examples/sr_hand_tactile_example.py \
+    scripts/shadow_hand/hand_examples/sr_handfinder_example.py \
+    scripts/shadow_hand/hand_examples/sr_print_hand_joints_position.py \
+    scripts/shadow_hand/hand_examples/sr_right_hand_follow_finger_trajectory.py \
+    scripts/shadow_hand/hand_examples/sr_right_hand_follow_named_trajectory.py \
+    scripts/shadow_hand/hand_examples/sr_right_hand_partial_traj_advanced.py \
+    scripts/shadow_hand/hand_examples/sr_right_hand_partial_traj_grasp.py \
+    scripts/shadow_hand/hand_examples/sr_sinusoid_joint_example.py \
+    scripts/shadow_hand/hand_examples/sr_store_hand.py \
+    scripts/shadow_hand/__init__.py \
+    3rd/joint-control-pkgs/gazebo_joint_control/config/ControlTemplate.yaml \
+    3rd/joint-control-pkgs/joint_trajectory_execution/config/JointTrajectoryParamsTemplate.yaml \
+    3rd/joint-control-pkgs/gazebo_joint_control/package.xml \
+    3rd/joint-control-pkgs/gazebo_joint_control/CMakeLists.txt \
+    3rd/joint-control-pkgs/joint_trajectory_execution/package.xml \
+    3rd/joint-control-pkgs/joint_trajectory_execution/CMakeLists.txt \
+    config/shadow_hand/gazebo/controller/hand_controllers_gazebo.yaml \
+    config/shadow_hand/gazebo/controller/la_trajectory_controller.yaml \
+    config/shadow_hand/gazebo/controller/ra_trajectory_controller.yaml \
+    config/shadow_hand/la_trajectory_controller.yaml \
+    config/shadow_hand/left_ur_arm_controller.yaml \
+    config/shadow_hand/lh_trajectory_controller.yaml \
+    config/shadow_hand/ra_trajectory_controller.yaml \
+    config/shadow_hand/rh_trajectory_controller.yaml \
+    config/shadow_hand/right_ur_arm_controller.yaml \
+    config/ur_arm/arm_controller_ur3.yaml \
+    config/ur_arm/arm_controller_ur5.yaml \
+    config/ur_arm/joint_state_controller.yaml \
+    config/ur_arm/ur_gazebo/arm_controller_ur3.yaml \
+    config/ur_arm/ur_gazebo/arm_controller_ur5.yaml \
+    config/ur_arm/ur_gazebo/arm_controller_ur10.yaml \
+    config/ur_arm/ur_gazebo/joint_state_controller.yaml \
+    config/ur_arm/ur10_moveit_config/controllers.yaml \
+    config/ur_arm/ur10_moveit_config/fake_controllers.yaml \
+    config/ur_arm/ur10_moveit_config/joint_limits.yaml \
+    config/ur_arm/ur10_moveit_config/kinematics.yaml \
+    config/ur_arm/ur10_moveit_config/ompl_planning.yaml \
+    launch/ur_arm/ur10_moveit/default_warehouse_db.launch \
+    launch/ur_arm/ur10_moveit/demo.launch \
+    launch/ur_arm/ur10_moveit/fake_moveit_controller_manager.launch.xml \
+    launch/ur_arm/ur10_moveit/move_group.launch \
+    launch/ur_arm/ur10_moveit/moveit_rviz.launch \
+    launch/ur_arm/ur10_moveit/ompl_planning_pipeline.launch.xml \
+    launch/ur_arm/ur10_moveit/planning_context.launch \
+    launch/ur_arm/ur10_moveit/planning_pipeline.launch.xml \
+    launch/ur_arm/ur10_moveit/run_benchmark_ompl.launch \
+    launch/ur_arm/ur10_moveit/sensor_manager.launch.xml \
+    launch/ur_arm/ur10_moveit/setup_assistant.launch \
+    launch/ur_arm/ur10_moveit/trajectory_execution.launch.xml \
+    launch/ur_arm/ur10_moveit/ur10_moveit_controller_manager.launch.xml \
+    launch/ur_arm/ur10_moveit/ur10_moveit_planning_execution.launch \
+    launch/ur_arm/ur10_moveit/ur10_moveit_sensor_manager.launch.xml \
+    launch/ur_arm/ur10_moveit/warehouse_settings.launch.xml \
+    launch/ur_arm/ur10_moveit/warehouse.launch \
+    launch/ur_arm/ur10_moveit/moveit.rviz \
+    config/ur_arm/ur10_moveit_config/ur10srh.srdf \
+    models/shadow_hand/ur_arm_hand/for_moveit/srhand_ur10arm.urdf \
+    launch/ur_arm/ur10_moveit/joystick_control.launch \
+    launch/ur_arm/ur10_moveit/ur10srh_moveit_controller_manager.launch.xml \
+    launch/ur_arm/ur10_moveit/ur10srh_moveit_sensor_manager.launch.xml
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -757,4 +838,12 @@ HEADERS += \
     include/Gazebo/gazebo_marker_plugin.h \
     include/my_arm/RobotDartAdapter.h \
     include/Gazebo/gazebo_selection_box.h \
-    include/Gazebo/gazebo_voxel_mesh_renderer.h
+    include/Gazebo/gazebo_voxel_mesh_renderer.h \
+    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointControl.h \
+    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointControlLocalImpl.h \
+    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointStateClient.h \
+    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointStatePublisher.h \
+    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointTrajectoryServer.h \
+    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/JointController.h \
+    3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/JointVelocityTracker.hpp \
+    3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h

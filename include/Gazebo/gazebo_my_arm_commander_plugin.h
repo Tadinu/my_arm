@@ -105,6 +105,7 @@ public:
 
     void modelStateCallback(const gazebo_msgs::ModelStates::ConstPtr& msg);
     void rosBumperCallback(const gazebo_msgs::ContactsState::ConstPtr& msg);
+    void jointStateCallback(const sensor_msgs::JointState& jointstate);
 private:
     QMutex _mMutex;
     event::ConnectionPtr _updateConnection;
@@ -117,7 +118,8 @@ private:
     // ROS STUFF
     boost::shared_ptr<ros::NodeHandle> _rosnode;
     sensor_msgs::JointState _joint_state;
-    ros::Publisher _joint_state_publisher;
+    ros::Publisher  _joint_state_publisher;
+    ros::Subscriber _joint_state_subscriber;
     ros::Publisher _point_cloud_publisher;
     std::string _tf_prefix;
     std::string _robot_namespace;
@@ -133,6 +135,7 @@ private:
     std::vector<ros::Subscriber> _ros_bumper_subscribers;
     /// \brief A PID controller for the joint.
     common::PID _model_pid;
+
     /// \brief A node used for transport
     //transport::NodePtr node;
 

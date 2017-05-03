@@ -16,6 +16,9 @@
 #define CJOINT_NAME_TAG       ("jointName")
 #define CUPDATE_RATE_TAG      ("updateRate")
 
+#define CJOINT_STATES_TOPIC  ("/joint_states")
+#define CJOINT_CONTROL_TOPIC ("joint_control")
+
 namespace gazebo
 {
     GazeboMyArmCommander::GazeboMyArmCommander()
@@ -68,7 +71,6 @@ namespace gazebo
         _rosnode = boost::shared_ptr<ros::NodeHandle>(new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME));
         _model_states_subscriber = _rosnode->subscribe("/gazebo/model_states", 1000,
                                                        &GazeboMyArmCommander::modelStateCallback, this);
-
         // Contact state info
         /*
         /contacts/rh_palm
@@ -175,7 +177,15 @@ namespace gazebo
                        this->_robot_namespace.c_str(), _model->GetName ().c_str());
 
         _tf_prefix = tf::getPrefixParam ( *_rosnode );
-        _joint_state_publisher = _rosnode->advertise<sensor_msgs::JointState>("joint_states", 1000);
+
+        // JOINT STATE SUBSCRIBER
+        _joint_state_subscriber = _rosnode->subscribe("/gazebo/joint_state", 1000,
+                                                      &GazeboMyArmCommander::jointStateCallback, this);
+        // JOINT STATE PUBLISHER
+        //boost::shared_ptr<ros::NodeHandle> node;
+        _joint_state_publisher = _rosnode->advertise<sensor_msgs::JointState>(CJOINT_STATES_TOPIC, 1000);
+
+        // POINT CLOUD PUBLISHER
         _point_cloud_publisher = _rosnode->advertise<sensor_msgs::PointCloud2>("contact_points", 1000);
 
         _last_update_time = this->_world->GetSimTime();
@@ -329,8 +339,8 @@ namespace gazebo
                 //applyJointForce(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 100);
 
                 //updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_BASE_JOINT, 0);
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, qAbs(jointValues[0][2]));
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT, -M_PI/2);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT, M_PI/2);
 
                 int jointId = KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT;
                 double a = this->_joint_controller->GetPositions()[_joint_names[jointId]];
@@ -343,12 +353,12 @@ namespace gazebo
                 //ROS_INFO("ABC: %f/n", a);
                 updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT, -M_PI/2);
 
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, 0);
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_2_JOINT, 0);
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_3_JOINT, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, -M_PI/2);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_2_JOINT, -M_PI/2);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_3_JOINT, -M_PI/2);
 
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ2, 0);
-                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ1, 0);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ2, -M_PI/2);
+                updateJointPosition(KsGlobal::VSHADOW_HAND_UR_ARM_WRJ1, -M_PI/2);
 
                 updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ5, jointValues[0][0]);
                 updateJointPosition(KsGlobal::VSHADOW_UR_FINGER_THUMB_THJ4, qAbs(jointValues[0][1]));
@@ -410,6 +420,14 @@ namespace gazebo
                     msg->pose[i].position.z << endl;
         }
 #endif
+    }
+
+    void GazeboMyArmCommander::jointStateCallback(const sensor_msgs::JointState& jointstate)
+    {
+        _mMutex.lock();
+        ROS_INFO("Updating joint state...");
+        _joint_state = jointstate;
+        _mMutex.unlock();
     }
 
     void GazeboMyArmCommander::rosBumperCallback(const gazebo_msgs::ContactsState::ConstPtr& msg)
@@ -537,8 +555,8 @@ namespace gazebo
         common::Time current_time = this->_world->GetSimTime();
         double seconds_since_last_update = ( current_time - _last_update_time ).Double();
         if ( seconds_since_last_update > update_period_ ) {
-#if 1
-            determineHandArrangmentOnLeapHands(CRUN_ROBOT);
+#if 0
+            //determineHandArrangmentOnLeapHands(CRUN_ROBOT);
             //std::cout << "--------------------------------------------------"<< std::endl;
             //for(size_t i = 0; i < _links.size(); i++) {
             //    std::cout << "Link: "        << _links[i]->GetSensorName(0)   << std::endl
@@ -548,10 +566,24 @@ namespace gazebo
 
             // --------------------------------------------------------------------------
             // Setup a P-controller, with a gain of 0.1.
-            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, common::PID(0.1, 0, 0));
+            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT,   common::PID(0.1, 0, 0));
+            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT,  common::PID(0.1, 0, 0));
+            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT,          common::PID(0.1, 0, 0));
+            this->setJointVelocity(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, 20);
 #else
-            // Publish Joint States
-            publishJointStates();
+            // Publish Joint States to CJOINT_CONTROL_TOPIC
+            //this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, common::PID(100, 1.0, 0));
+            //this->setJointVelocity(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 20);
+            //
+            //this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT, common::PID(100, 1.0, 0));
+            //this->setJointVelocity(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT, 20);
+            //
+            //this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT, common::PID(100, 1.0, 0));
+            //this->setJointVelocity(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT, 20);
+            //
+            //this->applyJointForce(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 100);
+
+            //this->publishJointStates();
 #endif
             _last_update_time+= common::Time ( update_period_ );
         }
@@ -561,23 +593,29 @@ namespace gazebo
     {
         ros::Time current_time = ros::Time::now();
 
+        _mMutex.lock();
         _joint_state.header.stamp = current_time;
         _joint_state.name.resize ( _joints.size() );
         _joint_state.position.resize ( _joints.size() );
 
+        math::Angle angle;
+        double      vel;
         for ( int i = 0; i < _joints.size(); i++ ) {
             //ROS_INFO("Joint: %s, %d", joint_names_[i].c_str(), this->parent_->GetJoint(joint_names_[i]).get());
             if(_joints[i] != nullptr) {
-                math::Angle angle        = _joints[i]->GetAngle(0);
+                angle        = _joints[i]->GetAngle(0);
+                vel          = _joints[i]->GetVelocity(0);
                 _joint_state.name[i]     = _joints[i]->GetName();
-                _joint_state.position[i] = angle.Radian() ;
-                //ROS_INFO("JOINT: %d %s %f", i, _joint_state.name[i].c_str(), _joint_state.position[i]);
+                //_joint_state.position[i] = angle.Radian() ;
+                _joint_state.velocity[i] = vel;
+                ROS_INFO("JOINT: %d %s %f", i, _joint_state.name[i].c_str(), _joint_state.position[i]);
             }
             else {
                 ROS_INFO("JOINT NULL: %d", i);
             }
         }
         _joint_state_publisher.publish(_joint_state);
+        _mMutex.unlock();
     }
 
     void GazeboMyArmCommander::publishPointCloud()

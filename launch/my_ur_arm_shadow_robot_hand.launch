@@ -34,10 +34,13 @@
     <arg name="use_sim_time" default="true"/>
     <arg name="headless" default="false"/>
 
-    <arg name="robot_config_file" default="$(find sr_multi_moveit_config)/config/robot_configs/right_sh_ur10.yaml"/>
+    <arg name="robot_config_file" default="$(find sr_multi_moveit_config)/config/robot_configs/$(arg side)_sh_ur10.yaml"/>
 
     <!-- ARM -->
-    <arg name="arm_controller" default="$(find my_arm)/config/$(arg side)_ur_arm_controller.yaml"/>
+    <arg name="shadow_hand_controller"        default="$(find my_arm)/config/shadow_hand/$(arg side)_ur_arm_controller.yaml"/>
+    <arg name="ur_arm_joint_state_controller" default="$(find my_arm)/config/ur_arm/ur_gazebo/joint_state_controller.yaml"/>
+    <arg name="ur_arm_ur5_controller"         default="$(find my_arm)/config/ur_arm/ur_gazebo/arm_controller_ur5.yaml"/>
+    <arg name="ur_arm_ur10_controller"        default="$(find my_arm)/config/ur_arm/ur_gazebo/arm_controller_ur10.yaml"/>
 
     <!-- SIMULATED ROBOTS -->
     <group if="$(arg sim)">
@@ -86,16 +89,32 @@
         <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
             <param name="publish_frequency" type="double" value="50.0" />
             <param name="tf_prefix" type="string" value="" />
-            <!-- <remap from="/joint_states" to="my_arm/joint_states" /> -->
+            <!--<remap from="joint_states" to="/my_arm/joint_state"/>-->
         </node>
 
-        <!-- send fake joint values -->
+        <!-- joint_state_publisher: send fake joint values -->
         <!--
         <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" >
             <param name="use_gui" value="TRUE"/>
+            <remap from="/joint_states" to="/my_arm/joint_control" />
         </node>
         -->
         <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
+
+        <!-- Fake Calibration -->
+        <node pkg="rostopic" type="rostopic" name="fake_joint_calibration"
+              args="pub /calibrated std_msgs/Bool true" />
+
+        <!-- ur_arm_joint_state_controller -->
+        <rosparam file="$(arg ur_arm_joint_state_controller)" command="load"/>
+        <node name="joint_state_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn joint_state_controller" respawn="false" output="screen"/>
+
+        <!-- ur_arm_ur10_controller -->
+        <rosparam file="$(arg ur_arm_ur10_controller)" command="load"/>
+        <node name="arm_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn arm_controller" respawn="false" output="screen"/>
+
+        <!-- Remap follow_joint_trajectory -->
+        <remap from="/follow_joint_trajectory" to="/arm_controller/follow_joint_trajectory"/>
     </group>
 
     <!-- REAL ROBOTS -->
@@ -114,6 +133,11 @@
     </group>
 
     <!-- MOVEIT -->
+    <include file="$(find my_arm)/launch/ur_arm/ur10_moveit/move_group.launch">
+        <arg name="limited" default="false"/>
+        <arg name="debug" default="false"/>
+    </include>
+
     <group if="$(arg use_moveit)">
         <include file="$(find sr_moveit_hand_config)/launch/moveit_planning_and_execution.launch">
             <arg name="load_robot_description" value="false"/>

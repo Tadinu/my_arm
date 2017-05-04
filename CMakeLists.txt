@@ -124,6 +124,17 @@ find_package(catkin REQUIRED COMPONENTS
   graspit
   ## graspit_ros_planning_msgs
 
+  ## MoveIt --
+  moveit_core
+  moveit_commander
+  moveit_msgs
+  moveit_kinematics
+  moveit_ros_control_interface
+  moveit_ros_move_group
+  moveit_ros_manipulation
+  moveit_ros_planning
+  moveit_ros_visualization
+
   ## Bullet --
   bullet_server
 )
@@ -357,6 +368,7 @@ qt5_wrap_cpp(QT_MOC_HPP ## my_arm --
                         include/my_arm/RobotKinectAdapter.h
                         include/my_arm/RobotVoxelyzeAdapter.h
                         include/my_arm/RobotDartAdapter.h
+                        include/my_arm/RobotMoveIt.h
                         include/Rviz/VMarker.h
 
                         ## VoxCad --
@@ -403,6 +415,7 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotKinectAdapter.cpp
                                   src/my_arm/RobotVoxelyzeAdapter.cpp
                                   src/my_arm/RobotDartAdapter.cpp
+                                  src/my_arm/RobotMoveIt.cpp
                                   src/Rviz/VMarker.cpp
 
                                   ## Kinect --
@@ -477,6 +490,7 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             src/my_arm/RobotKinectAdapter.cpp
                                             src/my_arm/RobotVoxelyzeAdapter.cpp
                                             src/my_arm/RobotDartAdapter.cpp
+                                            src/my_arm/RobotMoveIt.cpp
                                             src/Rviz/VMarker.cpp
 
                                             ## LeapMotion --
@@ -608,24 +622,32 @@ target_link_libraries(gazeboVoxelMeshRenderer    ${catkin_LIBRARIES}
                                          ${Qt5OpenGL_LIB}
                                          ${Qt5Concurrent_LIB}
                                          )
-## RVIZ --
+## RVIZ ++
 include_directories(${rviz_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${rviz_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${rviz_LIBRARIES})
 target_link_libraries(gazeboVoxelMeshRenderer  ${rviz_LIBRARIES})
+## RVIZ --
 
-## GAZEBO --
+## GAZEBO ++
 include_directories(${GAZEBO_INCLUDE_DIRS} ${SDFormat_INCLUDE_DIRS})
 target_link_libraries(robotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboRobotArmController ${GAZEBO_LIBRARIES})
 target_link_libraries(gazeboCameraPublisher ${GAZEBO_LIBRARIES} /usr/lib/x86_64-linux-gnu/gazebo-7/plugins/libCameraPlugin.so)
 target_link_libraries(gazeboVoxelMeshRenderer ${GAZEBO_LIBRARIES})
-## GRASPIT --
+## GAZEBO --
+
+## GRASPIT ++
 ## Graspit include files should now come directly from the graspit package
 set(GRASPIT_ROOT $ENV{GRASPIT})
 include_directories(${GRASPIT_ROOT})
 include_directories(${GRASPIT_ROOT}/src)
 include_directories(${GRASPIT_ROOT}/include)
+## GRASPIT --
+
+## MOVEIT ++
+
+## MOVEIT --
 
 ## BOOST ++
 set(Boost_USE_STATIC_LIBS OFF)

@@ -6,6 +6,7 @@
 #include "Gazebo/gazebo_my_arm_commander_plugin.h"
 #include "RobotLeapAdapter.h"
 #include "RobotVoxelyzeAdapter.h"
+#include "RobotMoveIt.h"
 #include "KsGlobal.h"
 
 // ROBOT TO RUN
@@ -181,13 +182,15 @@ namespace gazebo
         // JOINT STATE SUBSCRIBER
         _joint_state_subscriber = _rosnode->subscribe("/gazebo/joint_state", 1000,
                                                       &GazeboMyArmCommander::jointStateCallback, this);
+
         // JOINT STATE PUBLISHER
         //boost::shared_ptr<ros::NodeHandle> node;
         _joint_state_publisher = _rosnode->advertise<sensor_msgs::JointState>(CJOINT_STATES_TOPIC, 1000);
-
+#if 0
         // POINT CLOUD PUBLISHER
         _point_cloud_publisher = _rosnode->advertise<sensor_msgs::PointCloud2>("contact_points", 1000);
-
+#endif
+        //_reset_time_publisher =  _rosnode->advertise<std_msgs::Float64>("/reset_time", 1000);
         _last_update_time = this->_world->GetSimTime();
 
         // -----------------------------------------------------------------------------------------
@@ -196,6 +199,12 @@ namespace gazebo
         //
         this->_updateConnection = event::Events::ConnectWorldUpdateBegin (
                                      boost::bind ( &GazeboMyArmCommander::OnUpdate, this, _1 ));
+
+        // =========================================================================================
+#ifdef ROBOT_MOVEIT
+        VMOVEIT()->initMoveIt(_rosnode);
+        VMOVEIT()->fetchRobotModelInfo();
+#endif
     }
 
     void GazeboMyArmCommander::updateJointPosition(int jointId,
@@ -549,21 +558,21 @@ namespace gazebo
         //
         ros::spinOnce();
         //
-        this->publishPointCloud();
+        //this->publishPointCloud();
         // ------------------------------------------------------------------------------
         // Apply a small linear velocity to the model.
         common::Time current_time = this->_world->GetSimTime();
         double seconds_since_last_update = ( current_time - _last_update_time ).Double();
         if ( seconds_since_last_update > update_period_ ) {
-#if 0
-            //determineHandArrangmentOnLeapHands(CRUN_ROBOT);
+
+            determineHandArrangmentOnLeapHands(CRUN_ROBOT);
             //std::cout << "--------------------------------------------------"<< std::endl;
             //for(size_t i = 0; i < _links.size(); i++) {
             //    std::cout << "Link: "        << _links[i]->GetSensorName(0)   << std::endl
             //              << "World force:"  << _links[i]->GetWorldForce().z  << std::endl
             //              << "World torque:" << _links[i]->GetWorldTorque().z << std::endl;
             //}
-
+#if 1
             // --------------------------------------------------------------------------
             // Setup a P-controller, with a gain of 0.1.
             this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT,   common::PID(0.1, 0, 0));
@@ -583,7 +592,7 @@ namespace gazebo
             //
             //this->applyJointForce(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, 100);
 
-            //this->publishJointStates();
+            this->publishJointStates();
 #endif
             _last_update_time+= common::Time ( update_period_ );
         }

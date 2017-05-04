@@ -185,7 +185,8 @@ SOURCES += main.cpp \
     3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointStatePublisher.cpp \
     3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointTrajectoryServer.cpp \
     3rd/joint-control-pkgs/gazebo_joint_control/src/JointController.cpp \
-    3rd/joint-control-pkgs/joint_trajectory_execution/src/TrajectoryActionServer.cpp
+    3rd/joint-control-pkgs/joint_trajectory_execution/src/TrajectoryActionServer.cpp \
+    src/my_arm/RobotMoveIt.cpp
 
 RESOURCES += qml.qrc
 
@@ -535,6 +536,7 @@ DISTFILES += \
     models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited_biotacs.urdf.xacro \
     models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited.urdf.xacro \
     models/shadow_hand/ur_arm_hand/right_srhand_ur10.urdf.xacro \
+    models/shadow_hand/ur_arm_hand/for_moveit/srhand_ur10arm.urdf \
     launch/my_ur_arm_shadow_robot_hand.launch \
     ../../../../../../opt/ros/kinetic/share/ur_description/urdf/ur10.urdf.xacro \
     ../../../../../../opt/ros/kinetic/share/sr_robot_launch/launch/warehouse_trajectory_mapping.yaml \
@@ -592,41 +594,46 @@ DISTFILES += \
     config/shadow_hand/ra_trajectory_controller.yaml \
     config/shadow_hand/rh_trajectory_controller.yaml \
     config/shadow_hand/right_ur_arm_controller.yaml \
-    config/ur_arm/arm_controller_ur3.yaml \
-    config/ur_arm/arm_controller_ur5.yaml \
-    config/ur_arm/joint_state_controller.yaml \
-    config/ur_arm/ur_gazebo/arm_controller_ur3.yaml \
-    config/ur_arm/ur_gazebo/arm_controller_ur5.yaml \
-    config/ur_arm/ur_gazebo/arm_controller_ur10.yaml \
-    config/ur_arm/ur_gazebo/joint_state_controller.yaml \
-    config/ur_arm/ur10_moveit_config/controllers.yaml \
-    config/ur_arm/ur10_moveit_config/fake_controllers.yaml \
-    config/ur_arm/ur10_moveit_config/joint_limits.yaml \
-    config/ur_arm/ur10_moveit_config/kinematics.yaml \
-    config/ur_arm/ur10_moveit_config/ompl_planning.yaml \
-    launch/ur_arm/ur10_moveit/default_warehouse_db.launch \
-    launch/ur_arm/ur10_moveit/demo.launch \
-    launch/ur_arm/ur10_moveit/fake_moveit_controller_manager.launch.xml \
-    launch/ur_arm/ur10_moveit/move_group.launch \
-    launch/ur_arm/ur10_moveit/moveit_rviz.launch \
-    launch/ur_arm/ur10_moveit/ompl_planning_pipeline.launch.xml \
-    launch/ur_arm/ur10_moveit/planning_context.launch \
-    launch/ur_arm/ur10_moveit/planning_pipeline.launch.xml \
-    launch/ur_arm/ur10_moveit/run_benchmark_ompl.launch \
-    launch/ur_arm/ur10_moveit/sensor_manager.launch.xml \
-    launch/ur_arm/ur10_moveit/setup_assistant.launch \
-    launch/ur_arm/ur10_moveit/trajectory_execution.launch.xml \
-    launch/ur_arm/ur10_moveit/ur10_moveit_controller_manager.launch.xml \
-    launch/ur_arm/ur10_moveit/ur10_moveit_planning_execution.launch \
-    launch/ur_arm/ur10_moveit/ur10_moveit_sensor_manager.launch.xml \
-    launch/ur_arm/ur10_moveit/warehouse_settings.launch.xml \
-    launch/ur_arm/ur10_moveit/warehouse.launch \
-    launch/ur_arm/ur10_moveit/moveit.rviz \
-    config/ur_arm/ur10_moveit_config/ur10srh.srdf \
-    models/shadow_hand/ur_arm_hand/for_moveit/srhand_ur10arm.urdf \
-    launch/ur_arm/ur10_moveit/joystick_control.launch \
-    launch/ur_arm/ur10_moveit/ur10srh_moveit_controller_manager.launch.xml \
-    launch/ur_arm/ur10_moveit/ur10srh_moveit_sensor_manager.launch.xml
+    config/ur10srh/ur10srh_moveit_config/bimanual_sh.yaml \
+    config/ur10srh/ur10srh_moveit_config/left_sh_ur5.yaml \
+    config/ur10srh/ur10srh_moveit_config/left_sh_ur10_biotac.yaml \
+    config/ur10srh/ur10srh_moveit_config/left_sh_ur10.yaml \
+    config/ur10srh/ur10srh_moveit_config/left_sh.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_extra_lite_ur5.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_extra_lite.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_light.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_lite_ur10.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_motor_biotac.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_ur5.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_ur10_biotac.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh_ur10.yaml \
+    config/ur10srh/ur10srh_moveit_config/right_sh.yaml \
+    config/ur10srh/kinematics_extra_groups.yaml \
+    config/ur10srh/ompl_planning_extra_groups.yaml \
+    config/ur10srh/sbpl_planning.yaml \
+    config/ur10srh/sensors_rgbd.yaml \
+    config/ur10srh/stomp_planning.yaml \
+    config/ur10srh/ur10srh.srdf \
+    launch/ur10srh/ur10srh_moveit_launch/chomp_planning_pipeline.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/default_warehouse_db.launch \
+    launch/ur10srh/ur10srh_moveit_launch/demo.launch \
+    launch/ur10srh/ur10srh_moveit_launch/fake_moveit_controller_manager.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/move_group.launch \
+    launch/ur10srh/ur10srh_moveit_launch/moveit_planning_and_execution.launch \
+    launch/ur10srh/ur10srh_moveit_launch/moveit_rviz.launch \
+    launch/ur10srh/ur10srh_moveit_launch/ompl_planning_pipeline.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/planning_context.launch \
+    launch/ur10srh/ur10srh_moveit_launch/planning_pipeline.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/sbpl_planning_pipeline.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/sensor_manager.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/setup_assistant.launch \
+    launch/ur10srh/ur10srh_moveit_launch/shadowrobot_motor_moveit_controller_manager.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/shadowrobot_motor_moveit_sensor_manager.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/stomp_planning_pipeline.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/trajectory_execution.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/warehouse_settings.launch.xml \
+    launch/ur10srh/ur10srh_moveit_launch/warehouse.launch \
+    launch/ur10srh/ur10srh_moveit_launch/moveit.rviz \
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -846,4 +853,5 @@ HEADERS += \
     3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointTrajectoryServer.h \
     3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/JointController.h \
     3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/JointVelocityTracker.hpp \
-    3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h
+    3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h \
+    include/my_arm/RobotMoveIt.h

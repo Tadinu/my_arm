@@ -121,6 +121,7 @@ private:
     ros::Publisher  _joint_state_publisher;
     ros::Subscriber _joint_state_subscriber;
     ros::Publisher _point_cloud_publisher;
+    ros::Publisher _reset_time_publisher;
     std::string _tf_prefix;
     std::string _robot_namespace;
     std::vector<std::string> _joint_names;

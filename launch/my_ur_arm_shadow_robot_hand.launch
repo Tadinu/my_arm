@@ -3,30 +3,23 @@
     <arg name="gazebo" default="true"/> <!-- Else the simulation is Rviz -->
     <arg name="spawn_hand_model" default="true"/>
 
-    <!-- Loads the robot description -->
-    <arg name="robot_description" default="$(find my_arm)/models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited.urdf.xacro"/>
-    <!-- This launch file is for shadow hand only -->
-    <arg name="hand_id" default="rh"/>
-    <arg name="side" default="right"/>
     <!-- set to false if you want to use real robots, true if you need the gazebo simulation -->
     <arg name="sim" default="true"/>
     <!-- Set to true for debugging -->
     <arg name="debug" default="false"/>
     <arg name="verbose" default="true" />
-    <!-- Set to true to spawn trajectory controllers for the hands(the trajectory controller overwrites continuously the joint position command, preventing direct control via topics-->
-    <arg name="hand_trajectory" default="true"/>
-    <!-- Set to true to spawn the position controllers for the hands-->
-    <arg name="hand_ctrl" default="false"/>
-    <!-- Set to true to use pwm, false for torque -->
-    <arg name="pwm_control" default="true"/>
-    <!-- Serial number of the hand to be used-->
-    <arg name="hand_serial" default="1322"/>
 
     <!-- Allows to specify the ethernet interface/s to be used for ethercat devices. It defaults to the value of the env var ETHERCAT_PORT
          More than one interface can be specified by concatenating them using underscore as a separator (e.g eth1_eth2_eth3) -->
     <arg name="eth_port" default="$(optenv ETHERCAT_PORT eth0)"/>
+
     <!-- Set to true to allow planning trajectories-->
     <arg name="use_moveit" default="false"/>
+    <!--Choose planner library, options are ompl, stomp or sbpl-->
+    <arg name="planning" default="ompl"/>
+    <!--Should the planner yaml be automatically generated? -->
+    <arg name="generate_planning_config" default="True"/>
+
     <!-- Set to false if you want to start without guis -->
     <arg name="gui" default="true"/>
 
@@ -34,19 +27,43 @@
     <arg name="use_sim_time" default="true"/>
     <arg name="headless" default="false"/>
 
-    <arg name="robot_config_file" default="$(find sr_multi_moveit_config)/config/robot_configs/$(arg side)_sh_ur10.yaml"/>
+    <!-- Change this for the left hand and arm -->
+    <arg name="hand_id" default="rh"/>
+    <arg name="arm_id" default="ra"/>
+    <arg name="side" default="right"/>
+    <arg name="robot_model" default="ur10"/>
+    <arg name="initial_z" default="0.1"/>
+
+    <!-- Change this for another hand -->
+    <arg name="robot_description" default="$(find my_arm)/models/shadow_hand/ur_arm_hand/right_srhand_ur10_joint_limited.urdf.xacro"/>
+    <arg name="robot_config_file" default="$(find sr_multi_moveit_config)/config/robot_configs/$(arg side)_sh_$(arg robot_model).yaml"/>
+    <arg name="robot_name" default="$(arg robot_model)srh"/>
 
     <!-- ARM -->
+    <arg name="arm_controller" default="$(find sr_robot_launch)/config/$(arg side)_ur_arm_controller.yaml"/>
+    <arg name="arm_group_name" default="$(arg side)_arm"/>
+    <!-- Set to true to spawn trajectory controllers for the arms (the trajectory controller overwrites continuously the joint position command, preventing direct control via topics-->
+    <arg name="arm_trajectory" default="true"/>
+    <!-- Set to true to spawn the position controllers for the arm-->
+    <arg name="arm_ctrl" default="true"/>
+    <!-- ARM -->
     <arg name="shadow_hand_controller"        default="$(find my_arm)/config/shadow_hand/$(arg side)_ur_arm_controller.yaml"/>
-    <arg name="ur_arm_joint_state_controller" default="$(find my_arm)/config/ur_arm/ur_gazebo/joint_state_controller.yaml"/>
-    <arg name="ur_arm_ur5_controller"         default="$(find my_arm)/config/ur_arm/ur_gazebo/arm_controller_ur5.yaml"/>
-    <arg name="ur_arm_ur10_controller"        default="$(find my_arm)/config/ur_arm/ur_gazebo/arm_controller_ur10.yaml"/>
+
+    <!-- HAND -->
+    <!-- Set to true to spawn trajectory controllers for the hands(the trajectory controller overwrites continuously the joint position command, preventing direct control via topics-->
+    <arg name="hand_trajectory" default="true"/>
+    <!-- Set to true to spawn the position controllers for the hands-->
+    <arg name="hand_ctrl" default="true"/>
+    <!-- The control mode PWM (true) or torque (false) -->
+    <arg name="pwm_control" default="true"/>
+    <!-- Serial number of the hand to be used-->
+    <arg name="hand_serial" default="1082"/>
 
     <!-- SIMULATED ROBOTS -->
     <group if="$(arg sim)">
         <!-- Load the URDF/XACRO into the ROS Parameter Server -->
         <param name="robot_description"
-               command="$(find xacro)/xacro --inorder '$(arg robot_description)'"/>
+               command="$(find xacro)/xacro --inorder '$(arg robot_description)' initial_z:=$(arg initial_z)"/>
 
         <param name ="/use_sim_time" value="true"/>
         <!-- For GAZEBO -->
@@ -100,27 +117,12 @@
         </node>
         -->
         <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
-
-        <!-- Fake Calibration -->
-        <node pkg="rostopic" type="rostopic" name="fake_joint_calibration"
-              args="pub /calibrated std_msgs/Bool true" />
-
-        <!-- ur_arm_joint_state_controller -->
-        <rosparam file="$(arg ur_arm_joint_state_controller)" command="load"/>
-        <node name="joint_state_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn joint_state_controller" respawn="false" output="screen"/>
-
-        <!-- ur_arm_ur10_controller -->
-        <rosparam file="$(arg ur_arm_ur10_controller)" command="load"/>
-        <node name="arm_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn arm_controller" respawn="false" output="screen"/>
-
-        <!-- Remap follow_joint_trajectory -->
-        <remap from="/follow_joint_trajectory" to="/arm_controller/follow_joint_trajectory"/>
     </group>
 
     <!-- REAL ROBOTS -->
-    <!-- the path to the mapping files -->
     <group unless="$(arg sim)">
-        <arg name="mapping_path" default="$(find sr_edc_launch)/mappings/default_mappings/rh_E_v3.yaml"/>
+        <!-- the path to the mapping files -->
+        <arg name="mapping_path" default="$(find sr_edc_launch)/mappings/default_mappings/$(arg hand_id)_E_v3.yaml"/>
         <include file="$(find sr_edc_launch)/sr_edc.launch">
             <arg name="debug" value="$(arg debug)"/>
             <arg name="eth_port" value="$(arg eth_port)"/>
@@ -133,24 +135,29 @@
     </group>
 
     <!-- MOVEIT -->
-    <include file="$(find my_arm)/launch/ur_arm/ur10_moveit/move_group.launch">
-        <arg name="limited" default="false"/>
-        <arg name="debug" default="false"/>
-    </include>
-
     <group if="$(arg use_moveit)">
-        <include file="$(find sr_moveit_hand_config)/launch/moveit_planning_and_execution.launch">
-            <arg name="load_robot_description" value="false"/>
-            <arg name="gui" default="$(arg gui)"/>
-        </include>
-        <include file="$(find sr_moveit_hand_config)/launch/default_warehouse_db.launch"/>
+      <include file="$(find sr_multi_moveit_config)/launch/moveit_planning_and_execution.launch">
+        <arg name="load_robot_description" value="false"/>
+        <arg name="gui" default="$(arg gui)"/>
+        <arg name="robot_config_file" value ="$(arg robot_config_file)"/>
+        <arg name="planning" value="$(arg planning)"/>
+        <arg name="generate_planning_config" value="$(arg generate_planning_config)"/>
+      </include>
+      <include file="$(find sr_multi_moveit_config)/launch/default_warehouse_db.launch"/>
+
+      <node pkg="sr_multi_moveit_config" type="timed_roslaunch.sh" args="10 sr_robot_launch trajectory_services.launch
+        arm_group_name:=$(arg arm_group_name)" name="timed_trajectory_services" output="screen"
+      />
+
     </group>
 
     <!-- Trajectory controller -->
     <group if="$(arg hand_ctrl)">
-        <node name="$(arg hand_id)_trajectory_controller" pkg="sr_utilities" type="trajectory_controller_spawner.py" output="screen">
-            <param name="hand_trajectory" value ="$(arg hand_trajectory)"/>
-            <param name="wait_for" value ="/calibrated" unless="$(arg sim)"/>
-        </node>
+      <node name="$(arg hand_id)_trajectory_controller" pkg="sr_utilities" type="trajectory_controller_spawner.py" output="screen">
+        <param name="hand_trajectory" value ="$(arg hand_trajectory)"/>
+        <param name="exclude_wrist" value="true"/>
+        <param name="wait_for" value ="/calibrated" unless="$(arg sim)"/>
+      </node>
     </group>
+
 </launch>

@@ -1,6 +1,6 @@
 <launch>
     <param name="robot_description"
-        command="$(find xacro)/xacro --inorder '$(find my_arm)/models/mySoftHand.xacro'" />
+        command="$(find xacro)/xacro --inorder '$(find my_arm)/models/mySoftHand.xacro'" /> <!-- myArm_brHand.xacro -->
 
     <!-- send fake joint values ! KEEP THIS CAUSE UNSTABLE FLASHING!!! -->
     <!--

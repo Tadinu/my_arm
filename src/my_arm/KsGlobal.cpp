@@ -156,7 +156,7 @@ const char* KsGlobal::CSHADOWHAND_ARM_JOINTS[KsGlobal::VSHADOW_HAND_ARM_JOINT_TO
     "rh_THJ3",                                // Thumb hub, revolute
     "rh_THJ2",                                // Thumb middle, revolute
     "rh_THJ1",                                // Thumb distal, revolute
-    "rh_THtip",                               // Thumb tip
+    "rh_thtip",                               // Thumb tip
 
     // Index
     "rh_FFJ4",                                // knuckle, Revolute
@@ -252,7 +252,7 @@ const char* KsGlobal::CSHADOWHAND_UR_ARM_JOINTS[KsGlobal::VSHADOW_HAND_UR_ARM_JO
     "rh_THJ3",                                // Thumb hub, revolute
     "rh_THJ2",                                // Thumb middle, revolute
     "rh_THJ1",                                // Thumb distal, revolute
-    "rh_THtip",                               // Thumb tip
+    "rh_thtip",                               // Thumb tip
 
     // Index
     "rh_FFJ4",                                // knuckle, Revolute

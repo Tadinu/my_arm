@@ -837,32 +837,15 @@ endif()
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
+## CATKIN_PACKAGE_SHARE_DESTINATION : /opt/ros/kinetic/share/<package_name>
+## CATKIN_PACKAGE_BIN_DESTINATION :   /opt/ros/kinetic/lib/<package_name>
+
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 # install(PROGRAMS
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
-
-install(PROGRAMS
-    scripts/LeapMotion/leap_interface.py scripts/LeapMotion/sender.py scripts/LeapMotion/subscriber.py
-    3rd/bullet_server/scripts/soft_body.py
-    3rd/bullet_server/scripts/imarker_spawn.py
-    3rd/bullet_server/scripts/init_sim.py
-    3rd/bullet_server/scripts/load_urdf.py
-    3rd/bullet_server/scripts/make_wall.py
-    3rd/bullet_server/scripts/mesh.py
-    3rd/bullet_server/scripts/pos_to_vel.py
-    3rd/bullet_server/scripts/random_body.py
-    3rd/bullet_server/scripts/soft_body.py
-    3rd/bullet_server/scripts/soft_tetra.py
-    3rd/bullet_server/scripts/soft_vehicle.py
-    3rd/bullet_server/scripts/stewart_platform.py
-    3rd/bullet_server/scripts/terrain.py
-    3rd/bullet_server/scripts/test.py
-
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
 
 ## Mark executables and/or libraries for installation
 # install(TARGETS myArm myArm_node
@@ -878,7 +861,6 @@ install(PROGRAMS
 #   PATTERN ".svn" EXCLUDE
 # )
 
-## TODO ++
 #install(DIRECTORY launch
 #  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 #
@@ -887,10 +869,18 @@ install(PROGRAMS
 #
 #install(DIRECTORY models
 #  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-## TODO --
 
+install(DIRECTORY scripts/LeapMotion/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/LeapMotion
+)
 
+install(DIRECTORY 3rd/bullet_server/scripts/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/bullet_server
+)
 
+install(DIRECTORY launch/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

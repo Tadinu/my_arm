@@ -1,14 +1,19 @@
 <launch>
     <!-- <param name="robot_description" command="cat $(find my_arm)/models/myArm_brHand2.urdf" /> -->
 
-    <param name="robot_description"
-        command="$(find xacro)/xacro --inorder '$(find my_arm)/models/myArm_brHand.xacro'" />
-
-    <!-- send fake joint values -->
-    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" >
-        <param name="use_gui" value="FALSE"/>
+    <!-- Robot state publisher -->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
+        <param name="publish_frequency" type="double" value="50.0" />
+        <param name="tf_prefix" type="string" value="" />
+        <!--<remap from="joint_states" to="/my_arm/joint_state"/>-->
     </node>
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" />
-    <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
 
+    <!-- joint_state_publisher: send fake joint values -->
+    <!--
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" >
+        <param name="use_gui" value="TRUE"/>
+        <remap from="/joint_states" to="/my_arm/joint_control" />
+    </node>
+    -->
+    <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
 </launch>

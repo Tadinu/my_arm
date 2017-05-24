@@ -148,12 +148,12 @@ SOURCES += main.cpp \
     src/Kinect/hand_interaction/detect_hands_wskel.cpp \
     src/Kinect/hand_interaction/detect_hands.cpp \
     src/my_arm/RobotRealSenseAdapter.cpp \
-    src/RealSense/camera/f200_nodelet.cpp \
-    src/RealSense/camera/sr300_nodelet.cpp \
-    src/RealSense/camera/r200_nodelet.cpp \
-    src/RealSense/camera/zr300_nodelet.cpp \
-    src/RealSense/camera/base_nodelet.cpp \
-    src/RealSense/hands_publisher.cpp \
+    3rd/RealSense/src/camera/f200_nodelet.cpp \
+    3rd/RealSense/src/camera/sr300_nodelet.cpp \
+    3rd/RealSense/src/camera/r200_nodelet.cpp \
+    3rd/RealSense/src/camera/zr300_nodelet.cpp \
+    3rd/RealSense/src/camera/base_nodelet.cpp \
+    3rd/RealSense/src/hands_publisher.cpp \
     src/Kinect/pcl_tools/bag_to_pcd.cpp \
     src/Kinect/pcl_tools/pcl_utils.cpp \
     src/Kinect/pcl_tools/segfast.cpp \
@@ -216,8 +216,8 @@ INCLUDEPATH+= /usr/include \
               \ ## pcl
               /usr/include/pcl-1.7 \
               \ ## RealSense
-              ./include/RealSense \
-              ./include/RealSense/pxc \
+              ./3rd/RealSense/include \
+              ./3rd/RealSense/include/pxc \
               \ ## ros_vox_cad
               ./3rd/ros_vox_cad \
               ./3rd/ros_vox_cad/VoxCad \
@@ -476,7 +476,6 @@ DISTFILES += \
     msg/Kinect/body_msgs/Skeletons.msg \
     models/myArm.gazebo \
     worlds/shadowhand.world \
-    src/my_arm/my_arm_controller_py/main.py \
     worlds/universe.world \
     3rd/Voxelyze/makefile \
     3rd/Voxelyze/README.md \
@@ -634,6 +633,24 @@ DISTFILES += \
     launch/ur10srh/ur10srh_moveit_launch/warehouse_settings.launch.xml \
     launch/ur10srh/ur10srh_moveit_launch/warehouse.launch \
     launch/ur10srh/ur10srh_moveit_launch/moveit.rviz \
+    worlds/smart_grasping.world \
+    scripts/shadow_arm_hand/smart_handle.py \
+    scripts/shadow_hand/grasps.xml \
+    scripts/shadow_hand/Grasp.py \
+    scripts/shadow_hand/grasps_interpoler.py \
+    scripts/shadow_hand/grasps_parser.py \
+    scripts/shadow_hand/shadowhand_commander.py \
+    scripts/shadow_hand/shadowhand_ros.py \
+    scripts/shadow_hand/tactile_receiver.py \
+    scripts/shadow_hand/smart_handle.py \
+    setup.py \
+    scripts/my_arm/my_arm_controller.py \
+    scripts/my_arm/my_arm_controller2.py \
+    scripts/my_arm/my_arm_utils.py \
+    scripts/my_arm/grasp/convert_xml.py \
+    scripts/my_arm/grasp/grasp_planner.py \
+    scripts/my_arm/grasp/grasp.py \
+    scripts/my_arm/grasp/quick_grasp.py
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -651,100 +668,100 @@ HEADERS += \
     include/my_arm/RobotLeapAdapter.h \
     include/my_arm/RobotRealSenseAdapter.h \
     include/my_arm/RobotKinectAdapter.h \
-    include/RealSense/camera/f200_nodelet.h \
-    include/RealSense/camera/sr300_nodelet.h \
-    include/RealSense/camera/r200_nodelet.h \
-    include/RealSense/camera/zr300_nodelet.h \
-    include/RealSense/camera/constants.h \
-    include/RealSense/camera/base_nodelet.h \
-    include/RealSense/pxc/pxc3dscan.h \
-    include/RealSense/pxc/pxc3dseg.h \
-    include/RealSense/pxc/pxcaddref.h \
-    include/RealSense/pxc/pxcaudio.h \
-    include/RealSense/pxc/pxcaudiosource.h \
-    include/RealSense/pxc/pxcbase.h \
-    include/RealSense/pxc/pxcblobconfiguration.h \
-    include/RealSense/pxc/pxcblobdata.h \
-    include/RealSense/pxc/pxcblobmodule.h \
-    include/RealSense/pxc/pxccalibration.h \
-    include/RealSense/pxc/pxccapture.h \
-    include/RealSense/pxc/pxccapturemanager.h \
-    include/RealSense/pxc/pxccursorconfiguration.h \
-    include/RealSense/pxc/pxccursordata.h \
-    include/RealSense/pxc/pxcdefs.h \
-    include/RealSense/pxc/pxcenhancedphoto.h \
-    include/RealSense/pxc/pxcenhancedvideo.h \
-    include/RealSense/pxc/pxcfaceconfiguration.h \
-    include/RealSense/pxc/pxcfacedata.h \
-    include/RealSense/pxc/pxcfacemodule.h \
-    include/RealSense/pxc/pxchandconfiguration.h \
-    include/RealSense/pxc/pxchandcursormodule.h \
-    include/RealSense/pxc/pxchanddata.h \
-    include/RealSense/pxc/pxchandmodule.h \
-    include/RealSense/pxc/pxcimage.h \
-    include/RealSense/pxc/pxcmetadata.h \
-    include/RealSense/pxc/pxcobjectrecognitionconfiguration.h \
-    include/RealSense/pxc/pxcobjectrecognitiondata.h \
-    include/RealSense/pxc/pxcobjectrecognitionmodule.h \
-    include/RealSense/pxc/pxcpersontrackingconfiguration.h \
-    include/RealSense/pxc/pxcpersontrackingdata.h \
-    include/RealSense/pxc/pxcpersontrackingmodule.h \
-    include/RealSense/pxc/pxcphoto.h \
-    include/RealSense/pxc/pxcplatformcameracontrol.h \
-    include/RealSense/pxc/pxcpowerstate.h \
-    include/RealSense/pxc/pxcprojection.h \
-    include/RealSense/pxc/pxcsceneperception.h \
-    include/RealSense/pxc/pxcsensemanager.h \
-    include/RealSense/pxc/pxcsession.h \
-    include/RealSense/pxc/pxcspeechrecognition.h \
-    include/RealSense/pxc/pxcspeechsynthesis.h \
-    include/RealSense/pxc/pxcstatus.h \
-    include/RealSense/pxc/pxcsyncpoint.h \
-    include/RealSense/pxc/pxctouchlesscontroller.h \
-    include/RealSense/pxc/pxctracker.h \
-    include/RealSense/pxc/pxctrackerutils.h \
-    include/RealSense/pxc/pxcversion.h \
-    include/RealSense/pxc/pxcvideomodule.h \
-    include/RealSense/pxc/service/pxcloggingservice.h \
-    include/RealSense/pxc/service/pxcpowerstateserviceclient.h \
-    include/RealSense/pxc/service/pxcschedulerservice.h \
-    include/RealSense/pxc/service/pxcserializableservice.h \
-    include/RealSense/pxc/service/pxcsessionservice.h \
-    include/RealSense/pxc/service/pxcsmartasyncimpl.h \
-    include/RealSense/pxc/service/pxcsyncpointservice.h \
-    include/RealSense/pxc/utilities/pxcpointconverter.h \
-    include/RealSense/pxc/utilities/pxcrotation.h \
-    include/RealSense/pxc/utilities/pxcsmoother.h \
-    include/RealSense/Service/LoggingService.h \
-    include/RealSense/Service/PowerStateServiceClient.h \
-    include/RealSense/Service/SampleReaderService.h \
-    include/RealSense/Service/SenseManagerService.h \
-    include/RealSense/Service/SerializableService.h \
-    include/RealSense/Service/SessionService.h \
-    include/RealSense/Service/VideoModuleImpl.h \
-    include/RealSense/Utility/PointConverter.h \
-    include/RealSense/Utility/Rotation.h \
-    include/RealSense/Utility/Smoother.h \
-    include/RealSense/Base.h \
-    include/RealSense/Calibration.h \
-    include/RealSense/Capture.h \
-    include/RealSense/CaptureManager.h \
-    include/RealSense/Image.h \
-    include/RealSense/Metadata.h \
-    include/RealSense/PlatformCameraControl.h \
-    include/RealSense/Playback.h \
-    include/RealSense/PowerState.h \
-    include/RealSense/Projection.h \
-    include/RealSense/Recording.h \
-    include/RealSense/Reference.h \
-    include/RealSense/Sample.h \
-    include/RealSense/SampleReader.h \
-    include/RealSense/SenseManager.h \
-    include/RealSense/Session.h \
-    include/RealSense/Status.h \
-    include/RealSense/Type.h \
-    include/RealSense/VideoModule.h \
-    include/RealSense/VideoModuleCommon.h \
+    3rd/RealSense/include/camera/f200_nodelet.h \
+    3rd/RealSense/include/camera/sr300_nodelet.h \
+    3rd/RealSense/include/camera/r200_nodelet.h \
+    3rd/RealSense/include/camera/zr300_nodelet.h \
+    3rd/RealSense/include/camera/constants.h \
+    3rd/RealSense/include/camera/base_nodelet.h \
+    3rd/RealSense/include/pxc/pxc3dscan.h \
+    3rd/RealSense/include/pxc/pxc3dseg.h \
+    3rd/RealSense/include/pxc/pxcaddref.h \
+    3rd/RealSense/include/pxc/pxcaudio.h \
+    3rd/RealSense/include/pxc/pxcaudiosource.h \
+    3rd/RealSense/include/pxc/pxcbase.h \
+    3rd/RealSense/include/pxc/pxcblobconfiguration.h \
+    3rd/RealSense/include/pxc/pxcblobdata.h \
+    3rd/RealSense/include/pxc/pxcblobmodule.h \
+    3rd/RealSense/include/pxc/pxccalibration.h \
+    3rd/RealSense/include/pxc/pxccapture.h \
+    3rd/RealSense/include/pxc/pxccapturemanager.h \
+    3rd/RealSense/include/pxc/pxccursorconfiguration.h \
+    3rd/RealSense/include/pxc/pxccursordata.h \
+    3rd/RealSense/include/pxc/pxcdefs.h \
+    3rd/RealSense/include/pxc/pxcenhancedphoto.h \
+    3rd/RealSense/include/pxc/pxcenhancedvideo.h \
+    3rd/RealSense/include/pxc/pxcfaceconfiguration.h \
+    3rd/RealSense/include/pxc/pxcfacedata.h \
+    3rd/RealSense/include/pxc/pxcfacemodule.h \
+    3rd/RealSense/include/pxc/pxchandconfiguration.h \
+    3rd/RealSense/include/pxc/pxchandcursormodule.h \
+    3rd/RealSense/include/pxc/pxchanddata.h \
+    3rd/RealSense/include/pxc/pxchandmodule.h \
+    3rd/RealSense/include/pxc/pxcimage.h \
+    3rd/RealSense/include/pxc/pxcmetadata.h \
+    3rd/RealSense/include/pxc/pxcobjectrecognitionconfiguration.h \
+    3rd/RealSense/include/pxc/pxcobjectrecognitiondata.h \
+    3rd/RealSense/include/pxc/pxcobjectrecognitionmodule.h \
+    3rd/RealSense/include/pxc/pxcpersontrackingconfiguration.h \
+    3rd/RealSense/include/pxc/pxcpersontrackingdata.h \
+    3rd/RealSense/include/pxc/pxcpersontrackingmodule.h \
+    3rd/RealSense/include/pxc/pxcphoto.h \
+    3rd/RealSense/include/pxc/pxcplatformcameracontrol.h \
+    3rd/RealSense/include/pxc/pxcpowerstate.h \
+    3rd/RealSense/include/pxc/pxcprojection.h \
+    3rd/RealSense/include/pxc/pxcsceneperception.h \
+    3rd/RealSense/include/pxc/pxcsensemanager.h \
+    3rd/RealSense/include/pxc/pxcsession.h \
+    3rd/RealSense/include/pxc/pxcspeechrecognition.h \
+    3rd/RealSense/include/pxc/pxcspeechsynthesis.h \
+    3rd/RealSense/include/pxc/pxcstatus.h \
+    3rd/RealSense/include/pxc/pxcsyncpoint.h \
+    3rd/RealSense/include/pxc/pxctouchlesscontroller.h \
+    3rd/RealSense/include/pxc/pxctracker.h \
+    3rd/RealSense/include/pxc/pxctrackerutils.h \
+    3rd/RealSense/include/pxc/pxcversion.h \
+    3rd/RealSense/include/pxc/pxcvideomodule.h \
+    3rd/RealSense/include/pxc/service/pxcloggingservice.h \
+    3rd/RealSense/include/pxc/service/pxcpowerstateserviceclient.h \
+    3rd/RealSense/include/pxc/service/pxcschedulerservice.h \
+    3rd/RealSense/include/pxc/service/pxcserializableservice.h \
+    3rd/RealSense/include/pxc/service/pxcsessionservice.h \
+    3rd/RealSense/include/pxc/service/pxcsmartasyncimpl.h \
+    3rd/RealSense/include/pxc/service/pxcsyncpointservice.h \
+    3rd/RealSense/include/pxc/utilities/pxcpointconverter.h \
+    3rd/RealSense/include/pxc/utilities/pxcrotation.h \
+    3rd/RealSense/include/pxc/utilities/pxcsmoother.h \
+    3rd/RealSense/include/Service/LoggingService.h \
+    3rd/RealSense/include/Service/PowerStateServiceClient.h \
+    3rd/RealSense/include/Service/SampleReaderService.h \
+    3rd/RealSense/include/Service/SenseManagerService.h \
+    3rd/RealSense/include/Service/SerializableService.h \
+    3rd/RealSense/include/Service/SessionService.h \
+    3rd/RealSense/include/Service/VideoModuleImpl.h \
+    3rd/RealSense/include/Utility/PointConverter.h \
+    3rd/RealSense/include/Utility/Rotation.h \
+    3rd/RealSense/include/Utility/Smoother.h \
+    3rd/RealSense/include/Base.h \
+    3rd/RealSense/include/Calibration.h \
+    3rd/RealSense/include/Capture.h \
+    3rd/RealSense/include/CaptureManager.h \
+    3rd/RealSense/include/Image.h \
+    3rd/RealSense/include/Metadata.h \
+    3rd/RealSense/include/PlatformCameraControl.h \
+    3rd/RealSense/include/Playback.h \
+    3rd/RealSense/include/PowerState.h \
+    3rd/RealSense/include/Projection.h \
+    3rd/RealSense/include/Recording.h \
+    3rd/RealSense/include/Reference.h \
+    3rd/RealSense/include/Sample.h \
+    3rd/RealSense/include/SampleReader.h \
+    3rd/RealSense/include/SenseManager.h \
+    3rd/RealSense/include/Session.h \
+    3rd/RealSense/include/Status.h \
+    3rd/RealSense/include/Type.h \
+    3rd/RealSense/include/VideoModule.h \
+    3rd/RealSense/include/VideoModuleCommon.h \
     src/Kinect/pcl_tools/printing_tools.h \
     include/Kinect/body_msgs/Hand.h \
     include/Kinect/body_msgs/Hands.h \
@@ -855,3 +872,25 @@ HEADERS += \
     3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/JointVelocityTracker.hpp \
     3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h \
     include/my_arm/RobotMoveIt.h
+
+
+##
+## Just add the following to your .pro file to copy the folder "data" from the source directory to the build directory whenever you build the source code:
+##
+## copydata.commands = $(COPY_DIR) $$PWD/data $$OUT_PWD
+## first.depends = $(first) copydata
+## export(first.depends)
+## export(copydata.commands)
+## QMAKE_EXTRA_TARGETS += first copydata
+##
+## The meaning of the different names in the above are as follows:
+##
+##     - **\$(COPY\_DIR)** - Holds a platform-dependent copy-command that makes sure to copy recursively.
+##     - **\$\$PWD** - Holds the name of the source code directory, where your .pro file resides.
+##     - **\$\$OUT\_PWD** - Holds the name of the build directory.
+##     Note that this may not work if you are running qmake and make in the same directory as your source code, as you will be copying into the same folder as you copy from.
+##     - **copydata** - Just a name we choose. You can replace this with whatever you want.
+##     - **first -** This is a build step that already exists in the Makefile generated by qmake.
+##     We attach the copy build step to this build step.
+##     - **export** - Makes the variable in the argument of the function available in a global scope.
+##     - **QMAKE\_EXTRA\_TARGETS** - Tells qmake that you want to build more targets than the ones it adds by default to the Makefile.

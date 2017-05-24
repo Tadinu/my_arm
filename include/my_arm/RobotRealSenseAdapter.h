@@ -4,7 +4,7 @@
 #include <QtCore>
 #include <QMutex>
 #include "KsGlobal.h"
-#include "RealSense/camera/sr300_nodelet.h"
+#include "RealSense/include/camera/sr300_nodelet.h"
 
 #ifdef ROBOT_REAL_SENSE_HANDS
 #define VREAL_SENSE_INSTANCE() RobotRealSenseAdapter::getInstance()

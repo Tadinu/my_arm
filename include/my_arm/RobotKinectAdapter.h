@@ -4,7 +4,6 @@
 #include <QtCore>
 #include <QMutex>
 #include "KsGlobal.h"
-#include "RealSense/camera/sr300_nodelet.h"
 
 class RobotKinectAdapter : public QObject {
     Q_OBJECT

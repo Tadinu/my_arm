@@ -79,11 +79,11 @@ render the frame or stream using the HandRender class provided in the hand_analy
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #endif
-#include "RealSense/pxc/pxcsensemanager.h"
-#include "RealSense/pxc/pxchandconfiguration.h"
-#include "RealSense/pxc/pxchandmodule.h"
+#include "RealSense/include/pxc/pxcsensemanager.h"
+#include "RealSense/include/pxc/pxchandconfiguration.h"
+#include "RealSense/include/pxc/pxchandmodule.h"
 #if 0
-#include "RealSense/handanalysis_render.h"  //SDK provided utility class used for rendering face data (packaged in libpxcutils.lib)
+#include "RealSense/include/handanalysis_render.h"  //SDK provided utility class used for rendering face data (packaged in libpxcutils.lib)
 #endif
 
 #define NUM_HANDS 2

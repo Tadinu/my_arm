@@ -188,7 +188,7 @@ set_target_properties(Qt5::Concurrent  PROPERTIES MAP_IMPORTED_CONFIG_COVERAGE "
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -428,31 +428,31 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   src/LeapMotion/camera_listener.cpp
 
                                   ## RealSense --
-                                  ##include/RealSense/Base.h
-                                  ##include/RealSense/Calibration.h
-                                  ##include/RealSense/Capture.h
-                                  ##include/RealSense/CaptureManager.h
-                                  ##include/RealSense/hands_publisher.h
-                                  ##include/RealSense/Image.h
-                                  ##include/RealSense/Metadata.h
-                                  ##include/RealSense/PlatformCameraControl.h
-                                  ##include/RealSense/Playback.h
-                                  ##include/RealSense/PowerState.h
-                                  ##include/RealSense/Projection.h
-                                  ##include/RealSense/Recording.h
-                                  ##include/RealSense/Reference.h
-                                  ##include/RealSense/Sample.h
-                                  ##include/RealSense/SampleReader.h
-                                  ##include/RealSense/SenseManager.h
-                                  ##include/RealSense/Session.h
-                                  ##include/RealSense/Status.h
-                                  ##include/RealSense/Type.h
-                                  ##include/RealSense/VideoModuleCommon.h
-                                  ##include/RealSense/VideoModule.h
+                                  ##3rd/RealSense/src/Base.h
+                                  ##3rd/RealSense/src/Calibration.h
+                                  ##3rd/RealSense/src/Capture.h
+                                  ##3rd/RealSense/src/CaptureManager.h
+                                  ##3rd/RealSense/src/hands_publisher.h
+                                  ##3rd/RealSense/src/Image.h
+                                  ##3rd/RealSense/src/Metadata.h
+                                  ##3rd/RealSense/src/PlatformCameraControl.h
+                                  ##3rd/RealSense/src/Playback.h
+                                  ##3rd/RealSense/src/PowerState.h
+                                  ##3rd/RealSense/src/Projection.h
+                                  ##3rd/RealSense/src/Recording.h
+                                  ##3rd/RealSense/src/Reference.h
+                                  ##3rd/RealSense/src/Sample.h
+                                  ##3rd/RealSense/src/SampleReader.h
+                                  ##3rd/RealSense/src/SenseManager.h
+                                  ##3rd/RealSense/src/Session.h
+                                  ##3rd/RealSense/src/Status.h
+                                  ##3rd/RealSense/src/Type.h
+                                  ##3rd/RealSense/src/VideoModuleCommon.h
+                                  ##3rd/RealSense/src/VideoModule.h
                                   ##
-                                  ##src/RealSense/hands_publisher.cpp
-                                  src/RealSense/camera/base_nodelet.cpp
-                                  src/RealSense/camera/sr300_nodelet.cpp
+                                  ##3rd/RealSense/src/hands_publisher.cpp
+                                  3rd/RealSense/src/camera/base_nodelet.cpp
+                                  3rd/RealSense/src/camera/sr300_nodelet.cpp
 
                                   ## Voxelyze --
                                   ##3rd/Voxelyze/src/Voxelyze.cpp
@@ -713,9 +713,9 @@ endif()
 # REAL SENSE ++
 if(librealsense_FOUND)
     # librealsense & realsense_camera are already installed as catkin packages in ROS!
-    include_directories(include/RealSense
-                        include/RealSense/camera
-                        include/RealSense/pxc
+    include_directories(3rd/RealSense/include
+                        3rd/RealSense/include/camera
+                        3rd/RealSense/include/pxc
                         )
     target_link_libraries(gazeboRobotArmController ${librealsense_LIBRARIES})
     target_link_libraries(robotArmController ${librealsense_LIBRARIES})
@@ -847,6 +847,13 @@ endif()
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
+install(PROGRAMS
+        scripts/my_arm/my_arm_controller.py
+        scripts/LeapMotion/leap_interface.py scripts/LeapMotion/sender.py scripts/LeapMotion/subscriber.py
+        scripts/shadow_hand/smart_handle.py
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 ## Mark executables and/or libraries for installation
 # install(TARGETS myArm myArm_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -872,6 +879,10 @@ endif()
 
 install(DIRECTORY scripts/LeapMotion/
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/LeapMotion
+)
+
+install(DIRECTORY scripts/shadow_hand/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts/shadow_hand
 )
 
 install(DIRECTORY 3rd/bullet_server/scripts/

@@ -7,13 +7,163 @@
 # PLEASE NOTE: move_to_joint_value_target_unsafe is used in this script, so collision checks
 # between the hand and arm are not made!
 
+# Native Python
 import sys
 import rospy
+import copy
+from copy import deepcopy
+from math import pi
+import time
+from threading import Timer
+
+from std_msgs.msg import String
+from std_srvs.srv import Empty
+
+# ROS Modules
+import geometry_msgs.msg
+from geometry_msgs.msg import Pose
+from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest
+from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
+from sensor_msgs.msg import JointState
+from trajectory_msgs.msg import JointTrajectoryPoint
+
+from tf.transformations import quaternion_from_euler
+from tf_conversions import posemath, toMsg
+
+import PyKDL
+
+# GAZEBO modules
+from gazebo_msgs.srv import GetModelState, SetModelConfiguration, SpawnModel, DeleteModel
+from actionlib import SimpleActionClient
+
+# RVIZ modules
+from visualization_msgs.msg import Marker
+
+# MOVEIT modules
+import moveit_commander
+from moveit_commander import MoveGroupCommander
+
+from moveit_msgs.srv import GetPlanningScene
+from moveit_commander import MoveGroupCommander
+
+# https://github.com/ros-planning/moveit_msgs/tree/kinetic-devel/msg
+import moveit_msgs.msg
+from moveit_msgs.msg import DisplayRobotState, PlanningScene, PlanningSceneComponents
+
+# SHADOWHAND package modules
 from sr_robot_commander.sr_arm_commander import SrArmCommander
 from sr_robot_commander.sr_hand_commander import SrHandCommander
 from sr_utilities.hand_finder import HandFinder
 
-# #####################################################################################
+# ########################################################################################################
+# ROSPY INIT
+# sr_multi_moveit/sr_multi_moveit_config/config/generated_robot.srdf
+MAIN_ARM_GROUP_NAME           = "right_arm"  # Just the arm itself, not including the hand!
+MAIN_ARM_HAND_GROUP_NAME      = "right_arm_and_hand"
+MAIN_ARM_WRIST_GROUP_NAME     = "right_arm_and_wrist"
+
+MAIN_HAND_GROUP_NAME          = "right_hand"
+MAIN_HAND_GROUP_WRIST         = "rh_wrist"
+MAIN_HAND_GROUP_FIRST_FINGER  = "rh_first_finger"
+MAIN_HAND_GROUP_MIDDLE_FINGER = "rh_middle_finger"
+MAIN_HAND_GROUP_RING_FINGER   = "rh_ring_finger"
+MAIN_HAND_GROUP_LITTLE_FINGER = "rh_little_finger"
+MAIN_HAND_GROUP_THUMB         = "rh_thumb"
+MAIN_HAND_GROUP_FINGERS       = "rh_fingers"
+
+
+rospy.init_node("my_arm_controller", anonymous=True)
+
+# ########################################################################################################
+# GAZEBO SERVICES INIT
+#
+rospy.wait_for_service("/gazebo/get_model_state", 10.0)
+rospy.wait_for_service("/gazebo/reset_world", 10.0)
+# ducta ++
+rospy.wait_for_service("/gazebo/spawn_sdf_model", 10.0)
+# ducta --
+gb_gz_reset_world = rospy.ServiceProxy("/gazebo/reset_world", Empty)
+gb_gz_get_pose_srv = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
+#gb_gz_spawn_sdf_model = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
+gb_gz_spawn_sdf_model = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
+gb_gz_delete_model = rospy.ServiceProxy("/gazebo/delete_model", DeleteModel)
+
+rospy.wait_for_service("/gazebo/pause_physics")
+gb_gz_pause_physics = rospy.ServiceProxy("/gazebo/pause_physics", Empty)
+rospy.wait_for_service("/gazebo/unpause_physics")
+gb_gz_unpause_physics = rospy.ServiceProxy("/gazebo/unpause_physics", Empty)
+rospy.wait_for_service("/controller_manager/switch_controller")
+gb_gz_switch_ctrl = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
+rospy.wait_for_service("/gazebo/set_model_configuration")
+gb_gz_set_model = rospy.ServiceProxy("/gazebo/set_model_configuration", SetModelConfiguration)
+
+rospy.wait_for_service('/get_planning_scene', 10.0)
+gb_gz_get_planning_scene = rospy.ServiceProxy('/get_planning_scene', GetPlanningScene)
+gb_gz_pub_planning_scene = rospy.Publisher('/planning_scene', PlanningScene, queue_size=10, latch=True)
+
+
+def gb_gz_get_model_pose(model_name, base_frame_name):
+    """
+    Gets the pose of the model in the specified base frame.
+
+    @return The pose of the ball.
+    """
+    return gb_gz_get_pose_srv.call(model_name, base_frame_name).pose
+
+def gb_gz_get_ball_pose():
+    """
+    Gets the pose of the ball in the world frame.
+
+    @return The pose of the ball.
+    """
+    return gb_gz_get_model_pose("cricket_ball", "world")
+
+
+# RVIZ PUBLISHER INIT
+#
+# # We create this DisplayTrajectory publisher which is used below to publish
+# # trajectories for RVIZ to visualize.
+gb_rviz_display_trajectory_publisher = rospy.Publisher(
+                                             '/move_group/display_planned_path',
+                                             moveit_msgs.msg.DisplayTrajectory)
+
+# # Wait for RVIZ to initialize. This sleep is ONLY to allow Rviz to come up.
+print "============ Waiting for RVIZ..."
+#rospy.sleep(10)
+print "============ Starting tutorial "
+
+# ########################################################################################################
+# INIT MOVE IT COMMANDER
+#
+# First initialize moveit_commander and rospy.
+moveit_commander.roscpp_initialize(sys.argv)
+
+# Instantiate a RobotCommander object.  This object is an interface to
+# the robot as a whole.
+# http://docs.ros.org/jade/api/moveit_commander/html/classmoveit__commander_1_1robot_1_1RobotCommander.html
+gb_robot = moveit_commander.RobotCommander()
+# gb_robot.get_group_names()
+# gb_robot.get
+# gb_robot.get_current_state()
+# gb_robot.get_current_variable_values
+
+# Instantiate a PlanningSceneInterface object.  This object is an interface
+# to the world surrounding the robot.
+scene = moveit_commander.PlanningSceneInterface()
+
+# Instantiate a MoveGroupCommander object.  This object is an interface
+# to one group of joints.  In this case the group is the joints in the left
+# arm.  This interface can be used to plan and execute motions on the left arm.
+gb_arm_joint_group  = moveit_commander.MoveGroupCommander(MAIN_ARM_GROUP_NAME)
+gb_hand_joint_group = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_NAME)
+
+gb_TH_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_THUMB)
+gb_FF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_FIRST_FINGER)
+gb_MF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_MIDDLE_FINGER)
+gb_RF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_RING_FINGER)
+gb_LF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_LITTLE_FINGER)
+
+# ########################################################################################################
 # LEAP MOTION
 #
 import leap_interface
@@ -24,7 +174,7 @@ NODENAME = 'leap_skeleton_pub'
 PARAMNAME_FREQ = 'freq'
 PARAMNAME_FREQ_ENTIRE = '/' + NODENAME + '/' + PARAMNAME_FREQ
 
-def catchHandData():
+def catchHandLeapMotionData():
     li = leap_interface.Runner()
     li.setDaemon(True)
     li.start()
@@ -35,9 +185,9 @@ def catchHandData():
         timenow=rospy.Time.now()
 
         if li.listener.left_hand:
-            analyzeHandData(li.listener.left_hand)
+            analyzeHandLeapMotionData(li.listener.left_hand)
         elif li.listener.right_hand:
-            analyzeHandData(li.listener.right_hand)
+            analyzeHandLeapMotionData(li.listener.right_hand)
 
         fingerNames = ['thumb', 'index', 'middle', 'ring', 'pinky']
         fingerPointNames = ['metacarpal', 'proximal',
@@ -58,7 +208,7 @@ def catchHandData():
         rospy.sleep(0.01)
     print('ROSPY SHUT DOWN')
 
-def analyzeHandData(hand):
+def analyzeHandLeapMotionData(hand):
     for finger in hand.fingers:
         finger_name=hand_name+"_"+finger_names[finger.type()]
 
@@ -70,23 +220,103 @@ def analyzeHandData(hand):
             prev_bone_name=bone_name
             prev_bone_absolute=bone_absolute
 
-# #####################################################################################
+# ########################################################################################################
 # SHADOW HAND CONTROL
 #
-rospy.init_node("basic_hand_arm_example", anonymous=True)
 
-# handfinder is used to access the hand parameters
-hand_finder = HandFinder()
-hand_parameters = hand_finder.get_hand_parameters()
-prefix = hand_parameters.mapping.values()
+# HandFinder is used to access the hand parameters
+gb_hand_finder = HandFinder()
+gb_hand_parameters = gb_hand_finder.get_hand_parameters()
+prefix = gb_hand_parameters.mapping.values()
 rospy.loginfo('HAND TYPE:' + prefix[0])
-hand_serial = hand_parameters.mapping.keys()[0]
-rospy.loginfo('HAND SERIAL:' + hand_serial)
+gb_hand_serial = gb_hand_parameters.mapping.keys()[0]
+rospy.loginfo('HAND SERIAL:' + gb_hand_serial)
 
-#hand_commander = SrHandCommander(name="right_hand", prefix="rh")
-hand_commander = SrHandCommander(hand_parameters=hand_parameters, hand_serial=hand_serial)
-arm_commander = SrArmCommander(name="right_arm", set_ground=False)
+# Arm & Hand Commander
+gb_arm_commander  = SrArmCommander(name=MAIN_ARM_GROUP_NAME, set_ground=False)
+gb_hand_commander = SrHandCommander(name=MAIN_HAND_GROUP_NAME, prefix="", \
+                                    hand_parameters=gb_hand_parameters,   \
+                                    hand_serial=gb_hand_serial)
+#gb_hand_commander = SrHandCommander(name="right_hand", prefix="rh")
 
+hand_tactile_type  = gb_hand_commander.get_tactile_type()
+rospy.loginfo('HAND TACTILE TYPE:' + gb_hand_serial)
+hand_tactile_state = gb_hand_commander.get_tactile_state() # as a msg from a callback
+#rospy.loginfo('HAND TACTILE STATE:' + hand_tactile_state)
+
+# Hand Mapping(to do the grasp pose)
+gb_hand_mapping = gb_hand_parameters.mapping[gb_hand_serial]
+
+# Hand Joints
+gb_joints = gb_hand_finder.get_hand_joints()[gb_hand_mapping]
+
+deep_joint_poses = [0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0, 1.5707]
+deep_hand_joint_names = {0: 'rh_FFJ1', 1 : 'rh_FFJ2', 2 : 'rh_FFJ3',  3: 'rh_FFJ4',
+                         4: 'rh_MFJ1', 5 : 'rh_MFJ2', 6 : 'rh_MFJ3',  7: 'rh_MFJ4',
+                         8: 'rh_RFJ1', 9 : 'rh_RFJ2', 10: 'rh_RFJ3', 11: 'rh_RFJ4',
+                         12:'rh_LFJ1', 13: 'rh_LFJ2', 14: 'rh_LFJ3', 15: 'rh_LFJ4', 16: 'rh_LFJ5',
+                         17:'rh_THJ1', 18: 'rh_THJ2', 19: 'rh_THJ3', 20: 'rh_THJ4', 21: 'rh_THJ5' }
+
+gb_arm_joint_goals =  {'ra_shoulder_pan_joint' : 0.0,
+                       'ra_shoulder_lift_joint': 0.0,
+                       'ra_elbow_joint': 0.0,
+                       'ra_wrist_1_joint': 0.0,
+                       'ra_wrist_2_joint': 0.0,
+                       'ra_wrist_3_joint': 0.0,
+                       'rh_WRJ2': 0.0,
+                       'rh_WRJ1': 0.0}
+
+
+def gbMoveArmInitialPos():
+    gb_arm_joint_goals['ra_shoulder_pan_joint']  = 1.0
+    gb_arm_joint_goals['ra_shoulder_lift_joint'] = 0.1
+    gb_arm_joint_goals['ra_elbow_joint']         = 0.0
+
+    gb_arm_joint_goals['ra_wrist_1_joint']       = 0.0
+    gb_arm_joint_goals['ra_wrist_2_joint']       = 0.0
+    gb_arm_joint_goals['ra_wrist_3_joint']       = pi
+
+    gb_arm_joint_goals['rh_WRJ2']                = 0.0
+    gb_arm_joint_goals['rh_WRJ1']                = 0.5
+
+    gb_arm_commander.move_to_joint_value_target_unsafe(gb_arm_joint_goals, 3.0, True)
+    return
+
+gbMoveArmInitialPos()
+
+def gbMoveArm(joint_goals):
+    gb_arm_joint_goals['ra_wrist_2_joint']      = joint_goals[0]
+    gb_arm_joint_goals['ra_wrist_1_joint']      = joint_goals[1]
+    gb_arm_joint_goals['ra_shoulder_pan_joint'] = joint_goals[2]
+    gb_arm_joint_goals['ra_wrist_3_joint']      = joint_goals[3]
+    gb_arm_joint_goals['rh_WRJ2']               = joint_goals[4]
+    gb_arm_joint_goals['rh_WRJ1']               = joint_goals[5]
+    gb_arm_commander.move_to_joint_value_target_unsafe(gb_arm_joint_goals, 3.0, True)
+    return
+
+# def onJointState(state):
+#     print('ON JOINT STATE ##################################################\n')
+#     i = 0
+#     for jointName in state.joint_state.name:
+#         rospy.loginfo(jointName + ':' + state.joint_state.position[i] + '\n')
+#         for name in gb_arm_joint_goals.keys():
+#             if(jointName == name):
+#                 gb_arm_joint_goals[name] = state.joint_state.position[i]
+#                 break
+#     else:
+#         gb_arm_commander.move_to_joint_value_target_unsafe(gb_arm_joint_goals, 3.0, True)
+#     #print(statemulti_dof_joint_state)
+#
+# rospy.Subscriber("/my_arm_state",
+#                  DisplayRobotState, onJointState)
+
+# ########################################################################################################
+# DO ARM TEACHING
+#
 # Specify goals for hand and arm
 hand_joint_goals_1 = {'rh_RFJ2': 1.59, 'rh_RFJ3': 1.49, 'rh_RFJ1': 1.47, 'rh_RFJ4': -0.01, 'rh_LFJ4': 0.02,
                       'rh_LFJ5': 0.061, 'rh_LFJ1': 1.41, 'rh_LFJ2': 1.60, 'rh_LFJ3': 1.49, 'rh_THJ2': 0.64,
@@ -150,154 +380,148 @@ arm_joint_goals_8 = {'ra_shoulder_lift_joint': -1.55, 'ra_elbow_joint': 1.41, 'r
                      'ra_wrist_1_joint': 0.61, 'ra_shoulder_pan_joint': -1.55, 'ra_wrist_3_joint': -0.57,
                      'rh_WRJ2': -0.04, 'rh_WRJ1': 0.16}
 
-deep_joint_poses = [0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.0, 1.5707]
-deep_hand_joint_names = {0: 'rh_FFJ1', 1 : 'rh_FFJ2', 2 : 'rh_FFJ3',  3: 'rh_FFJ4',
-                         4: 'rh_MFJ1', 5 : 'rh_MFJ2', 6 : 'rh_MFJ3',  7: 'rh_MFJ4',
-                         8: 'rh_RFJ1', 9 : 'rh_RFJ2', 10: 'rh_RFJ3', 11: 'rh_RFJ4',
-                         12:'rh_LFJ1', 13: 'rh_LFJ2', 14: 'rh_LFJ3', 15: 'rh_LFJ4',
-                         16:'rh_THJ1', 17: 'rh_THJ2', 18: 'rh_THJ3', 19: 'rh_THJ4', 20: 'rh_THJ5' }
 
-# ####################################################################################
-# DO ARM TEACHING
-#
 # sleep for some time (default 20s) during which the arm can be moved around by pushing it
 # but be careful to get away before the time runs out. You are warned
 rospy.loginfo("Set arm teach mode ON")
-arm_commander.set_teach_mode(True)
+gb_arm_commander.set_teach_mode(True)
 rospy.sleep(1.0)
 
 rospy.loginfo("Set arm teach mode OFF")
-arm_commander.set_teach_mode(False)
+gb_arm_commander.set_teach_mode(False)
 
 # Move through each goal
 # joint states are sent to the commanders, with a time for execution and a flag as to whether
 # or not the commander should wait for the command to complete before moving to the next command.
 
-# # Move hand and arm
-# joint_goals = hand_joint_goals_1
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# hand_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, False)
-# joint_goals = arm_joint_goals_1
-# rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
-# arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
-#
-# # Move hand and arm
-# joint_goals = hand_joint_goals_2
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# hand_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, False)
-# joint_goals = arm_joint_goals_2
-# rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
-# arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
-#
-# # Move arm
-# joint_goals = arm_joint_goals_3
-# rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
-# arm_commander.move_to_joint_value_target_unsafe(joint_goals, 1.0, True)
-#
-# # Move hand
-# joint_goals = hand_joint_goals_3
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# hand_commander.move_to_joint_value_target_unsafe(joint_goals, 2.0, True)
-#
-# # Move arm
-# joint_goals = arm_joint_goals_6
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
-#
-# # Move hand
-# joint_goals = hand_joint_goals_4
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# hand_commander.move_to_joint_value_target_unsafe(joint_goals, 2.0, True)
-#
-# # Move arm
-# joint_goals = arm_joint_goals_5
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# arm_commander.move_to_joint_value_target_unsafe(joint_goals, 2.0, True)
-#
-# # Move arm and hand
-# joint_goals = arm_joint_goals_7
-# rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
-# arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, False)
-# joint_goals = hand_joint_goals_5
-# rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
-# hand_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
+def do_move_arm_hand():
+    # Move hand and arm
+    joint_goals = hand_joint_goals_1
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_hand_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, False)
+    joint_goals = arm_joint_goals_1
+    rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
+    gb_arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
 
-# ####################################################################################
+    # Move hand and arm
+    joint_goals = hand_joint_goals_2
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_hand_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, False)
+    joint_goals = arm_joint_goals_2
+    rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
+    gb_arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
+
+    # Move arm
+    joint_goals = arm_joint_goals_3
+    rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
+    gb_arm_commander.move_to_joint_value_target_unsafe(joint_goals, 1.0, True)
+
+    # Move hand
+    joint_goals = hand_joint_goals_3
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_hand_commander.move_to_joint_value_target_unsafe(joint_goals, 2.0, True)
+
+    # Move arm
+    joint_goals = arm_joint_goals_6
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
+
+    # Move hand
+    joint_goals = hand_joint_goals_4
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_hand_commander.move_to_joint_value_target_unsafe(joint_goals, 2.0, True)
+
+    # Move arm
+    joint_goals = arm_joint_goals_5
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_arm_commander.move_to_joint_value_target_unsafe(joint_goals, 2.0, True)
+
+    # Move arm and hand
+    joint_goals = arm_joint_goals_7
+    rospy.loginfo("Moving arm to joint states\n" + str(joint_goals) + "\n")
+    gb_arm_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, False)
+    joint_goals = hand_joint_goals_5
+    rospy.loginfo("Moving hand to joint states\n" + str(joint_goals) + "\n")
+    gb_hand_commander.move_to_joint_value_target_unsafe(joint_goals, 3.0, True)
+
+#do_move_arm_hand()
+
+# ########################################################################################################
 # DO HAND TEACHING
 #
-hand_commander.set_teach_mode(True)
+gb_hand_commander.set_teach_mode(True)
 # sleep for some time (default 20s) during which the hand joints can be moved manually
 rospy.sleep(1.0)
 rospy.loginfo("Set hand teach mode OFF")
-hand_commander.set_teach_mode(False)
+gb_hand_commander.set_teach_mode(False)
+# ...
 
-# ####################################################################################
+# ########################################################################################################
 # DO SINUISOID FINGERS
 #
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from numpy import sin, cos, pi, arange
 
-# cycles per second of sine wave
-f = 1
-# angular frequency, rads/s
-w = 2 * pi * f
-# time for motion to complete
-ts = 20
+def do_sinuisoid_fingers():
+    # cycles per second of sine wave
+    f = 1
+    # angular frequency, rads/s
+    w = 2 * pi * f
+    # time for motion to complete
+    ts = 20
 
-# specify 2 joints to move
-joint_names = [prefix[0] + '_FFJ3', prefix[0] + '_RFJ3']
+    # specify 2 joints to move
+    joint_names = [prefix[0] + '_FFJ3', prefix[0] + '_RFJ3']
 
-# set max and min joint positions
-min_pos_J3 = 0.0
-max_pos_J3 = pi / 2
+    # set max and min joint positions
+    min_pos_J3 = 0.0
+    max_pos_J3 = pi / 2
 
-rospy.sleep(rospy.Duration(2))
+    rospy.sleep(rospy.Duration(2))
 
-hand_joints_goal = {joint_names[0]: 0.0, joint_names[1]: 0.0}
+    hand_joints_goal = {joint_names[0]: 0.0, joint_names[1]: 0.0}
 
-rospy.loginfo("Running joints trajectory")
+    rospy.loginfo("Running joints trajectory")
 
-# initialising the joint trajectory message
-joint_trajectory = JointTrajectory()
-joint_trajectory.header.stamp = rospy.Time.now()
-joint_trajectory.joint_names = list(hand_joints_goal.keys())
-joint_trajectory.points = []
+    # initialising the joint trajectory message
+    joint_trajectory = JointTrajectory()
+    joint_trajectory.header.stamp = rospy.Time.now()
+    joint_trajectory.joint_names = list(hand_joints_goal.keys())
+    joint_trajectory.points = []
 
-# generate sinusoidal list of data points, two joints moving out of phase
-for t in arange(0.002, ts, 0.02):
-    trajectory_point = JointTrajectoryPoint()
-    trajectory_point.time_from_start = rospy.Duration.from_sec(float(t))
-    trajectory_point.positions = []
-    trajectory_point.velocities = []
-    trajectory_point.accelerations = []
-    trajectory_point.effort = []
+    # generate sinusoidal list of data points, two joints moving out of phase
+    for t in arange(0.002, ts, 0.02):
+        trajectory_point = JointTrajectoryPoint()
+        trajectory_point.time_from_start = rospy.Duration.from_sec(float(t))
+        trajectory_point.positions = []
+        trajectory_point.velocities = []
+        trajectory_point.accelerations = []
+        trajectory_point.effort = []
 
-    for key in joint_trajectory.joint_names:
-        if key in joint_names[0]:  # generate joint positions for first joint
-            joint_position = sin(w * t) * (max_pos_J3 - min_pos_J3) / 2 + (max_pos_J3 - min_pos_J3) / 2 + min_pos_J3
-            trajectory_point.positions.append(joint_position)
-        elif key in joint_names[1]:  # generate joint positions for second joint
-            joint_position = cos(w * t) * (max_pos_J3 - min_pos_J3) / 2 + (max_pos_J3 - min_pos_J3) / 2 + min_pos_J3
-            trajectory_point.positions.append(joint_position)
-        else:
-            trajectory_point.positions.append(hand_joints_goal[key])
+        for key in joint_trajectory.joint_names:
+            if key in joint_names[0]:  # generate joint positions for first joint
+                joint_position = sin(w * t) * (max_pos_J3 - min_pos_J3) / 2 + (max_pos_J3 - min_pos_J3) / 2 + min_pos_J3
+                trajectory_point.positions.append(joint_position)
+            elif key in joint_names[1]:  # generate joint positions for second joint
+                joint_position = cos(w * t) * (max_pos_J3 - min_pos_J3) / 2 + (max_pos_J3 - min_pos_J3) / 2 + min_pos_J3
+                trajectory_point.positions.append(joint_position)
+            else:
+                trajectory_point.positions.append(hand_joints_goal[key])
 
-        trajectory_point.velocities.append(0.0)
-        trajectory_point.accelerations.append(0.0)
-        trajectory_point.effort.append(0.0)
+            trajectory_point.velocities.append(0.0)
+            trajectory_point.accelerations.append(0.0)
+            trajectory_point.effort.append(0.0)
 
-    joint_trajectory.points.append(trajectory_point)
+        joint_trajectory.points.append(trajectory_point)
 
-# Send trajectory to hand_commander
-hand_commander.run_joint_trajectory_unsafe(joint_trajectory)
+    # Send trajectory to gb_hand_commander
+    gb_hand_commander.run_joint_trajectory_unsafe(joint_trajectory)
 
-rospy.sleep(rospy.Duration(15))
+    rospy.sleep(rospy.Duration(15))
 
-# ####################################################################################
+#do_sinuisoid_fingers()
+
+# ########################################################################################################
 # DO FINGERS TRAJECTORY
 #
 import numpy as np
@@ -475,7 +699,7 @@ class PartialTrajListener():
         plt.show()
 
 
-def construct_trajectory_point(posture, duration):
+def construct_trajectory_point(joint_trajectory, posture, duration):
     trajectory_point = JointTrajectoryPoint()
     trajectory_point.time_from_start = rospy.Duration.from_sec(float(duration))
     for key in joint_trajectory.joint_names:
@@ -522,28 +746,23 @@ grasp5 = {'rh_FFJ1': 0.0, 'rh_FFJ2': 0.0, 'rh_FFJ3': 1.5707, 'rh_FFJ4': 0.0,
 grasp_partial_1 = {'rh_FFJ3': 1.06}
 grasp_partial_2 = {'rh_FFJ3': 1.2}
 
+open_hand_pose = {'rh_FFJ1': 0.0, 'rh_FFJ2': 0.0, 'rh_FFJ3': 0.0, 'rh_FFJ4': 0.0,
+                  'rh_MFJ1': 0.0, 'rh_MFJ2': 0.0, 'rh_MFJ3': 0.0, 'rh_MFJ4': 0.0,
+                  'rh_RFJ1': 0.0, 'rh_RFJ2': 0.0, 'rh_RFJ3': 0.0, 'rh_RFJ4': 0.0,
+                  'rh_LFJ1': 0.0, 'rh_LFJ2': 0.0, 'rh_LFJ3': 0.0, 'rh_LFJ4': 0.0,
+                  'rh_LFJ5': 0.0, 'rh_THJ1': 0.0, 'rh_THJ2': 0.0, 'rh_THJ3': 0.0,
+                  'rh_THJ4': 0.0, 'rh_THJ5': 0.0}
+
 def do_fingers_trajectory():
     listener = PartialTrajListener()
-    hand_finder = HandFinder()
-
-    hand_parameters = hand_finder.get_hand_parameters()
-    hand_serial = hand_parameters.mapping.keys()[0]
-
-    hand_commander = SrHandCommander(hand_parameters=hand_parameters,
-                                     hand_serial=hand_serial)
-
-    hand_mapping = hand_parameters.mapping[hand_serial]
-
-    # Hand joints are detected
-    joints = hand_finder.get_hand_joints()[hand_mapping]
 
     # Adjust poses according to the hand loaded
-    open_hand_current = dict([(i, open_hand[i]) for i in joints if i in open_hand])
-    grasp1_current = dict([(i, grasp1[i]) for i in joints if i in grasp1])
-    grasp2_current = dict([(i, grasp2[i]) for i in joints if i in grasp2])
-    grasp3_current = dict([(i, grasp3[i]) for i in joints if i in grasp3])
-    grasp4_current = dict([(i, grasp4[i]) for i in joints if i in grasp4])
-    grasp5_current = dict([(i, grasp5[i]) for i in joints if i in grasp5])
+    open_hand_current = dict([(i, open_hand_pose[i]) for i in gb_joints if i in open_hand_pose])
+    grasp1_current = dict([(i, grasp1[i]) for i in gb_joints if i in grasp1])
+    grasp2_current = dict([(i, grasp2[i]) for i in gb_joints if i in grasp2])
+    grasp3_current = dict([(i, grasp3[i]) for i in gb_joints if i in grasp3])
+    grasp4_current = dict([(i, grasp4[i]) for i in gb_joints if i in grasp4])
+    grasp5_current = dict([(i, grasp5[i]) for i in gb_joints if i in grasp5])
 
     start_time = rospy.Time.now()
 
@@ -554,28 +773,28 @@ def do_fingers_trajectory():
     joint_trajectory.header.stamp = start_time + rospy.Duration.from_sec(float(trajectory_start_time))
     joint_trajectory.joint_names = list(open_hand_current.keys())
     joint_trajectory.points = []
-    trajectory_point = construct_trajectory_point(open_hand_current, 1.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, open_hand_current, 1.0)
     joint_trajectory.points.append(trajectory_point)
-    hand_commander.run_joint_trajectory_unsafe(joint_trajectory, True)
+    gb_hand_commander.run_joint_trajectory_unsafe(joint_trajectory, True)
 
-    # Closing index and middle fingers. Trajectories are generated from grasp1 - grasp5 and run with hand_commander
+    # Closing index and middle fingers. Trajectories are generated from grasp1 - grasp5 and run with gb_hand_commander
     rospy.loginfo("Closing index and ring fingers")
     trajectory_start_time = 4.0
     joint_trajectory = JointTrajectory()
     joint_trajectory.header.stamp = start_time + rospy.Duration.from_sec(float(trajectory_start_time))
     joint_trajectory.joint_names = list(grasp1_current.keys())
     joint_trajectory.points = []
-    trajectory_point = construct_trajectory_point(grasp1_current, 1.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp1_current, 1.0)
     joint_trajectory.points.append(trajectory_point)
-    trajectory_point = construct_trajectory_point(grasp2_current, 4.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp2_current, 4.0)
     joint_trajectory.points.append(trajectory_point)
-    trajectory_point = construct_trajectory_point(grasp3_current, 6.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp3_current, 6.0)
     joint_trajectory.points.append(trajectory_point)
-    trajectory_point = construct_trajectory_point(grasp4_current, 8.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp4_current, 8.0)
     joint_trajectory.points.append(trajectory_point)
-    trajectory_point = construct_trajectory_point(grasp5_current, 10.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp5_current, 10.0)
     joint_trajectory.points.append(trajectory_point)
-    hand_commander.run_joint_trajectory_unsafe(joint_trajectory, False)
+    gb_hand_commander.run_joint_trajectory_unsafe(joint_trajectory, False)
 
     # Interrupting trajectory of index using two partial trajectories
     rospy.loginfo("Moving index finger to partial trajectory goals")
@@ -585,11 +804,11 @@ def do_fingers_trajectory():
     joint_trajectory.header.stamp = start_time + rospy.Duration.from_sec(float(trajectory_start_time))
     joint_trajectory.joint_names = list(grasp_partial_1.keys())
     joint_trajectory.points = []
-    trajectory_point = construct_trajectory_point(grasp_partial_1, 1.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp_partial_1, 1.0)
     joint_trajectory.points.append(trajectory_point)
-    trajectory_point = construct_trajectory_point(grasp_partial_2, 3.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp_partial_2, 3.0)
     joint_trajectory.points.append(trajectory_point)
-    hand_commander.run_joint_trajectory_unsafe(joint_trajectory, False)
+    gb_hand_commander.run_joint_trajectory_unsafe(joint_trajectory, False)
 
     graphs_finished = False
 
@@ -606,39 +825,29 @@ def do_fingers_trajectory():
             break
         rate.sleep()
 
-do_fingers_trajectory()
+# do_fingers_trajectory()
 
-# ####################################################################################
+# ########################################################################################################
 # DO GRASP POSE
 #
-hand_mapping = hand_parameters.mapping[hand_serial]
 
-# Hand joints are detected
-joints = hand_finder.get_hand_joints()[hand_mapping]
-
-open_hand = {'rh_FFJ1': 0.0, 'rh_FFJ2': 0.0, 'rh_FFJ3': 0.0, 'rh_FFJ4': 0.0,
-             'rh_MFJ1': 0.0, 'rh_MFJ2': 0.0, 'rh_MFJ3': 0.0, 'rh_MFJ4': 0.0,
-             'rh_RFJ1': 0.0, 'rh_RFJ2': 0.0, 'rh_RFJ3': 0.0, 'rh_RFJ4': 0.0,
-             'rh_LFJ1': 0.0, 'rh_LFJ2': 0.0, 'rh_LFJ3': 0.0, 'rh_LFJ4': 0.0,
-             'rh_LFJ5': 0.0, 'rh_THJ1': 0.0, 'rh_THJ2': 0.0, 'rh_THJ3': 0.0,
-             'rh_THJ4': 0.0, 'rh_THJ5': 0.0}
-
-keys = ['rh_FFJ1', 'rh_FFJ2', 'rh_FFJ3', 'rh_FFJ4', 'rh_LFJ1', 'rh_LFJ2',
-        'rh_LFJ3', 'rh_LFJ4', 'rh_LFJ5', 'rh_MFJ1', 'rh_MFJ2', 'rh_MFJ3',
-        'rh_MFJ4', 'rh_RFJ1', 'rh_RFJ2', 'rh_RFJ3', 'rh_RFJ4', 'rh_THJ1',
-        'rh_THJ2', 'rh_THJ3', 'rh_THJ4', 'rh_THJ5']
+joint_names = ['rh_FFJ1', 'rh_FFJ2', 'rh_FFJ3', 'rh_FFJ4',
+               'rh_LFJ1', 'rh_LFJ2', 'rh_LFJ3', 'rh_LFJ4', 'rh_LFJ5',
+               'rh_MFJ1', 'rh_MFJ2', 'rh_MFJ3', 'rh_MFJ4',
+               'rh_RFJ1', 'rh_RFJ2', 'rh_RFJ3', 'rh_RFJ4',
+               'rh_THJ1', 'rh_THJ2', 'rh_THJ3', 'rh_THJ4', 'rh_THJ5']
 
 position = [1.07, 0.26, 0.88, -0.34, 0.85, 0.60,
             0.21, -0.23, 0.15, 1.06, 0.16, 1.04,
             0.05, 1.04, 0.34, 0.68, -0.24, 0.35,
             0.69, 0.18, 1.20, -0.11]
 
-def do_grasp_pose():
-    grasp_pose = dict(zip(keys, position))
+def gbGraspPose():
+    grasp_pose = dict(zip(joint_names, position))
 
     # Adjust poses according to the hand loaded
-    open_hand_current = dict([(i, open_hand[i]) for i in joints if i in open_hand])
-    grasp_pose_current = dict([(i, grasp_pose[i]) for i in joints if i in grasp_pose])
+    open_hand_current  = dict([(i, open_hand_pose[i]) for i in gb_joints if i in open_hand_pose])
+    grasp_pose_current = dict([(i, grasp_pose[i]) for i in gb_joints if i in grasp_pose])
 
     # Partial list of goals
     grasp_partial_1 = {'rh_FFJ3': 0.50}
@@ -646,12 +855,12 @@ def do_grasp_pose():
     start_time = rospy.Time.now()
 
     # Move hand using move_to_joint_value_target_unsafe to 1st position
-    hand_commander.move_to_joint_value_target_unsafe(open_hand_current, 1.0, True)
+    gb_hand_commander.move_to_joint_value_target_unsafe(open_hand_current, 1.0, True)
 
     rospy.sleep(2)
 
     # Move hand using run_joint_trajectory_unsafe to joint angles specified in 'position' list
-    hand_commander.move_to_joint_value_target_unsafe(grasp_pose_current, 1.0, False)
+    gb_hand_commander.move_to_joint_value_target_unsafe(grasp_pose_current, 1.0, False)
 
     trajectory_start_time = 2.0
     joint_trajectory = JointTrajectory()
@@ -660,15 +869,577 @@ def do_grasp_pose():
     joint_trajectory.header.stamp = start_time + rospy.Duration.from_sec(float(trajectory_start_time))
     joint_trajectory.joint_names = list(grasp_partial_1.keys())
     joint_trajectory.points = []
-    trajectory_point = construct_trajectory_point(grasp_partial_1, 1.0)
+    trajectory_point = construct_trajectory_point(joint_trajectory, grasp_partial_1, 1.0)
     joint_trajectory.points.append(trajectory_point)
 
-    hand_commander.run_joint_trajectory_unsafe(joint_trajectory, True)
+    gb_hand_commander.run_joint_trajectory_unsafe(joint_trajectory, True)
     rospy.sleep(2)
 
-do_grasp_pose()
+#gbGraspPose()
 
-# ####################################################################################
+# ########################################################################################################
+# MOVEIT
+# https://github.com/ros-planning/moveit_pr2/blob/hydro-devel/pr2_moveit_tutorials/planning/scripts/move_group_python_interface_tutorial.py
+#
+def move_group():
+    # # Getting Basic Information
+    # # ^^^^^^^^^^^^^^^^^^^^^^^^^
+    # #
+    # # We can get the name of the reference frame for this robot
+    print "============ Reference frame: %s" % gb_arm_joint_group.get_planning_frame()
+
+    # # We can also print the name of the end-effector link for this group
+    print "============ Reference frame: %s" % gb_arm_joint_group.get_end_effector_link()
+
+    # # We can get a list of all the groups in the robot
+    print "============ Robot Groups:"
+    print gb_robot.get_group_names()
+
+    # # Sometimes for debugging it is useful to print the entire state of the
+    # # robot.
+    print "============ Printing robot state"
+    print gb_robot.get_current_state()
+    print "============"
+
+
+    # # Planning to a Pose goal
+    # # ^^^^^^^^^^^^^^^^^^^^^^^
+    # # We can plan a motion for this group to a desired pose for the
+    # # end-effector
+    print "============ Generating plan 1"
+    #pose_target = geometry_msgs.msg.Pose()
+    #pose_target.orientation.w = 1.0
+    #pose_target.position.x = 0.150031
+    #pose_target.position.y = -0.000046
+    #pose_target.position.z = 0.773986
+    #ball_pose = gb_gz_get_ball_pose()
+    ball_pose = gb_gz_get_model_pose("cricket_ball", "world")
+    hammer_pose = ball_pose
+    hammer_pose.position.x += 0.1
+    f = open('/usr/share/gazebo-7/models/hammer/model.sdf','r')
+    hammer_model = f.read()
+    gb_gz_spawn_sdf_model("hammer", hammer_model, "", hammer_pose, "world")
+
+    ball_pose.position.z += 0.3
+    gb_arm_joint_group.set_pose_target(ball_pose)
+
+    # # Now, we call the planner to compute the plan
+    # # and visualize it if successful
+    # # Note that we are just planning, not asking move_group
+    # # to actually move the robot
+    arm_plan = gb_arm_joint_group.plan()
+
+    print "============ Waiting while RVIZ displays plan1..."
+    rospy.sleep(5)
+
+
+    # # You can ask RVIZ to visualize a plan (aka trajectory) for you.  But the
+    # # gb_arm_joint_group.plan() method does this automatically so this is not that useful
+    # # here (it just displays the same trajectory again).
+    print "============ Visualizing plan1"
+    #display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    #
+    #display_trajectory.trajectory_start = gb_robot.get_current_state()
+    #display_trajectory.trajectory.append(plan1)
+    #gb_rviz_display_trajectory_publisher.publish(display_trajectory);
+
+    #print "============ Waiting while plan1 is visualized (again)..."
+    #rospy.sleep(5)
+
+
+    # # Moving to a pose goal
+    # # ^^^^^^^^^^^^^^^^^^^^^
+    # #
+    # # Moving to a pose goal is similar to the step above
+    # # except we now use the go() function. Note that
+    # # the pose goal we had set earlier is still active
+    # # and so the robot will try to move to that goal. We will
+    # # not use that function in this tutorial since it is
+    # # a blocking function and requires a controller to be active
+    # # and report success on execution of a trajectory.
+
+    # Uncomment below line when working with a real robot
+    # gb_arm_joint_group.go(wait=True)
+
+    # Use execute instead if you would like the robot to follow
+    # the plan that has already been computed
+    # gb_arm_joint_group.execute(plan1)
+
+    # ducta Move Plan 0++
+    #group_variable_values = gb_arm_joint_group.get_current_joint_values()
+    #print "============ Joint values 0: ", group_variable_values
+    #gbMoveArm(group_variable_values)
+    # OR
+    #gb_arm_joint_group.execute(arm_plan)
+    #rospy.sleep(3)
+
+    # Move FF to the ball
+    gb_FF_joint_group.set_pose_target(hammer_pose)
+    ff_plan  = gb_FF_joint_group.plan()
+    rospy.sleep(2)
+    gb_FF_joint_group.execute(ff_plan)
+
+    # Move TH to the ball
+    gb_TH_joint_group.set_pose_target(hammer_pose)
+    th_plan  = gb_TH_joint_group.plan()
+    rospy.sleep(2)
+    gb_TH_joint_group.execute(th_plan)
+
+    return
+    # ducta --
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # # Planning to a joint-space goal
+    # # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # #
+    # # Let's set a joint space goal and move towards it.
+    # # First, we will clear the pose target we had just set.
+
+    gb_arm_joint_group.clear_pose_targets()
+
+    # # Then, we will get the current set of joint values for the group
+    group_variable_values = gb_arm_joint_group.get_current_joint_values()
+    print "============ Joint values 1: ", group_variable_values
+
+    # # Now, let's modify one of the joints, plan to the new joint
+    # # space goal and visualize the plan
+    group_variable_values[0] = 1.0
+    gb_arm_joint_group.set_joint_value_target(group_variable_values)
+
+    plan2 = gb_arm_joint_group.plan()
+    #display_trajectory.trajectory.append(plan2)
+    #gb_rviz_display_trajectory_publisher.publish(display_trajectory);
+
+    print "============ Waiting while RVIZ displays plan2..."
+    rospy.sleep(5)
+    # ducta Move Plan 2++
+    group_variable_values = gb_arm_joint_group.get_current_joint_values()
+    print "============ Joint values 2: ", group_variable_values
+    gbMoveArm(group_variable_values)
+    # ducta --
+
+    # # Cartesian Paths
+    # # ^^^^^^^^^^^^^^^
+    # # You can plan a cartesian path directly by specifying a list of waypoints
+    # # for the end-effector to go through.
+    waypoints = []
+
+    # start with the current pose
+    waypoints.append(gb_arm_joint_group.get_current_pose().pose)
+
+    # first orient gripper and move forward (+x)
+    wpose = geometry_msgs.msg.Pose()
+    wpose.orientation.w = 1.0
+    wpose.position.x = waypoints[0].position.x + 0.1
+    wpose.position.y = waypoints[0].position.y
+    wpose.position.z = waypoints[0].position.z
+    waypoints.append(copy.deepcopy(wpose))
+
+    # second move down
+    wpose.position.z -= 0.10
+    waypoints.append(copy.deepcopy(wpose))
+
+    # third move to the side
+    wpose.position.y += 0.05
+    waypoints.append(copy.deepcopy(wpose))
+
+    # # We want the cartesian path to be interpolated at a resolution of 1 cm
+    # # which is why we will specify 0.01 as the eef_step in cartesian
+    # # translation.  We will specify the jump threshold as 0.0, effectively
+    # # disabling it.
+    (plan3, fraction) = gb_arm_joint_group.compute_cartesian_path(
+                                 waypoints,   # waypoints to follow
+                                 0.01,        # eef_step
+                                 0.0)         # jump_threshold
+
+    #display_trajectory.trajectory.append(plan3)
+    #gb_rviz_display_trajectory_publisher.publish(display_trajectory);
+    print "============ Waiting while RVIZ displays plan3..."
+    rospy.sleep(5)
+    # ducta Move Plan 3++
+    group_variable_values = gb_arm_joint_group.get_current_joint_values()
+    print "============ Joint values 3: ", group_variable_values
+    gbMoveArm(group_variable_values)
+    # ducta --
+
+    # # Adding/Removing Objects and Attaching/Detaching Objects
+    # # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # # First, we will define the collision object message
+    collision_object = moveit_msgs.msg.CollisionObject()
+
+    # # END_TUTORIAL
+    print "============ STOPPING"
+
+move_group()
+
+
+# ########################################################################################################
+# SMART GRASPING
+#
+
+# smart_grasping_sandbox.py
+# https://github.com/shadow-robot/smart_grasping_sandbox/blob/master/smart_grasping_sandbox/src/smart_grasping_sandbox/smart_grasper.py
+#
+class SmartGrasp(object):
+    """
+    This is the helper library to easily access the different functionalities of the simulated robot
+    from python.
+    """
+
+    __last_joint_state = None
+
+    def __init__(self):
+        self.__joint_state_sub = rospy.Subscriber("/joint_states", JointState,
+                                                  self.__joint_state_cb, queue_size=1)
+
+        self.arm_commander  = MoveGroupCommander(MAIN_ARM_GROUP_NAME)
+        self.hand_commander = MoveGroupCommander(MAIN_HAND_GROUP_NAME)
+        # !NOTE: These below don't work!
+        #self.arm_commander  = gb_arm_commander._move_group_commander
+        #self.hand_commander = gb_hand_commander._move_group_commander
+
+        # self.__hand_traj_client = SimpleActionClient("/hand_controller/follow_joint_trajectory",
+        #                                              FollowJointTrajectoryAction)
+        # self.__arm_traj_client = SimpleActionClient("/arm_controller/follow_joint_trajectory",
+        #                                             FollowJointTrajectoryAction)
+        #
+        # if self.__hand_traj_client.wait_for_server(timeout=rospy.Duration(4.0)) is False:
+        #     rospy.logfatal("Failed to connect to /hand_controller/follow_joint_trajectory in 4sec.")
+        #     raise Exception("Failed to connect to /hand_controller/follow_joint_trajectory in 4sec.")
+        #
+        # if self.__arm_traj_client.wait_for_server(timeout=rospy.Duration(4.0)) is False:
+        #     rospy.logfatal("Failed to connect to /arm_controller/follow_joint_trajectory in 4sec.")
+        #     raise Exception("Failed to connect to /arm_controller/follow_joint_trajectory in 4sec.")
+
+        self.reset_world()
+        arm_target = self.__compute_arm_target_for_ball()
+        rospy.loginfo('ARM_TARGET:' + str(arm_target.position.x) + '-' + \
+                                      str(arm_target.position.y) + '-' + \
+                                      str(arm_target.position.z) + '\n')
+        rospy.loginfo('ARM GROUP NAME:'  + self.arm_commander.get_name())
+        rospy.loginfo('HAND GROUP NAME:' + self.hand_commander.get_name())
+
+        self.__lift(arm_target)
+        self.__pre_grasp(arm_target)
+        self.__grasp(arm_target)
+        # OR
+        #self.pick()
+
+    def reset_world(self):
+        """
+        Resets the object poses in the world and the robot joint angles.
+        """
+        gb_gz_switch_ctrl.call(start_controllers=[],
+                                stop_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
+                                strictness=SwitchControllerRequest.BEST_EFFORT)
+        gb_gz_pause_physics.call()
+
+        joint_names = ['ra_shoulder_pan_joint', 'ra_shoulder_lift_joint', 'ra_elbow_joint',
+                       'ra_wrist_1_joint', 'ra_wrist_2_joint', 'ra_wrist_3_joint']
+        joint_positions = [1.2, 0.5, -1.5, -0.5, -1.5, 0.0]
+
+        gb_gz_set_model.call(model_name="ur10srh",
+                              urdf_param_name="robot_description",
+                              joint_names=joint_names,
+                              joint_positions=joint_positions)
+
+        timer = Timer(0.0, self.__start_ctrl)
+        timer.start()
+
+        time.sleep(0.1)
+        gb_gz_unpause_physics.call()
+
+        gb_gz_reset_world.call()
+
+    def get_tip_pose(self):
+        """
+        Gets the current pose of the robot's tooltip in the world frame.
+        @return the tip pose
+        """
+        return self.arm_commander.get_current_pose(self.arm_commander.get_end_effector_link()).pose
+
+    def move_tip_absolute(self, target):
+        """
+        Moves the tooltip to the absolute target in the world frame
+        @param target is a geometry_msgs.msg.Pose
+        @return True on success
+        """
+        self.arm_commander.set_start_state_to_current_state()
+        self.arm_commander.set_pose_targets([target])
+        plan = self.arm_commander.plan()
+        if not self.arm_commander.execute(plan):
+            return False
+        return True
+
+    def move_tip(self, x=0., y=0., z=0., roll=0., pitch=0., yaw=0.):
+        """
+        Moves the tooltip in the world frame by the given x,y,z / roll,pitch,yaw.
+        @return True on success
+        """
+        transform = PyKDL.Frame(PyKDL.Rotation.RPY(pitch, roll, yaw),
+                                PyKDL.Vector(-x, -y, -z))
+
+        tip_pose = self.get_tip_pose()
+        tip_pose_kdl = posemath.fromMsg(tip_pose)
+        final_pose = toMsg(tip_pose_kdl * transform)
+
+        self.arm_commander.set_start_state_to_current_state()
+        self.arm_commander.set_pose_targets([final_pose])
+        plan = self.arm_commander.plan()
+        if not  self.arm_commander.execute(plan):
+            return False
+        return True
+
+    def send_command(self, command, duration=0.2):
+        """
+        Send a dictionnary of joint targets to the arm and hand directly.
+
+        @param command: a dictionnary of joint names associated with a target:
+                        {"H1_F1J1": -1.0, "shoulder_pan_joint": 1.0}
+        @param duration: the amount of time it will take to get there in seconds. Needs to be bigger than 0.0
+        """
+        hand_goal = None
+        arm_goal = None
+
+        for joint, target in command.items():
+            if "rh_FFJ1" in joint:
+                if not hand_goal:
+                    hand_goal = FollowJointTrajectoryGoal()
+
+                    point = JointTrajectoryPoint()
+                    point.time_from_start = rospy.Duration.from_sec(duration)
+
+                    hand_goal.trajectory.points.append(point)
+
+                hand_goal.trajectory.joint_names.append(joint)
+                hand_goal.trajectory.points[0].positions.append(target)
+            else:
+                if not arm_goal:
+                    arm_goal = FollowJointTrajectoryGoal()
+
+                    point = JointTrajectoryPoint()
+                    point.time_from_start = rospy.Duration.from_sec(duration)
+
+                    arm_goal.trajectory.points.append(point)
+
+                arm_goal.trajectory.joint_names.append(joint)
+                arm_goal.trajectory.points[0].positions.append(target)
+
+        if arm_goal:
+            self.__arm_traj_client.send_goal_and_wait(arm_goal)
+        if hand_goal:
+            self.__hand_traj_client.send_goal_and_wait(hand_goal)
+
+    def get_current_joint_state(self):
+        """
+        Gets the current state of the robot.
+
+        @return joint positions, velocity and efforts as three dictionnaries
+        """
+        joints_position = {n: p for n, p in
+                           zip(self.__last_joint_state.name,
+                               self.__last_joint_state.position)}
+        joints_velocity = {n: v for n, v in
+                           zip(self.__last_joint_state.name,
+                           self.__last_joint_state.velocity)}
+        joints_effort = {n: v for n, v in
+                         zip(self.__last_joint_state.name,
+                         self.__last_joint_state.effort)}
+        return joints_position, joints_velocity, joints_effort
+
+    def open_hand(self):
+        """
+        Opens the hand.
+
+        @return True on success
+        """
+        self.hand_commander.set_named_target("open") # <group_state> defined in SRDF file
+        plan = self.hand_commander.plan()
+        if not self.hand_commander.execute(plan, wait=True):
+            return False
+
+        return True
+
+    def close_hand(self):
+        """
+        Closes the hand.
+
+        @return True on success
+        """
+        self.hand_commander.set_named_target("pack") # <group_state> defined in SRDF file
+        plan = self.hand_commander.plan()
+        if not self.hand_commander.execute(plan, wait=True):
+            return False
+
+        return True
+
+    def check_fingers_collisions(self, enable=True):
+        """
+        Disables or enables the collisions check between the fingers and the objects / table
+
+        @param enable: set to True to enable / False to disable
+        @return True on success
+        """
+        objects = ["cricket_ball__link", "drill__link", "cafe_table__link"]
+
+        while gb_gz_pub_planning_scene.get_num_connections() < 1:
+            rospy.loginfo("waiting for someone to subscribe to the /planning_scene")
+            rospy.sleep(0.1)
+
+        request = PlanningSceneComponents(components=PlanningSceneComponents.ALLOWED_COLLISION_MATRIX)
+        response = gb_gz_get_planning_scene(request)
+        acm = response.scene.allowed_collision_matrix
+
+        for object_name in objects:
+            if object_name not in acm.entry_names:
+                # add object to allowed collision matrix
+                acm.entry_names += [object_name]
+                for row in range(len(acm.entry_values)):
+                    acm.entry_values[row].enabled += [False]
+
+                new_row = deepcopy(acm.entry_values[0])
+                acm.entry_values += {new_row}
+
+        for index_entry_values, entry_values in enumerate(acm.entry_values):
+            if "H1_F" in acm.entry_names[index_entry_values]:
+                for index_value, _ in enumerate(entry_values.enabled):
+                    if acm.entry_names[index_value] in objects:
+                        if enable:
+                            acm.entry_values[index_entry_values].enabled[index_value] = False
+                        else:
+                            acm.entry_values[index_entry_values].enabled[index_value] = True
+            elif acm.entry_names[index_entry_values] in objects:
+                for index_value, _ in enumerate(entry_values.enabled):
+                    if "H1_F" in acm.entry_names[index_value]:
+                        if enable:
+                            acm.entry_values[index_entry_values].enabled[index_value] = False
+                        else:
+                            acm.entry_values[index_entry_values].enabled[index_value] = True
+
+        planning_scene_diff = PlanningScene(is_diff=True, allowed_collision_matrix=acm)
+        gb_gz_pub_planning_scene.publish(planning_scene_diff)
+        rospy.sleep(1.0)
+
+        return True
+
+    def pick(self):
+        """
+        Does its best to pick the ball.
+        """
+        #rospy.loginfo("Moving to Pregrasp")
+        #self.open_hand()
+        #time.sleep(0.1)
+
+        ball_pose = gb_gz_get_ball_pose()
+        rospy.loginfo('BALL POSE:' + str(ball_pose.position.x) + '-' + str(ball_pose.position.y) + '-' + str(ball_pose.position.z) + '\n')
+        ball_pose.position.z += 0.5
+
+        #setting an absolute orientation (from the top)
+        quaternion = quaternion_from_euler(-pi/2., 0.0, 0.0)
+        ball_pose.orientation.x = quaternion[0]
+        ball_pose.orientation.y = quaternion[1]
+        ball_pose.orientation.z = quaternion[2]
+        ball_pose.orientation.w = quaternion[3]
+
+        self.move_tip_absolute(ball_pose)
+        time.sleep(0.1)
+
+        rospy.loginfo("Pick - Grasping")
+        self.move_tip(y=-0.16)
+        time.sleep(0.1)
+        self.check_fingers_collisions(False)
+        time.sleep(0.1)
+        #gbGraspPose()
+        self.close_hand()
+        time.sleep(0.1)
+
+        rospy.loginfo("Pick - Lifting")
+        for _ in range(50):
+            self.move_tip(y=0.001)
+            time.sleep(0.1)
+
+        self.check_fingers_collisions(True)
+
+    def __compute_arm_target_for_ball(self):
+        ball_pose = gb_gz_get_ball_pose()
+
+        # come at it from the top
+        arm_target = ball_pose
+        arm_target.position.z += 0.5
+
+        quaternion = quaternion_from_euler(-pi/2., 0.0, 0.0)
+        arm_target.orientation.x = quaternion[0]
+        arm_target.orientation.y = quaternion[1]
+        arm_target.orientation.z = quaternion[2]
+        arm_target.orientation.w = quaternion[3]
+
+        return arm_target
+
+    def __pre_grasp(self, arm_target):
+        self.hand_commander.set_named_target("open")
+        plan = self.hand_commander.plan()
+        self.hand_commander.execute(plan, wait=True)
+
+        for _ in range(10):
+            self.arm_commander.set_start_state_to_current_state()
+            self.arm_commander.set_pose_targets([arm_target])
+            plan = self.arm_commander.plan()
+            if self.arm_commander.execute(plan):
+                rospy.loginfo("__pre_grasp done!")
+                return True
+            rospy.loginfo("__pre_grasp failed!")
+
+    def __grasp(self, arm_target):
+        waypoints = []
+        waypoints.append(self.arm_commander.get_current_pose(self.arm_commander.get_end_effector_link()).pose)
+        arm_above_ball = deepcopy(arm_target)
+        arm_above_ball.position.z -= 0.12
+        waypoints.append(arm_above_ball)
+
+        self.arm_commander.set_start_state_to_current_state()
+        (plan, fraction) = self.arm_commander.compute_cartesian_path(waypoints, 0.01, 0.0)
+        print fraction
+        if not self.arm_commander.execute(plan):
+            return False
+
+        self.hand_commander.set_named_target("pack")
+        plan = self.hand_commander.plan()
+        if not self.hand_commander.execute(plan, wait=True):
+            rospy.loginfo("__grasp failed!")
+            return False
+
+        rospy.loginfo("__grasp failed!")
+        self.hand_commander.attach_object("cricket_ball__link")
+
+    def __lift(self, arm_target):
+        waypoints = []
+        waypoints.append(self.arm_commander.get_current_pose(self.arm_commander.get_end_effector_link()).pose)
+        arm_above_ball = deepcopy(arm_target)
+        arm_above_ball.position.z += 0.1
+        waypoints.append(arm_above_ball)
+
+        self.arm_commander.set_start_state_to_current_state()
+        (plan, fraction) = self.arm_commander.compute_cartesian_path(waypoints, 0.01, 0.0)
+        print fraction
+        if not self.arm_commander.execute(plan):
+            rospy.loginfo("__lift failed!")
+            return False
+        rospy.loginfo("__lift done!")
+
+    def __start_ctrl(self):
+        rospy.loginfo("STARTING CONTROLLERS")
+        gb_gz_switch_ctrl.call(start_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
+                                stop_controllers=[], strictness=1)
+
+    def __joint_state_cb(self, msg):
+        self.__last_joint_state = msg
+
+def gbGraspObject():
+    SmartGrasp()
+
+#gbGraspObject()
+# ########################################################################################################
 # START TO DO FINGER LEARNING
 #
 def deep_keep_moving_fingers():
@@ -683,11 +1454,20 @@ def deep_keep_moving_fingers():
                 joint_name = deep_hand_joint_names[i]
                 #rospy.loginfo('MOVE to joint name ' + joint_name + "\n")
                 hand_joint_goals_1[joint_name] = deep_joint_poses[i]
-                rospy.loginfo("Moving arm to joint states\n" + str(hand_joint_goals_1) + "\n")
-                hand_commander.move_to_joint_value_target_unsafe(hand_joint_goals_1, 0.5, True)
+                rospy.loginfo("Moving fingers to joint states\n" + str(hand_joint_goals_1) + "\n")
+                gb_hand_commander.move_to_joint_value_target_unsafe(hand_joint_goals_1, 0.5, True)
+                hand_tactile_state = gb_hand_commander.get_tactile_state() # as a msg from a callback
+                rospy.loginfo('HAND TACTILE STATE:' + str(hand_tactile_state))
 
-deep_keep_moving_fingers()
+#deep_keep_moving_fingers()
 
 from my_arm_utils import mk_grasp
 
-mk_grasp(hand_joint_goals_1)
+#mk_grasp(hand_joint_goals_1)
+
+
+# ########################################################################################################
+# SHUT DOWN MOVE IT COMMANDER
+#
+# # When finished shut down moveit_commander.
+moveit_commander.roscpp_shutdown()

@@ -20,7 +20,7 @@
 // Kinematics
 #include <moveit_msgs/GetPositionIK.h>
 
-//#define ROBOT_MOVEIT
+#define ROBOT_MOVEIT
 #define VMOVEIT() RobotMoveIt::getInstance()
 
 class RobotMoveIt : public QObject {
@@ -32,7 +32,7 @@ public:
     static void deleteInstance();
     static bool checkInstance();
 
-    void initMoveIt(boost::shared_ptr<ros::NodeHandle> nodeHandle);
+    void initMoveIt(ros::NodeHandle* nodeHandle);
 
     // Read Robot Model Info
     void fetchRobotModelInfo();
@@ -45,6 +45,17 @@ public:
     void setupPickPlaceSettings();
     void placeObject(moveit::planning_interface::MoveGroupInterface &group);
     void pickObject(moveit::planning_interface::MoveGroupInterface &group);
+
+    // Motion Planing
+    // https://github.com/ros-planning/moveit_tutorials/tree/kinetic-devel/doc/pr2_tutorials/planning/src
+#if 0
+    void doMotionPlanning();
+    void doMoveGroupInterface();
+    void doMoveGroup();
+    void doPlanningSceneRosAPI();
+    void doPlanningPipeline();
+    void doPlanningScene();
+#endif
 signals:
 
 private:
@@ -52,6 +63,10 @@ private:
     static RobotMoveIt* _instance;
     QMutex* _pMutex;
     boost::shared_ptr<ros::NodeHandle> _node_handle;
+    ros::Publisher _robot_state_publisher;
+    robot_model::RobotModelPtr _kinematic_model;
+    robot_state::RobotState* _kinematic_state;
+    robot_state::JointModelGroup *_joint_model_group;
 };
 
 #endif // ___ROBOT_MOVEIT_H___

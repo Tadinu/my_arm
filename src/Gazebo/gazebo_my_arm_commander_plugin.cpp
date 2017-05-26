@@ -202,7 +202,7 @@ namespace gazebo
 
         // =========================================================================================
 #ifdef ROBOT_MOVEIT
-        VMOVEIT()->initMoveIt(_rosnode);
+        VMOVEIT()->initMoveIt(_rosnode.get());
         VMOVEIT()->fetchRobotModelInfo();
 #endif
     }

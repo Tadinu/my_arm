@@ -1,6 +1,11 @@
 <launch>
     <!-- <param name="robot_description" command="cat $(find my_arm)/models/myArm_brHand2.urdf" /> -->
 
+    <include file="$(find gazebo2rviz)/launch/gazebo2rviz.launch">
+        <env name="GAZEBO_MODEL_PATH" value="~/.gazebo/models:${GAZEBO_MODEL_PATH}"/>
+        <env name="MESH_WORKSPACE_PATH" value="."/>
+    </include>
+
     <!-- Robot state publisher -->
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
         <param name="publish_frequency" type="double" value="50.0" />
@@ -15,7 +20,7 @@
         <remap from="/joint_states" to="/my_arm/joint_control" />
     </node>
     -->
-    <!-- <node name="robotArmController"    pkg="my_arm" type="robotArmController" output="screen" /> -->
+    <!--<node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />-->
     <node name="robotArmControllerPy"  pkg="my_arm" type="my_arm_controller.py" output="screen" />
     <!-- <node name="robotArmSmartHandlePy" pkg="my_arm" type="smart_handle.py" output="screen" /> -->
 </launch>

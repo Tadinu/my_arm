@@ -12,7 +12,7 @@
 #include "RobotRealSenseAdapter.h"
 #include "RobotVoxelyzeAdapter.h"
 //#include "RobotDartAdapter.h"
-
+#include "RobotMoveIt.h"
 #include "bullet_server.h"
 
 // ROBOT TO RUN
@@ -227,6 +227,12 @@ void RobotThread::runArmOperation(int armId)
     BulletServer bullet_server;
 #endif
 
+#ifdef ROBOT_MOVEIT
+    VMOVEIT()->initMoveIt(_node_handle);
+    VMOVEIT()->fetchRobotModelInfo();
+    //VMOVEIT()->setupPickPlaceSettings();
+#endif
+
     _model_states_subscriber = _node_handle->subscribe("/gazebo/model_states", 100,
                                                        &RobotThread::gazeboModelStatecallback, this);
     // =======================================================================================================
@@ -291,6 +297,7 @@ void RobotThread::runArmOperation(int armId)
     //
     while (ros::ok())
     {
+        VMOVEIT()->fetchRobotModelInfo();
         // =====================================================================================
         // Listen for frame transforms
         //
@@ -298,17 +305,17 @@ void RobotThread::runArmOperation(int armId)
         determineRobotOperationLimit();
 
         // =====================================================================================
-        // Publish Joint State
-        publishJointState(armId, joint_pub, joint_state);
+        // PUBLISH JOINT STATE
+        //publishJointState(armId, joint_pub, joint_state);
 
         // =====================================================================================
-        // Move Robot to a position
-        publishRobotPose(armId, _world_trans, trans_broadcaster);
+        // PUBLISH ROBOT POSE (MOVE ROBOT TO A POSITION)
+        //publishRobotPose(armId, _world_trans, trans_broadcaster);
 
         // =====================================================================================
-        // Send Static Markers
+        // PUBLISH STATTIC MARKERS FOR RVIZ
         //publishStaticMarkers(marker_pub, VMARKER_INSTANCE()->getStaticMarker(VMarker::TARGET_BALL));
-        VMARKER_INSTANCE()->publishVoxelMesh();
+        //RKER_INSTANCE()->publishVoxelMesh();
         // =====================================================================================
 #ifdef BULLET_SERVER
         // Update bullet server

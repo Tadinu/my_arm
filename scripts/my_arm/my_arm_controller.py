@@ -55,8 +55,15 @@ from sr_robot_commander.sr_arm_commander import SrArmCommander
 from sr_robot_commander.sr_hand_commander import SrHandCommander
 from sr_utilities.hand_finder import HandFinder
 
+
+# ########################################################################################################
+# GLOBAL HELPER FUNCTIONS
+
+
 # ########################################################################################################
 # ROSPY INIT
+WORLD_FRAME = "world"
+
 # sr_multi_moveit/sr_multi_moveit_config/config/generated_robot.srdf
 MAIN_ARM_GROUP_NAME           = "right_arm"  # Just the arm itself, not including the hand!
 MAIN_ARM_HAND_GROUP_NAME      = "right_arm_and_hand"
@@ -71,36 +78,86 @@ MAIN_HAND_GROUP_LITTLE_FINGER = "rh_little_finger"
 MAIN_HAND_GROUP_THUMB         = "rh_thumb"
 MAIN_HAND_GROUP_FINGERS       = "rh_fingers"
 
+GAZEBO_MODEL_PLATE_PATH   = "/home/brhm/DUC/RobotArm/src/my_arm/models/plate/model.sdf"
+GAZEBO_MODEL_PLATE_NAME   = "plate"
+GAZEBO_MODEL_HAMMER_PATH  = "/usr/share/gazebo-7/models/hammer/model.sdf"
+GAZEBO_MODEL_HAMMER_NAME  = "hammer"
+GAZEBO_MODEL_CRICKET_NAME = "cricket_ball"
 
 rospy.init_node("my_arm_controller", anonymous=True)
 
 # ########################################################################################################
 # GAZEBO SERVICES INIT
+# http://gazebosim.org/tutorials?tut=ros_comm
+# Services: State and property getters
+# ~/get_model_properties   : gazebo_msgs/GetModelProperties- This service returns the properties of a model in simulation.
+#
+# ~/get_model_state        : gazebo_msgs/GetModelState - This service returns the states of a model in simulation.
+#
+# ~/get_world_properties   : gazebo_msgs/GetWorldProperties - This service returns the properties of the simulation world.
+#
+# ~/get_joint_properties   : gazebo_msgs/GetJointProperties - This service returns the properties of a joint in simulation.
+#
+# ~/get_link_properties    : gazebo_msgs/GetLinkProperties - This service returns the properties of a link in simulation.
+#
+# ~/get_link_state         : gazebo_msgs/GetLinkState - This service returns the states of a link in simulation.
+#
+# ~/get_physics_properties : gazebo_msgs/GetPhysicsProperties - This service returns the properties of the physics engine used in simulation.
 #
 rospy.wait_for_service("/gazebo/get_model_state", 10.0)
 rospy.wait_for_service("/gazebo/reset_world", 10.0)
 # ducta ++
 rospy.wait_for_service("/gazebo/spawn_sdf_model", 10.0)
 # ducta --
-gb_gz_reset_world = rospy.ServiceProxy("/gazebo/reset_world", Empty)
-gb_gz_get_pose_srv = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
-#gb_gz_spawn_sdf_model = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
-gb_gz_spawn_sdf_model = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
-gb_gz_delete_model = rospy.ServiceProxy("/gazebo/delete_model", DeleteModel)
+gb_gz_srv_reset_world     = rospy.ServiceProxy("/gazebo/reset_world", Empty)
+gb_gz_srv_get_pose        = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
+gb_gz_srv_spawn_sdf_model = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
+gb_gz_srv_delete_model    = rospy.ServiceProxy("/gazebo/delete_model", DeleteModel)
 
 rospy.wait_for_service("/gazebo/pause_physics")
-gb_gz_pause_physics = rospy.ServiceProxy("/gazebo/pause_physics", Empty)
+gb_gz_srv_pause_physics   = rospy.ServiceProxy("/gazebo/pause_physics", Empty)
 rospy.wait_for_service("/gazebo/unpause_physics")
-gb_gz_unpause_physics = rospy.ServiceProxy("/gazebo/unpause_physics", Empty)
+gb_gz_srv_unpause_physics = rospy.ServiceProxy("/gazebo/unpause_physics", Empty)
 rospy.wait_for_service("/controller_manager/switch_controller")
-gb_gz_switch_ctrl = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
+gb_gz_srv_switch_ctrl     = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
 rospy.wait_for_service("/gazebo/set_model_configuration")
-gb_gz_set_model = rospy.ServiceProxy("/gazebo/set_model_configuration", SetModelConfiguration)
+gb_gz_srv_set_model       = rospy.ServiceProxy("/gazebo/set_model_configuration", SetModelConfiguration)
 
 rospy.wait_for_service('/get_planning_scene', 10.0)
-gb_gz_get_planning_scene = rospy.ServiceProxy('/get_planning_scene', GetPlanningScene)
+gb_gz_srv_get_planning_scene = rospy.ServiceProxy('/get_planning_scene', GetPlanningScene)
 gb_gz_pub_planning_scene = rospy.Publisher('/planning_scene', PlanningScene, queue_size=10, latch=True)
 
+# Spawn a model into Gazebo
+def gb_gz_spawn_model(model_name, model_path, model_pose):
+    model_file  = open(model_path,'r')
+    spawn_model = model_file.read()
+    gb_gz_srv_spawn_sdf_model(model_name, spawn_model, "", model_pose, WORLD_FRAME)
+
+# Spawn a model in loop with lapse_time
+def gb_gz_spawn_model_loop(model_name, model_path, model_pose, lapse_time):
+    model_file  = open(model_path,'r')
+    spawn_model = model_file.read()
+    while 1:
+        gb_gz_srv_spawn_sdf_model(model_name, spawn_model, "", model_pose, WORLD_FRAME) # <-- SPAWING MODEL HERE !!!
+        #time.sleep(lapse_time)
+        rospy.sleep(lapse_time)
+        gb_gz_srv_delete_model(model_name)
+
+# Spawn the plate model in loop with lapse_time
+def gb_gz_spawn_plate_model_loop(lapse_time):
+    mpose = geometry_msgs.msg.Pose()
+    mpose.orientation.w = 1.0
+    mpose.position.x = 1.17
+    mpose.position.y = -0.29
+    mpose.position.z = 1.29
+
+    gb_gz_spawn_model_loop(GAZEBO_MODEL_PLATE_NAME, GAZEBO_MODEL_PLATE_PATH, mpose, lapse_time)
+
+    #print "START SPAWING MODEL IN SEPARATE THREAD..."
+    #try:
+    #    thread.start_new_thread(gb_gz_spawn_model, (GAZEBO_MODEL_PLATE_PATH, GAZEBO_MODEL_PLATE_NAME, mpose))
+    #except:
+    #    print "Error: unable to start thread"
 
 def gb_gz_get_model_pose(model_name, base_frame_name):
     """
@@ -108,7 +165,7 @@ def gb_gz_get_model_pose(model_name, base_frame_name):
 
     @return The pose of the ball.
     """
-    return gb_gz_get_pose_srv.call(model_name, base_frame_name).pose
+    return gb_gz_srv_get_pose.call(model_name, base_frame_name).pose
 
 def gb_gz_get_ball_pose():
     """
@@ -116,7 +173,7 @@ def gb_gz_get_ball_pose():
 
     @return The pose of the ball.
     """
-    return gb_gz_get_model_pose("cricket_ball", "world")
+    return gb_gz_get_model_pose(GAZEBO_MODEL_CRICKET_NAME, WORLD_FRAME)
 
 
 # RVIZ PUBLISHER INIT
@@ -286,7 +343,7 @@ def gbMoveArmInitialPos():
     gb_arm_commander.move_to_joint_value_target_unsafe(gb_arm_joint_goals, 3.0, True)
     return
 
-gbMoveArmInitialPos()
+#gbMoveArmInitialPos()
 
 def gbMoveArm(joint_goals):
     gb_arm_joint_goals['ra_wrist_2_joint']      = joint_goals[0]
@@ -913,12 +970,14 @@ def move_group():
     #pose_target.position.y = -0.000046
     #pose_target.position.z = 0.773986
     #ball_pose = gb_gz_get_ball_pose()
-    ball_pose = gb_gz_get_model_pose("cricket_ball", "world")
-    hammer_pose = ball_pose
-    hammer_pose.position.x += 0.1
-    f = open('/usr/share/gazebo-7/models/hammer/model.sdf','r')
-    hammer_model = f.read()
-    gb_gz_spawn_sdf_model("hammer", hammer_model, "", hammer_pose, "world")
+    ball_pose = gb_gz_get_model_pose("cricket_ball", WORLD_FRAME)
+    spawn_model_pose = ball_pose
+    spawn_model_pose.position.x += 0.1
+
+
+    f = open(GAZEBO_MODEL_PLATE_PATH,'r')
+    spawn_model = f.read()
+    gb_gz_srv_spawn_sdf_model("Plate", spawn_model, "", spawn_model_pose, WORLD_FRAME)
 
     ball_pose.position.z += 0.3
     gb_arm_joint_group.set_pose_target(ball_pose)
@@ -931,7 +990,6 @@ def move_group():
 
     print "============ Waiting while RVIZ displays plan1..."
     rospy.sleep(5)
-
 
     # # You can ask RVIZ to visualize a plan (aka trajectory) for you.  But the
     # # gb_arm_joint_group.plan() method does this automatically so this is not that useful
@@ -970,7 +1028,7 @@ def move_group():
     #print "============ Joint values 0: ", group_variable_values
     #gbMoveArm(group_variable_values)
     # OR
-    #gb_arm_joint_group.execute(arm_plan)
+    gb_arm_joint_group.execute(arm_plan)
     #rospy.sleep(3)
 
     # Move FF to the ball
@@ -1071,7 +1129,7 @@ def move_group():
     # # END_TUTORIAL
     print "============ STOPPING"
 
-move_group()
+#move_group()
 
 
 # ########################################################################################################
@@ -1130,16 +1188,16 @@ class SmartGrasp(object):
         """
         Resets the object poses in the world and the robot joint angles.
         """
-        gb_gz_switch_ctrl.call(start_controllers=[],
+        gb_gz_srv_switch_ctrl.call(start_controllers=[],
                                 stop_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
                                 strictness=SwitchControllerRequest.BEST_EFFORT)
-        gb_gz_pause_physics.call()
+        gb_gz_srv_pause_physics.call()
 
         joint_names = ['ra_shoulder_pan_joint', 'ra_shoulder_lift_joint', 'ra_elbow_joint',
                        'ra_wrist_1_joint', 'ra_wrist_2_joint', 'ra_wrist_3_joint']
         joint_positions = [1.2, 0.5, -1.5, -0.5, -1.5, 0.0]
 
-        gb_gz_set_model.call(model_name="ur10srh",
+        gb_gz_srv_set_model.call(model_name="ur10srh",
                               urdf_param_name="robot_description",
                               joint_names=joint_names,
                               joint_positions=joint_positions)
@@ -1148,9 +1206,9 @@ class SmartGrasp(object):
         timer.start()
 
         time.sleep(0.1)
-        gb_gz_unpause_physics.call()
+        gb_gz_srv_unpause_physics.call()
 
-        gb_gz_reset_world.call()
+        gb_gz_srv_reset_world.call()
 
     def get_tip_pose(self):
         """
@@ -1288,7 +1346,7 @@ class SmartGrasp(object):
             rospy.sleep(0.1)
 
         request = PlanningSceneComponents(components=PlanningSceneComponents.ALLOWED_COLLISION_MATRIX)
-        response = gb_gz_get_planning_scene(request)
+        response = gb_gz_srv_get_planning_scene(request)
         acm = response.scene.allowed_collision_matrix
 
         for object_name in objects:
@@ -1429,7 +1487,7 @@ class SmartGrasp(object):
 
     def __start_ctrl(self):
         rospy.loginfo("STARTING CONTROLLERS")
-        gb_gz_switch_ctrl.call(start_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
+        gb_gz_srv_switch_ctrl.call(start_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
                                 stop_controllers=[], strictness=1)
 
     def __joint_state_cb(self, msg):
@@ -1460,11 +1518,11 @@ def deep_keep_moving_fingers():
                 rospy.loginfo('HAND TACTILE STATE:' + str(hand_tactile_state))
 
 #deep_keep_moving_fingers()
+gb_gz_spawn_plate_model_loop(1)
 
 from my_arm_utils import mk_grasp
 
 #mk_grasp(hand_joint_goals_1)
-
 
 # ########################################################################################################
 # SHUT DOWN MOVE IT COMMANDER

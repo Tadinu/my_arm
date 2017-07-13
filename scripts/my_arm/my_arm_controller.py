@@ -9,7 +9,6 @@
 
 # Native Python
 import sys
-import rospy
 import copy
 from copy import deepcopy
 from math import pi
@@ -19,9 +18,14 @@ from threading import Timer
 from std_msgs.msg import String
 from std_srvs.srv import Empty
 
-# ROS Modules
+# ROS Python Modules
+# http://wiki.ros.org/rospy/Overview/Initialization%20and%20Shutdown
+import rospy
+from rospy import Timer
+
 import geometry_msgs.msg
 from geometry_msgs.msg import Pose
+from geometry_msgs.msg import WrenchStamped
 from controller_manager_msgs.srv import SwitchController, SwitchControllerRequest
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from sensor_msgs.msg import JointState
@@ -57,11 +61,12 @@ from sr_utilities.hand_finder import HandFinder
 
 
 # ########################################################################################################
-# GLOBAL HELPER FUNCTIONS
-
+# GLOBAL HELPER MEMBERS
 
 # ########################################################################################################
 # ROSPY INIT
+# http://wiki.ros.org/rospy/Overview/Services
+# http://wiki.ros.org/rospy/Overview/Initialization%20and%20Shutdown
 WORLD_FRAME = "world"
 
 # sr_multi_moveit/sr_multi_moveit_config/config/generated_robot.srdf
@@ -85,10 +90,16 @@ GAZEBO_MODEL_HAMMER_NAME  = "hammer"
 GAZEBO_MODEL_CRICKET_NAME = "cricket_ball"
 
 rospy.init_node("my_arm_controller", anonymous=True)
+# r = rospy.Rate(10) # 10hz
+# while not rospy.is_shutdown():
+#     pub.publish("hello")
+#     r.sleep()
 
 # ########################################################################################################
 # GAZEBO SERVICES INIT
+#
 # http://gazebosim.org/tutorials?tut=ros_comm
+# http://mirror.umd.edu/roswiki/doc/diamondback/api/gazebo/html/msg/ModelState.html
 # Services: State and property getters
 # ~/get_model_properties   : gazebo_msgs/GetModelProperties- This service returns the properties of a model in simulation.
 #
@@ -110,7 +121,7 @@ rospy.wait_for_service("/gazebo/reset_world", 10.0)
 rospy.wait_for_service("/gazebo/spawn_sdf_model", 10.0)
 # ducta --
 gb_gz_srv_reset_world     = rospy.ServiceProxy("/gazebo/reset_world", Empty)
-gb_gz_srv_get_pose        = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
+gb_gz_srv_get_model_state = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
 gb_gz_srv_spawn_sdf_model = rospy.ServiceProxy("/gazebo/spawn_sdf_model", SpawnModel)
 gb_gz_srv_delete_model    = rospy.ServiceProxy("/gazebo/delete_model", DeleteModel)
 
@@ -131,19 +142,31 @@ gb_gz_pub_planning_scene = rospy.Publisher('/planning_scene', PlanningScene, que
 def gb_gz_spawn_model(model_name, model_path, model_pose):
     model_file  = open(model_path,'r')
     spawn_model = model_file.read()
-    gb_gz_srv_spawn_sdf_model(model_name, spawn_model, "", model_pose, WORLD_FRAME)
+    gb_gz_srv_delete_model(model_name)
+    gb_gz_srv_spawn_sdf_model(model_name, spawn_model, "", model_pose, WORLD_FRAME) # <-- SPAWNING MODEL HERE !!!
+
+# Spawn PLATE model into Gazebo
+def gb_gz_spawn_plate_model():
+    mpose = geometry_msgs.msg.Pose()
+    mpose.orientation.w = 1.0
+    mpose.position.x = 1.17
+    mpose.position.y = -0.29
+    mpose.position.z = 1.29
+
+    gb_gz_spawn_model(GAZEBO_MODEL_PLATE_NAME, GAZEBO_MODEL_PLATE_PATH, mpose)
 
 # Spawn a model in loop with lapse_time
 def gb_gz_spawn_model_loop(model_name, model_path, model_pose, lapse_time):
     model_file  = open(model_path,'r')
     spawn_model = model_file.read()
-    while 1:
-        gb_gz_srv_spawn_sdf_model(model_name, spawn_model, "", model_pose, WORLD_FRAME) # <-- SPAWING MODEL HERE !!!
+
+    while not rospy.is_shutdown():
+        gb_gz_srv_delete_model(model_name)
+        gb_gz_srv_spawn_sdf_model(model_name, spawn_model, "", model_pose, WORLD_FRAME) # <-- SPAWNING MODEL HERE !!!
         #time.sleep(lapse_time)
         rospy.sleep(lapse_time)
-        gb_gz_srv_delete_model(model_name)
 
-# Spawn the plate model in loop with lapse_time
+# Spawn PLATE model in loop with lapse_time
 def gb_gz_spawn_plate_model_loop(lapse_time):
     mpose = geometry_msgs.msg.Pose()
     mpose.orientation.w = 1.0
@@ -153,9 +176,9 @@ def gb_gz_spawn_plate_model_loop(lapse_time):
 
     gb_gz_spawn_model_loop(GAZEBO_MODEL_PLATE_NAME, GAZEBO_MODEL_PLATE_PATH, mpose, lapse_time)
 
-    #print "START SPAWING MODEL IN SEPARATE THREAD..."
+    #print "START SPAWNING MODEL IN SEPARATE THREAD..."
     #try:
-    #    thread.start_new_thread(gb_gz_spawn_model, (GAZEBO_MODEL_PLATE_PATH, GAZEBO_MODEL_PLATE_NAME, mpose))
+    #    thread.start_new_thread(gb_gz_spawn_model_loop, (GAZEBO_MODEL_PLATE_NAME, GAZEBO_MODEL_PLATE_PATH, mpose, lapse_time))
     #except:
     #    print "Error: unable to start thread"
 
@@ -165,7 +188,7 @@ def gb_gz_get_model_pose(model_name, base_frame_name):
 
     @return The pose of the ball.
     """
-    return gb_gz_srv_get_pose.call(model_name, base_frame_name).pose
+    return gb_gz_srv_get_model_state.call(model_name, base_frame_name).pose
 
 def gb_gz_get_ball_pose():
     """
@@ -175,6 +198,15 @@ def gb_gz_get_ball_pose():
     """
     return gb_gz_get_model_pose(GAZEBO_MODEL_CRICKET_NAME, WORLD_FRAME)
 
+# ########################################################################################################
+# ROSPY GLOBAL TIMER CALLBACK
+#
+def gb_ros_timer_callback():
+    rospy.loginfo("ABC DEF GHI\n")
+    gb_gz_spawn_plate_model()
+
+gb_ros_timer = rospy.Timer(rospy.Duration(1), gb_ros_timer_callback)
+#gb_ros_timer.start() , already starts
 
 # RVIZ PUBLISHER INIT
 #
@@ -217,7 +249,7 @@ gb_hand_joint_group = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_NAME)
 gb_TH_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_THUMB)
 gb_FF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_FIRST_FINGER)
 gb_MF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_MIDDLE_FINGER)
-gb_RF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_RING_FINGER)
+#gb_RF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_RING_FINGER)
 gb_LF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_LITTLE_FINGER)
 
 # ########################################################################################################
@@ -280,7 +312,7 @@ def analyzeHandLeapMotionData(hand):
 # ########################################################################################################
 # SHADOW HAND CONTROL
 #
-
+#
 # HandFinder is used to access the hand parameters
 gb_hand_finder = HandFinder()
 gb_hand_parameters = gb_hand_finder.get_hand_parameters()
@@ -370,6 +402,25 @@ def gbMoveArm(joint_goals):
 #
 # rospy.Subscriber("/my_arm_state",
 #                  DisplayRobotState, onJointState)
+
+
+
+# ########################################################################################################
+#
+# Reading the optoforce tactiles from the hand
+#
+def gb_hand_optoforce_callback(data):
+    rospy.loginfo("At:" + str(data.header.stamp.secs) + "." + str(data.header.stamp.nsecs) +
+                  " sensor:" + str(data.header.frame_id) +
+                  " Force:" + str(data.wrench.force.x) + "," +
+                  str(data.wrench.force.y) + "," + str(data.wrench.force.z))
+
+def gb_hand_optoforce_listener():
+    num_sensors = 5
+    for sensor_num in range(num_sensors):
+        rospy.Subscriber("/optoforce_" + str(sensor_num), WrenchStamped, gb_hand_optoforce_callback)
+
+gb_hand_optoforce_listener()
 
 # ########################################################################################################
 # DO ARM TEACHING
@@ -869,7 +920,7 @@ def do_fingers_trajectory():
 
     graphs_finished = False
 
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(10) # 10hz
 
     # Do not exit until graphs closed
     while not rospy.is_shutdown():
@@ -1500,6 +1551,9 @@ def gbGraspObject():
 # ########################################################################################################
 # START TO DO FINGER LEARNING
 #
+
+# 1 - Keep moving fingers
+#
 def deep_keep_moving_fingers():
     for i in range(0,20):
         hand_joint_goals_1[deep_hand_joint_names[i]] = deep_joint_poses[i]
@@ -1518,10 +1572,12 @@ def deep_keep_moving_fingers():
                 rospy.loginfo('HAND TACTILE STATE:' + str(hand_tactile_state))
 
 #deep_keep_moving_fingers()
-gb_gz_spawn_plate_model_loop(1)
 
+#2 - Spawning Plate Model Loop
+#gb_gz_spawn_plate_model_loop(1.5)
+
+# #######################################
 from my_arm_utils import mk_grasp
-
 #mk_grasp(hand_joint_goals_1)
 
 # ########################################################################################################
@@ -1529,3 +1585,7 @@ from my_arm_utils import mk_grasp
 #
 # # When finished shut down moveit_commander.
 moveit_commander.roscpp_shutdown()
+
+rospy.spin()
+# The spin() code simply sleeps until the is_shutdown() flag is True. It is mainly used to prevent your Python
+# Main thread from exiting.

@@ -30,7 +30,7 @@
     <plugin filename="libgazebo_ros_control.so" name="gazebo_ros_control">
       <robotSimType>sr_gazebo_sim/SrGazeboHWSim</robotSimType>
     </plugin>
-    <plugin filename="libgazeboRobotArmController.so" name="gazebo_my_arm_control">
+    <plugin filename="libgazeboRobotArmController.so" name="gazebo_my_arm_control"> <!-- devel/lib folder -->
       <robotNamespace/>
       <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
       <jointName>rh_world_joint,

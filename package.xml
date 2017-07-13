@@ -81,8 +81,8 @@
         <build_depend>image_transport</build_depend>
 
         <!-- Build: Realsense  -->
-        <build_depend>librealsense</build_depend>
-        <build_depend>realsense_camera</build_depend>
+        <!--<build_depend>librealsense</build_depend> -->
+        <!--<build_depend>realsense_camera</build_depend> -->
         <build_depend>cv_bridge</build_depend>
         <build_depend>pcl_ros</build_depend>
         <build_depend>dynamic_reconfigure</build_depend>
@@ -128,8 +128,8 @@
         <run_depend>image_transport</run_depend>
 
         <!-- Build: Realsense  -->
-        <run_depend>librealsense</run_depend>
-        <run_depend>realsense_camera</run_depend>
+        <!--<run_depend>librealsense</run_depend> -->
+        <!--<run_depend>realsense_camera</run_depend> -->
         <run_depend>cv_bridge</run_depend>
         <run_depend>pcl_ros</run_depend>
         <run_depend>dynamic_reconfigure</run_depend>

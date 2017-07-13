@@ -163,7 +163,9 @@ SOURCES += \
     ../../../src/LeapMotion/hands_listener.cpp \
     ../../../src/LeapMotion/camera_listener.cpp \
     ../../../src/my_arm/RobotLeapAdapter.cpp \
-    ../../../src/my_arm/KsGlobal.cpp
+    ../../../src/my_arm/KsGlobal.cpp \
+    Util.cpp \
+    MyWindow.cpp
 HEADERS += \
     ../../../include/my_arm/RobotVoxelyzeAdapter.h \
     ../../../include/LeapMotion/hands_listener.h \
@@ -171,7 +173,9 @@ HEADERS += \
     ../../../include/LeapMotion/leap_msg.h \
     ../../../include/LeapMotion/leapros_msg.h \
     ../../../include/my_arm/RobotLeapAdapter.h \
-    ../../../include/my_arm/KsGlobal.h
+    ../../../include/my_arm/KsGlobal.h \
+    Util.h \
+    MyWindow.h
 
 
 # The following define makes your compiler emit warnings if you use

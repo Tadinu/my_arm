@@ -9,7 +9,7 @@
 //#include "KsGlobal.h"
 
 // VOXCAD/VOXELYZE --
-// SET IN PRO FILE
+// SET IN PRO or CMakeLists.txt FILE
 //#define VOX_CAD
 //#define VOXELYZE_PURE
 
@@ -28,12 +28,8 @@
 
 //#include <rviz/robot/robot.h>
 
-// ROBOT_VOXELYZE --
-//
-//#define ROBOT_VOXELYZE
-
 #define VVOXELYZE_ADAPTER() RobotVoxelyzeAdapter::getInstance()
-#define CVOXEL_MESH_TOPIC  ("voxel_mesh")
+#define CVOXEL_MESH_TOPIC  ("/voxel_mesh")
 class RobotVoxelyzeAdapter : public QObject {
     Q_OBJECT
 

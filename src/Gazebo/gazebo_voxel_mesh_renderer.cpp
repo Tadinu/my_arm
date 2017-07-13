@@ -54,6 +54,7 @@ namespace gazebo
         // start ros node
         if (!ros::isInitialized())
         {
+          cout << "Voxel Mesh Renderer initialized!" << endl;
           int argc = 0;
           char** argv = NULL;
           ros::init(argc, argv,
@@ -93,7 +94,7 @@ namespace gazebo
             this->rosQueueThread =
               std::thread(std::bind(&GazeboVoxelMesh::queueThread, this));
 #else
-            _voxel_mesh_listener = _ros_node_handle->subscribe(CVOXEL_MESH_TOPIC, 1000,
+            _voxel_mesh_listener = _ros_node_handle->subscribe(CVOXEL_MESH_TOPIC, 100,
                                                                &GazeboVoxelMeshRenderer::voxelMeshCallback, this);
 #endif
         }
@@ -111,10 +112,10 @@ namespace gazebo
 
     void GazeboVoxelMeshRenderer::voxelMeshCallback(const my_arm::voxel_mesh& voxelMeshInfo)
     {
-        _mMutex.lock();
-        //cout << "Voxel Mesh Message" << voxelMeshInfo.vertices.size()<<endl;
+        //cout << "Voxel Mesh Message: " << voxelMeshInfo.vertices.size()<<endl;
+        //_mMutex.lock();
         _voxel_mesh_info = voxelMeshInfo;
-        _mMutex.unlock();
+        //_mMutex.unlock();
     }
 
     /// \brief ROS helper function that processes messages
@@ -153,8 +154,8 @@ namespace gazebo
             mRootSceneNode=mSceneMgr->getRootSceneNode();
             Ogre::TextureManager::getSingleton().setDefaultNumMipmaps(5);
 
-            cout << rendering::RenderEngine::Instance()->GetScene()->Name() << endl;
-            cout << rendering::RenderEngine::Instance()->SceneCount() << endl;
+            cout << "Scene name:"  << rendering::RenderEngine::Instance()->GetScene()->Name() << endl;
+            cout << "Scene count:" << rendering::RenderEngine::Instance()->SceneCount() << endl;
 
             // -------------------------------------------------------------------------------------
             // START ATTACHING OBJECTS INTO THE SCENE FROM HERE ------------------------------------
@@ -231,8 +232,9 @@ namespace gazebo
     void GazeboVoxelMeshRenderer::createVoxelMeshSimple(bool isInitialShown)
     {
         _mMutex.lock();
-        //cout << "VERTEX COUNT" << _voxel_mesh_info.vertices.size();
+        if( _voxel_mesh_info.vertices.size() > 0)
         {
+            //cout << "VERTEX COUNT: " << _voxel_mesh_info.vertices.size() << endl;
             // -----------------------------------------------------------------------------------
             if(isInitialShown) {
                 mManualObj = mSceneMgr->createManualObject("voxel_object");
@@ -304,7 +306,7 @@ namespace gazebo
             if(isInitialShown) {
                 mRootSceneNode->createChildSceneNode("voxel_mesh")->attachObject(mManualObj);
             }
-        }
+        } // if( _voxel_mesh_info.vertices.size() > 0)
         _mMutex.unlock();
     }
 
@@ -746,6 +748,7 @@ namespace gazebo
         }
     }
 
+    // The lib name is set in CMakeLists.txt, and built into devel/lib dir
     // Register this plugin with the simulator
     GZ_REGISTER_SYSTEM_PLUGIN(GazeboVoxelMeshRenderer)
     }

@@ -245,12 +245,11 @@ void MyWindow::leapCallback(const visualization_msgs::MarkerArray&)
 
     auto shapeNodes       = mShadowHand->getRootBodyNode(0)->getShapeNodesWith<dart::dynamics::VisualAspect>();
     const auto& meshShape = static_cast<const MeshShape*>(shapeNodes[0]->getShape().get());
-    aiMesh** mesh         = meshShape->getMesh()->mMeshes;
-
+    //aiMesh** mesh         = meshShape->getMesh()->mMeshes;
 
 #ifdef VOXELYZE_PURE
     //joint = mShadowHand->getJoint(i);
-    VVOXELYZE_ADAPTER()->updateVoxelCollidedPos(QVector3D(0.1,0.1,0.1));
+    VVOXELYZE_ADAPTER()->updateVoxelCollisionInfo(QVector3D(0.1,0.1,0.1), QVector3D(0.1,0.1,0.1));
 #endif
 }
 

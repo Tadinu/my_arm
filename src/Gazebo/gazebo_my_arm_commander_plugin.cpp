@@ -10,8 +10,9 @@
 #include "KsGlobal.h"
 
 // ROBOT TO RUN
-#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_UR_ARM)
+//#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_UR_ARM)
 //#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
+#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
 
 #define CROBOT_NAME_SPACE_TAG ("robotNamespace")
 #define CJOINT_NAME_TAG       ("jointName")
@@ -33,11 +34,11 @@ namespace gazebo
             int argc = 0;
             char** argv = NULL;
             ros::init(argc, argv,
-                      "gazebo_my_arm_commander",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
+                      "gazebo_my_arm_commander_model_plugin",ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
             return;
         }
 
-        ROS_INFO("GazeboArmCommander Model plugin - Hello World!");
+        ROS_INFO("GazeboArmCommander Model plugin - Hello!");
     }
 
     GazeboMyArmCommander::~GazeboMyArmCommander()
@@ -434,13 +435,14 @@ namespace gazebo
     void GazeboMyArmCommander::jointStateCallback(const sensor_msgs::JointState& jointstate)
     {
         _mMutex.lock();
-        ROS_INFO("Updating joint state...");
+        //ROS_INFO("Updating joint state...");
         _joint_state = jointstate;
         _mMutex.unlock();
     }
 
     void GazeboMyArmCommander::rosBumperCallback(const gazebo_msgs::ContactsState::ConstPtr& msg)
     {
+        return;
 #if 1
         //int a;
         //a = sizeof(msg);
@@ -483,16 +485,17 @@ namespace gazebo
                 point_cloud->points.push_back(pcl::PointXYZ(msg->states[i].contact_positions[j].x,
                                                             msg->states[i].contact_positions[j].y,
                                                             msg->states[i].contact_positions[j].z));
-
-                //std::cout << j << "  Position:"
-                //          << msg->states[i].contact_positions[j].x << " "
-                //          << msg->states[i].contact_positions[j].y << " "
-                //          << msg->states[i].contact_positions[j].z << "\n";
-                //std::cout << "   Normal:"
-                //          << msg->states[i].contact_normals[j].x<< " "
-                //          << msg->states[i].contact_normals[j].y<< " "
-                //          << msg->states[i].contact_normals[j].z<< "\n";
-                //std::cout << "   Depth:" << msg->states[i].depths[j] << "\n";
+#if 0
+                std::cout << j << "  Position:"
+                          << msg->states[i].contact_positions[j].x << " "
+                          << msg->states[i].contact_positions[j].y << " "
+                          << msg->states[i].contact_positions[j].z << "\n";
+                std::cout << "   Normal:"
+                          << msg->states[i].contact_normals[j].x<< " "
+                          << msg->states[i].contact_normals[j].y<< " "
+                          << msg->states[i].contact_normals[j].z<< "\n";
+                std::cout << "   Depth:" << msg->states[i].depths[j] << "\n";
+#endif
             }
             //std::cout << " ------------------------------------- " << std::endl;
 
@@ -575,10 +578,10 @@ namespace gazebo
 #if 1
             // --------------------------------------------------------------------------
             // Setup a P-controller, with a gain of 0.1.
-            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT,   common::PID(0.1, 0, 0));
-            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT,  common::PID(0.1, 0, 0));
-            this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT,          common::PID(0.1, 0, 0));
-            this->setJointVelocity(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, 20);
+            // this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT,   common::PID(0.1, 0, 0));
+            // this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_LIFT_JOINT,  common::PID(0.1, 0, 0));
+            // this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_ELBOW_JOINT,          common::PID(0.1, 0, 0));
+            // this->setJointVelocity(KsGlobal::VSHADOW_HAND_UR_ARM_WRIST_1_JOINT, 20);
 #else
             // Publish Joint States to CJOINT_CONTROL_TOPIC
             //this->setJointVelocityPID(KsGlobal::VSHADOW_HAND_UR_ARM_SHOULDER_PAN_JOINT, common::PID(100, 1.0, 0));
@@ -617,10 +620,10 @@ namespace gazebo
                 _joint_state.name[i]     = _joints[i]->GetName();
                 //_joint_state.position[i] = angle.Radian() ;
                 _joint_state.velocity[i] = vel;
-                ROS_INFO("JOINT: %d %s %f", i, _joint_state.name[i].c_str(), _joint_state.position[i]);
+                //ROS_INFO("JOINT: %d %s %f", i, _joint_state.name[i].c_str(), _joint_state.position[i]);
             }
             else {
-                ROS_INFO("JOINT NULL: %d", i);
+                //ROS_INFO("JOINT NULL: %d", i);
             }
         }
         _joint_state_publisher.publish(_joint_state);

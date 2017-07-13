@@ -59,6 +59,12 @@
                       args="-urdf -model shadowhand_motor -x 0 -y 0 -z 0.0 -param robot_description"/>
             </group>
         </group>
+        <!--
+        <group unless="$(arg gazebo)">
+            <node name="GazeboVoxelMeshRenderer" pkg="gazebo_ros" type="gzclient"
+                  respawn="false" output="screen" />
+        </group>
+        -->
 
         <!--
         <rosparam command="load" file="$(find sr_description)/hand/config/$(arg hand_id)_controller_gazebo.yaml"/>
@@ -81,6 +87,7 @@
             <param name="use_gui" value="TRUE"/>
         </node>
         -->
+        <!-- The node, though the main robot controller node, is just an independent node like other nodes(gazebo model plugin nodes, etc.) -->
         <node name="robotArmController" pkg="my_arm" type="robotArmController" output="screen" />
     </group>
 

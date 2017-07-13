@@ -87,7 +87,7 @@ void RobotVoxelyzeAdapter::initVoxelyze(ros::NodeHandle* nodeHandle, bool isShow
     ROS_INFO("VOX_CAD START");
     bool test = loadVXA();
     if(test) {
-        //ROS_INFO("LOAD VXA SUCCESSFULLY : %d", _voxCad->MainSim.pEnv->pObj->GetNumVox());
+        ROS_INFO("LOAD VXA SUCCESSFULLY : %d", _voxCad->MainSim.pEnv->pObj->GetNumVox());
         std::cout << "LOAD VXA SUCCESSFULLY : %d" << _voxCad->MainSim.pEnv->pObj->GetNumVox();
     }
     //
@@ -201,7 +201,8 @@ void RobotVoxelyzeAdapter::updateVoxelMesh()
 #endif
         emitVoxelMeshUpdated();
         //
-        // ------------------------------------------------------------------------------------------
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // PUBLISH VOXEL MESH MESSAGE
         //
         my_arm::voxel_mesh voxel_mesh_msg;

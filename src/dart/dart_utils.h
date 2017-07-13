@@ -311,7 +311,7 @@ SoftBodyNode::UniqueProperties makeMeshProperties(
         face[2] = facets[i].vi[2];
         properties.addFace(face);
     }
-#else if defined VOXELYZE_PURE
+#elif defined VOXELYZE_PURE
     //----------------------------------------------------------------------------
     // Point masses
     //----------------------------------------------------------------------------

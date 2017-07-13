@@ -67,6 +67,7 @@ CONFIG(release, debug|release) {
             -lrosconsole_backend_interface \
             -lrosconsole_bridge \
             -lroscpp \
+            \ # -lroscpp_common \
             -lroslz4 \
             -lroslib \
             -lroscpp_serialization \
@@ -122,6 +123,7 @@ CONFIG(debug, debug|release) {
             -lrosconsole_bridge \
             -lroscpp \
             -lroslib \
+            \ # -lroscpp_common \
             -lroslz4 \
             -lroscpp_serialization \
             -lrostime \

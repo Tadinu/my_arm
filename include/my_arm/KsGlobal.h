@@ -1,5 +1,7 @@
 #pragma once
 
+#include "commondefines.h"
+
 // QT --
 //
 #include <QApplication>
@@ -9,20 +11,11 @@
 #include <QEventLoop>
 #include <QMetaObject>
 
-// ROS --
-//
-#include <ros/ros.h>
-#include <ros/console.h>
-#include <ros/common.h>
-#include <ros/cpp_common_decl.h>
-
 #if   ( (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) )
 #define K3DS_QT5
 #elif ( (QT_VERSION >= QT_VERSION_CHECK(4, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) )
 #define K3DS_QT4
 #endif
-
-#define V_PI (3.1415926535897931)
 
 #define K3D_MEMFUNC_CALL(object, method) ((object).*(method))
 
@@ -243,35 +236,6 @@
 
 #define V_TF_2_QVECTOR3D(tfVector) (QVector3D(tfVector.x(), tfVector.y(), tfVector.z()))
 #define V_QVECTOR3D_2TF(qVector)   (tf::Vector3(qVector.x(), qVector.y(), qVector.z()))
-// ----------------------------------------------------------------------------------
-// ROS COMMON DEFINE
-#define MY_ARM_RVIZ
-
-// PACKAGE NAME --
-#define CROS_MY_ARM_PACKAGE_NAME ("my_arm")
-
-// FRAMES --
-#define CWORLD_FRAME ("world")
-#define CBASE_LINK ("base_link")
-#define RAD_2_ANGLE(rad)   ((rad*180)/V_PI)
-#define ANGLE_2_RAD(angle) ((angle*V_PI)/180)
-
-// VMARKER --
-#define VMARKER_INSTANCE() VMarker::getInstance()
-
-// LEAP / REALSENSE HANDS --
-//
-#define ROBOT_LEAP_HANDS
-//#define ROBOT_REAL_SENSE_HANDS
-#define CLEAP_BASE_FRAME (CWORLD_FRAME)
-
-// DART --
-#define ROBOT_DART
-#ifdef ROBOT_DART
-#define VDART_ADAPTER() RobotDartAdapter::getInstance()
-#endif
-
-//#define USING_PISA_SOFT_HAND_ONLY
 
 class KsGlobal : public QObject
 {

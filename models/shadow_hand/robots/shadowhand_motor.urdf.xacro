@@ -10,7 +10,7 @@
 
     <gazebo>
       <!-- !NOTEE : MODEL PLUGIN TYPE ONLY -->
-      <plugin name="gazebo_my_arm_control" filename="libgazeboRobotArmController.so">
+      <plugin name="gazebo_my_arm_control" filename="libgazeboRobotArmController.so"> <!-- devel/lib folder -->
           <robotNamespace></robotNamespace>
           <robotSimType>my_arm_gazebo_sim/DefaultRobotHWSim</robotSimType>
           <jointName>rh_world_joint,

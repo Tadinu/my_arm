@@ -16,7 +16,7 @@ See <http://www.opensource.org/licenses/lgpl-3.0.html> for license details.
 #include <float.h>
 #include "Vec3D.h"
 
-#define PI 3.14159265358979
+#define QUAT3D_PI 3.14159265358979
 #define DBL_EPSILONx24 5.328e-15 //DBL_EPSILON*24
 //#define DBL_EPSILON_SQ_x6xROOT2 4.17e-31 //DBL_EPSILON*DBL_EPSILON*6*sqrt(2.0)
 
@@ -61,7 +61,7 @@ public:
 		if (theta <= 0) {*this = Quat3D(1,0,0,0); return;} //very small angle, return no rotation
 		Vec3D<T> Axis = RotateFrom.Cross(RotateTo); //Axis of rotation
 		Axis.NormalizeFast();
-		if (theta > PI-DISCARD_ANGLE_RAD) {*this = Quat3D(Axis); return;} //180 degree rotation (180 degree rot about axis ax, ay, az is Quat(0,ax,ay,az))
+        if (theta > QUAT3D_PI-DISCARD_ANGLE_RAD) {*this = Quat3D(Axis); return;} //180 degree rotation (180 degree rot about axis ax, ay, az is Quat(0,ax,ay,az))
 		*this = Quat3D(theta, Axis); //otherwise for the quaternion from angle-axis. 
 	} //!< Constructs this quaternion to represent the rotation from two vectors. The vectors need not be normalized and are not modified. @param[in] RotateFrom A vector representing a pre-rotation orientation. @param[in] RotateTo A vector representing a post-rotation orientation.
 
@@ -155,7 +155,7 @@ public:
 		RotFromNorm.NormalizeFast(); //Normalize the input...
 
 		T theta = acos(RotFromNorm.x); //because RotFromNorm is normalized, 1,0,0 is normalized, and A.B = |A||B|cos(theta) = cos(theta)
-		if (theta > PI-DISCARD_ANGLE_RAD) {w=0; x=0; y=1; z=0; return;} //180 degree rotation (about y axis, since the vector must be pointing in -x direction
+        if (theta > QUAT3D_PI-DISCARD_ANGLE_RAD) {w=0; x=0; y=1; z=0; return;} //180 degree rotation (about y axis, since the vector must be pointing in -x direction
 
 		const T AxisMagInv = 1.0/sqrt(RotFromNorm.z*RotFromNorm.z+RotFromNorm.y*RotFromNorm.y);
 		//Here theta is the angle, axis is RotFromNorm.Cross(Vec3D(1,0,0)) = Vec3D(0, RotFromNorm.z/AxisMagInv, -RotFromNorm.y/AxisMagInv), which is still normalized. (super rolled together)

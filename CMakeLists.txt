@@ -112,8 +112,8 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
 
   ## Realsense --
-  librealsense
-  realsense_camera
+  #librealsense
+  #realsense_camera
   cv_bridge
   dynamic_reconfigure
 
@@ -304,8 +304,8 @@ catkin_package(
       geometry_msgs
       image_transport
       message_runtime
-      librealsense
-      realsense_camera
+      # librealsense
+      # realsense_camera
       ##graspit_ros_planning_msgs
 )
 
@@ -355,16 +355,17 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR} ## To include gen files like "ui
 
 qt5_add_resources(QT_RESOURCES_CPP qml.qrc 3rd/ros_vox_cad/VoxCad.qrc)
 qt5_wrap_cpp(QT_MOC_HPP ## my_arm --
+                        include/my_arm/commondefines.h
+                        include/my_arm/KsGlobal.h
                         include/my_arm/GeopadMainWindowAgent.h
                         include/my_arm/GeopadQMLAdapter.h
                         include/my_arm/K3DMaskedMouseArea.h
                         include/my_arm/K3DQMLItemAgent.h
                         include/my_arm/K3DQMLItemInfo.h
                         include/my_arm/K3DStateMachine.h
-                        include/my_arm/KsGlobal.h
                         include/my_arm/RobotThread.h
                         include/my_arm/RobotLeapAdapter.h
-                        include/my_arm/RobotRealSenseAdapter.h
+                        # include/my_arm/RobotRealSenseAdapter.h
                         include/my_arm/RobotKinectAdapter.h
                         include/my_arm/RobotVoxelyzeAdapter.h
                         include/my_arm/RobotDartAdapter.h
@@ -401,17 +402,19 @@ qt5_wrap_ui(QT_UI_HPP 3rd/ros_vox_cad/VoxCad/VoxCad.ui
 
 ## Declare a C++ executable
 add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
+                                  src/my_arm/commondefines.cpp
+                                  src/my_arm/KsGlobal.cpp
                                   src/my_arm/GeopadMainWindowAgent.cpp
                                   src/my_arm/GeopadQMLAdapter.cpp
                                   src/my_arm/K3DMaskedMouseArea.cpp
                                   src/my_arm/K3DQMLItemAgent.cpp
                                   src/my_arm/K3DQMLItemInfo.cpp
                                   src/my_arm/K3DStateMachine.cpp
-                                  src/my_arm/KsGlobal.cpp
+
                                   src/my_arm/RobotArmControllerMain.cpp
                                   src/my_arm/RobotThread.cpp
                                   src/my_arm/RobotLeapAdapter.cpp
-                                  src/my_arm/RobotRealSenseAdapter.cpp
+                                  ## src/my_arm/RobotRealSenseAdapter.cpp
                                   src/my_arm/RobotKinectAdapter.cpp
                                   src/my_arm/RobotVoxelyzeAdapter.cpp
                                   src/my_arm/RobotDartAdapter.cpp
@@ -451,8 +454,9 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   ##3rd/RealSense/src/VideoModule.h
                                   ##
                                   ##3rd/RealSense/src/hands_publisher.cpp
-                                  3rd/RealSense/src/camera/base_nodelet.cpp
-                                  3rd/RealSense/src/camera/sr300_nodelet.cpp
+
+                                  ## 3rd/RealSense/src/camera/base_nodelet.cpp
+                                  ## 3rd/RealSense/src/camera/sr300_nodelet.cpp
 
                                   ## Voxelyze --
                                   ##3rd/Voxelyze/src/Voxelyze.cpp
@@ -476,17 +480,18 @@ add_executable(robotArmController src/my_arm/RobotArmControllerMain.cpp
                                   )
 
 add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_plugin.cpp
+                                            src/my_arm/commondefines.cpp
+                                            src/my_arm/KsGlobal.cpp
                                             src/my_arm/GeopadMainWindowAgent.cpp
                                             src/my_arm/GeopadQMLAdapter.cpp
                                             src/my_arm/K3DMaskedMouseArea.cpp
                                             src/my_arm/K3DQMLItemAgent.cpp
                                             src/my_arm/K3DQMLItemInfo.cpp
                                             src/my_arm/K3DStateMachine.cpp
-                                            src/my_arm/KsGlobal.cpp
                                             src/my_arm/RobotArmControllerMain.cpp
                                             src/my_arm/RobotThread.cpp
                                             src/my_arm/RobotLeapAdapter.cpp
-                                            src/my_arm/RobotRealSenseAdapter.cpp
+                                            ## src/my_arm/RobotRealSenseAdapter.cpp
                                             src/my_arm/RobotKinectAdapter.cpp
                                             src/my_arm/RobotVoxelyzeAdapter.cpp
                                             src/my_arm/RobotDartAdapter.cpp
@@ -497,7 +502,7 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             src/LeapMotion/hands_listener.cpp
                                             src/LeapMotion/camera_listener.cpp
 
-                                            ## Voxelyze --
+                                            ## Voxelyze -- Use Voxelyze as a lib, not source
                                             ##3rd/Voxelyze/src/Voxelyze.cpp
                                             ##3rd/Voxelyze/src/VX_Collision.cpp
                                             ##3rd/Voxelyze/src/VX_External.cpp
@@ -518,6 +523,7 @@ add_library(gazeboRobotArmController SHARED src/Gazebo/gazebo_my_arm_commander_p
                                             ${QT_MOC_HPP}
                                             )
 
+## Output dir: devel/lib
 add_library(gazeboCameraPublisher SHARED src/Gazebo/gazebo_camera_publisher_plugin.cpp)
 add_library(gazeboMarkerPlugin    SHARED src/Gazebo/gazebo_marker_plugin.cpp src/Gazebo/gazebo_selection_box.cpp)
 add_library(gazeboVoxelMeshRenderer       SHARED src/Gazebo/gazebo_voxel_mesh_renderer.cpp src/Gazebo/gazebo_selection_box.cpp)

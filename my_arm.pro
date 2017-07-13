@@ -18,6 +18,8 @@ DEFINES += MY_ARM QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL PREC
 TARGET = robotArmController
 TEMPLATE = app
 
+# THIS PROJECT, FOR UNKNOWN REASON, IS NOT SUCCESSFULLY BUILT YET AS INTEGRATING DART WITH ROS..!
+# atlasSimbicon, also Dart & Ros, PROJECT MEANWHILE COULD BE BUILT SMOOTHLY!
 CONFIG(release, debug|release) {
     message(Release)
     LIBS += \ ## -L/usr/lib/x86_64-linux-gnu/ \ ## qt_version_tag error (Ubuntu default conflict with Qt5.7.1) since QtCreator automatically add this!
@@ -186,7 +188,9 @@ SOURCES += main.cpp \
     3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointTrajectoryServer.cpp \
     3rd/joint-control-pkgs/gazebo_joint_control/src/JointController.cpp \
     3rd/joint-control-pkgs/joint_trajectory_execution/src/TrajectoryActionServer.cpp \
-    src/my_arm/RobotMoveIt.cpp
+    src/my_arm/RobotMoveIt.cpp \
+    src/my_arm/commondefines.cpp \
+    src/my_arm/base64.cpp
 
 RESOURCES += qml.qrc
 
@@ -871,7 +875,9 @@ HEADERS += \
     3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/JointController.h \
     3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/JointVelocityTracker.hpp \
     3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h \
-    include/my_arm/RobotMoveIt.h
+    include/my_arm/RobotMoveIt.h \
+    include/my_arm/base64.h \
+    include/my_arm/commondefines.h
 
 
 ##

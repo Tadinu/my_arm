@@ -83,7 +83,7 @@ void RobotMoveIt::initMoveIt(ros::NodeHandle* node_handle)
 
     while (!service_client.exists())
     {
-      ROS_INFO("Waiting for service");
+      ROS_INFO("RobotMoveIt::initMoveIt-Waiting for service");
       sleep(1.0);
     }
 

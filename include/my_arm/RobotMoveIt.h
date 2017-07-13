@@ -20,7 +20,6 @@
 // Kinematics
 #include <moveit_msgs/GetPositionIK.h>
 
-#define ROBOT_MOVEIT
 #define VMOVEIT() RobotMoveIt::getInstance()
 
 class RobotMoveIt : public QObject {

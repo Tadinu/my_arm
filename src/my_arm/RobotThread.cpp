@@ -8,15 +8,22 @@
 #include "RobotThread.h"
 #include "KsGlobal.h"
 
+#ifdef ROBOT_LEAP_HANDS
 #include "RobotLeapAdapter.h"
+#endif
+#ifdef ROBOT_REAL_SENSE_HANDS
 #include "RobotRealSenseAdapter.h"
+#endif
 #include "RobotVoxelyzeAdapter.h"
-//#include "RobotDartAdapter.h"
+#ifdef ROBOT_DART
+#include "RobotDartAdapter.h"
+#endif
 #include "RobotMoveIt.h"
 #include "bullet_server.h"
 
 // ROBOT TO RUN
-#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_UR_ARM)
+//#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_UR_ARM)
+#define CRUN_ROBOT (KsGlobal::VSHADOW_HAND_ARM)
 //#define CRUN_ROBOT (KsGlobal::VPISA_SOFT_HAND_ARM)
 
 // NODE --
@@ -132,9 +139,9 @@ bool RobotThread::init()
     VVOXELYZE_ADAPTER()->initVoxelyze(_node_handle); // UI TASK -> MUST BE RUN ON MAIN THREAD
 #endif
 
-//#ifdef ROBOT_DART
-//    //VDART_ADAPTER()->initDart(_init_argc, _pInit_argv);
-//#endif
+#ifdef ROBOT_DART
+    //VDART_ADAPTER()->initDart(_init_argc, _pInit_argv);
+#endif
 
     return true;
 }//set up the thread
@@ -206,6 +213,7 @@ void RobotThread::runArmOperation(int armId)
                      this, &RobotThread::determineArmArrangement);
 
     // create a timer to update the published transforms
+    // http://wiki.ros.org/roscpp_tutorials/Tutorials/Timers
     ros::Timer frame_timer = _node_handle->createTimer(ros::Duration(0.5), &VMarker::frameCallback);
 
     // -------------------------------------------------------------------------------------------------------
@@ -297,7 +305,9 @@ void RobotThread::runArmOperation(int armId)
     //
     while (ros::ok())
     {
+#ifdef ROBOT_MOVEIT
         VMOVEIT()->fetchRobotModelInfo();
+#endif
         // =====================================================================================
         // Listen for frame transforms
         //

@@ -31,67 +31,84 @@
 
 #include <iostream>
 
-#include "dart/dart.hpp"
+#include "MyWindow.hpp"
+#include "Controller.hpp"
 
-#include "examples/atlasSimbicon/MyWindow.hpp"
-#include "examples/atlasSimbicon/Controller.hpp"
+#include "my_arm/RobotVoxelyzeAdapter.h"
 
-using namespace std;
-using namespace Eigen;
-using namespace dart::common;
-using namespace dart::math;
-using namespace dart::dynamics;
-using namespace dart::simulation;
-using namespace dart::utils;
+// ==================================================================================================
+MyWindow* gbWindow = nullptr;
+void gbDoIdleTasks()
+{
+}
 
 int main(int argc, char* argv[])
 {
-  // Create empty soft world
-  WorldPtr myWorld(new World);
+    QApplication app(argc, argv); // To run VoxCad
 
-  // Load ground and Atlas robot and add them to the world
-  DartLoader urdfLoader;
-  SkeletonPtr ground = urdfLoader.parseSkeleton(
-        DART_DATA_PATH"sdf/atlas/ground.urdf");
-//  SkeletonPtr atlas = SoftSdfParser::readSkeleton(
-//        DART_DATA_PATH"sdf/atlas/atlas_v3_no_head.sdf");
-  SkeletonPtr atlas = SdfParser::readSkeleton(
-        DART_DATA_PATH"sdf/atlas/atlas_v3_no_head_soft_feet.sdf");
-              //DART_DATA_PATH"sdf/shadow_hand/shadow_hand.sdf");
-  std::string test = myWorld->addSkeleton(atlas);
-  test = myWorld->addSkeleton(ground);
+    ros::init(argc, argv, "dart", ros::init_options::NoSigintHandler|ros::init_options::AnonymousName);
+    ros::NodeHandle* _node_handle = new ros::NodeHandle(CROS_MY_ARM_PACKAGE_NAME);
+    //
+    if (!ros::master::check()) {
+        std::cout << "ROS INITIALIZATION FAILED!" << std::endl;
+        return -1; //do not start without ros.
+    }
+    // -----------------------------------------------------------------------
+#if 1
+    dart::simulation::WorldPtr myWorld
+        = dart::utils::SkelParser::readWorld(
+          DART_DATA_PATH"skel/softGround.skel");
+#else
+    // Create empty soft world
+    WorldPtr myWorld(new World);
 
-  // Set initial configuration for Atlas robot
-  VectorXd q = atlas->getPositions();
-  q[0] = -0.5 * constantsd::pi();
-  atlas->setPositions(q);
+    // Load ground and Atlas robot and add them to the world
+    DartLoader urdfLoader;
+    SkeletonPtr ground = urdfLoader.parseSkeleton(
+          DART_DATA_PATH"sdf/atlas/ground2.urdf");
+    std::string test = myWorld->addSkeleton(ground);
 
-  // Set gravity of the world
-  myWorld->setGravity(Vector3d(0.0, -9.81, 0.0));
+    // Set gravity of the world
+    myWorld->setGravity(Vector3d(0.0, -9.81, 0.0));
+#endif
 
-  // Create a window and link it to the world
-  MyWindow window(new Controller(atlas, myWorld->getConstraintSolver()));
-  window.setWorld(myWorld);
+#ifdef DART_VOXEL_MESH
+    VVOXELYZE_ADAPTER()->initVoxelyze(_node_handle, false);
+    QThread::msleep(1000);
+    gbWindow = new MyWindow(myWorld);
+    gbWindow->setWorld(myWorld);
+#ifdef VOX_CAD
+    VOXELYZE_ADAPTER()->deleteInstance();
+#endif
+#else
+    // Create a window and link it to the world
+    MyWindow window(new Controller(atlas, myWorld->getConstraintSolver()));
+    window.setWorld(myWorld);
+#endif
 
-  // Print manual
-  cout << "space bar: simulation on/off" << endl;
-  cout << "'p': playback/stop" << endl;
-  cout << "'[' and ']': play one frame backward and forward" << endl;
-  cout << "'v': visualization on/off" << endl;
-  cout << endl;
-  cout << "'h': harness pelvis on/off" << endl;
-  cout << "'j': harness left foot on/off" << endl;
-  cout << "'k': harness right foot on/off" << endl;
-  cout << "'r': reset robot" << endl;
-  cout << "'n': transite to the next state manually" << endl;
-  cout << endl;
-  cout << "'1': standing controller" << endl;
-  cout << "'2': walking controller" << endl;
+    // Print manual
+    cout << "space bar: simulation on/off" << endl;
+    cout << "'p': playback/stop" << endl;
+    cout << "'[' and ']': play one frame backward and forward" << endl;
+    cout << "'v': visualization on/off" << endl;
+    cout << endl;
+    cout << "'h': harness pelvis on/off" << endl;
+    cout << "'j': harness left foot on/off" << endl;
+    cout << "'k': harness right foot on/off" << endl;
+    cout << "'r': reset robot" << endl;
+    cout << "'n': transite to the next state manually" << endl;
+    cout << endl;
+    cout << "'a/s': push forward/backward" << endl;
+    cout << "'d/f': push right/left" << endl;
+    cout << endl;
+    cout << "'1': standing controller" << endl;
+    cout << "'2': walking controller" << endl;
 
-  // Run glut loop
-  glutInit(&argc, argv);
-  window.initWindow(640, 480, "Atlas Robot");
-  glutMainLoop();
+    // Run glut loop
+    glutInit(&argc, argv);
+    gbWindow->initWindow(640, 480, "Atlas Robot");
+    //glutIdleFunc(&gbDoIdleTasks);
+    glutMainLoop();
 
-  return 0;
+    return 0;
 }

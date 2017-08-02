@@ -18,8 +18,7 @@ DEFINES += MY_ARM QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL PREC
 TARGET = robotArmController
 TEMPLATE = app
 
-# THIS PROJECT, FOR UNKNOWN REASON, IS NOT SUCCESSFULLY BUILT YET AS INTEGRATING DART WITH ROS..!
-# atlasSimbicon, also Dart & Ros, PROJECT MEANWHILE COULD BE BUILT SMOOTHLY!
+MY_ARM_PROJ_DIR = /home/brhm/DUC/RobotArm/src/my_arm
 CONFIG(release, debug|release) {
     message(Release)
     LIBS += \ ## -L/usr/lib/x86_64-linux-gnu/ \ ## qt_version_tag error (Ubuntu default conflict with Qt5.7.1) since QtCreator automatically add this!
@@ -57,12 +56,18 @@ CONFIG(release, debug|release) {
             ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
@@ -112,12 +117,18 @@ CONFIG(debug, debug|release) {
             ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \

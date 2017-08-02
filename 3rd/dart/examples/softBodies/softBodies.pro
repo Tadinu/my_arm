@@ -75,12 +75,18 @@ CONFIG(release, debug|release) {
             ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
@@ -123,12 +129,18 @@ CONFIG(debug, debug|release) {
             ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \

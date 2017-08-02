@@ -48,7 +48,7 @@ message(STATUS "GAZEBO_CXX_FLAGS:" ${GAZEBO_CXX_FLAGS})
 # or the Qt5<Module>_DIR must be set in the CMake cache to the location of the Qt5WidgetsConfig.cmake
 # file. The easiest way to use CMake is to set the CMAKE_PREFIX_PATH environment variable to the install
 # prefix of Qt 5.
-set(QT_DIR "$ENV{HOME}/Qt5.7.1/5.7/gcc_64")
+set(QT_DIR "$ENV{HOME}/Qt5.9.1/5.9.1/gcc_64")
 message(STATUS "QT_DIR:" ${QT_DIR})
 set(CMAKE_PREFIX_PATH "${QT_DIR} $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_PREFIX_PATH: " ${CMAKE_PREFIX_PATH})

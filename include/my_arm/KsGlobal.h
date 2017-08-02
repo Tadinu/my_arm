@@ -11,6 +11,12 @@
 #include <QEventLoop>
 #include <QMetaObject>
 
+#include <QThread>
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
+#include <QThread>
+#include <QMutex>
+
 #if   ( (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(6, 0, 0)) )
 #define K3DS_QT5
 #elif ( (QT_VERSION >= QT_VERSION_CHECK(4, 0, 0)) &&  (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) )

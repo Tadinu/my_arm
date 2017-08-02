@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
   std::cout << "'q','w','a','s','z','x': programmed interaction" << std::endl;
 
   std::cout << "\nWarning: Let objects settle before tossing a new one, or the simulation could explode." << std::endl;
-  std::cout <<   "         If the simulation freezes, you may need to force quit the application.\n" << std::endl;
+  std::cout << "         If the simulation freezes, you may need to force quit the application.\n" << std::endl;
 
   glutInit(&argc, argv);
   gbWindow->initWindow(640, 480, "Collisions");

@@ -68,6 +68,7 @@ CONFIG(release, debug|release) {
             -lrosconsole_backend_interface \
             -lrosconsole_bridge \
             -lroscpp \
+            \ # -lroscpp_common \
             -lroslz4 \
             -lroslib \
             -lroscpp_serialization \
@@ -84,16 +85,23 @@ CONFIG(release, debug|release) {
             ## \ ## moveit_visual_tools --
             ## -lrviz_visual_tools  \
             \ ## dart --
-            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             ## https://dartsim.github.io/install_dart_on_ubuntu.html
             ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
+            ## -> THEREFORE, FOR NOW WE CANNOT USE -lfcl
             ##
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
@@ -140,16 +148,23 @@ CONFIG(debug, debug|release) {
             ## \ ## moveit_visual_tools --
             ## -lrviz_visual_tools  \
             \ ## dart --
-            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             ## https://dartsim.github.io/install_dart_on_ubuntu.html
             ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
+            ## -> THEREFORE, FOR NOW WE CANNOT USE -lfcl
             ##
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
@@ -165,7 +180,8 @@ SOURCES += \
     ../../../src/my_arm/RobotLeapAdapter.cpp \
     ../../../src/my_arm/KsGlobal.cpp \
     Util.cpp \
-    MyWindow.cpp
+    MyWindow.cpp \
+    ../../../src/my_arm/commondefines.cpp
 HEADERS += \
     ../../../include/my_arm/RobotVoxelyzeAdapter.h \
     ../../../include/LeapMotion/hands_listener.h \
@@ -175,7 +191,8 @@ HEADERS += \
     ../../../include/my_arm/RobotLeapAdapter.h \
     ../../../include/my_arm/KsGlobal.h \
     Util.h \
-    MyWindow.h
+    MyWindow.h \
+    ../../../include/my_arm/commondefines.h
 
 
 # The following define makes your compiler emit warnings if you use

@@ -7,6 +7,9 @@ TARGET = my_arm_dart
 TEMPLATE = app
 DEFINES += MY_ARM VOXELYZE_PURE QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL PREC_MED USE_OMP ## QT_DLL // VOX_CAD For VoxCad, USE_OMP & VOXELYZE_PURE, PARDISO_5 for Voxelyze
 
+# THIS PROJECT, FOR UNKNOWN REASON, IS NOT SUCCESSFULLY BUILT YET AS INTEGRATING DART WITH ROS..!
+# atlasSimbicon, also Dart & Ros, PROJECT MEANWHILE COULD BE BUILT SMOOTHLY!
+MY_ARM_PROJ_DIR = /home/brhm/DUC/RobotArm/src/my_arm
 INCLUDEPATH+= /usr/include \
               /usr/local/include \
               \ ## ROS
@@ -84,13 +87,19 @@ CONFIG(release, debug|release) {
             ## \ ## moveit_visual_tools --
             ## -lrviz_visual_tools  \
             \ ## dart --
-            -L../../3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
@@ -137,13 +146,19 @@ CONFIG(debug, debug|release) {
             ## \ ## moveit_visual_tools --
             ## -lrviz_visual_tools  \
             \ ## dart --
-            -L../../3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
+            -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/odelcpsolver \
             -ldart \
             -ldart-gui \
             -ldart-planning \
             -ldart-collision-bullet \
             -ldart-utils \
             -ldart-utils-urdf \
+            -ldart-external-imgui \
+            -ldart-external-lodepng \
+            -ldart-external-odelcpsolver \
             \ ## LEAP --
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \

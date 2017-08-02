@@ -742,7 +742,8 @@ public:
 
 #ifdef DART_VOXEL_MESH
     MyWindow(const WorldPtr& world)
-      : mRandomize(true),
+      : SoftSimWindow(),
+        mRandomize(true),
         mRD(),
         mMT(mRD()),
         mDistribution(-1.0, std::nextafter(1.0, 2.0)),

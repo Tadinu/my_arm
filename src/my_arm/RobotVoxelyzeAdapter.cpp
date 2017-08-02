@@ -437,9 +437,10 @@ void RobotVoxelyzeAdapter::makeVoxelMesh()
 
 QVector3D RobotVoxelyzeAdapter::getVoxelMeshSize()
 {
+    // 2000-x, 1000-y, 700-z
     return QVector3D(20*_voxelyze->voxelSize() * (_voxelyze->indexMaxX()-_voxelyze->indexMinX()+1),
-                     200*_voxelyze->voxelSize() * (_voxelyze->indexMaxY()-_voxelyze->indexMinY()+1),
-                     10*_voxelyze->voxelSize() * (_voxelyze->indexMaxZ()-_voxelyze->indexMinZ()+1));
+                     100*_voxelyze->voxelSize() * (_voxelyze->indexMaxY()-_voxelyze->indexMinY()+1),
+                     70*_voxelyze->voxelSize() * (_voxelyze->indexMaxZ()-_voxelyze->indexMinZ()+1));
 }
 
 #endif

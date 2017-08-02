@@ -5,7 +5,7 @@
 #TEMPLATE = app
 TEMPLATE = lib
 TARGET = VoxCad
-DESTDIR = lib
+DESTDIR = lib # OUTPUT DIR
 QT += core gui xml opengl concurrent network qml quick widgets
 CONFIG += c++11
 ##CONFIG += staticlib

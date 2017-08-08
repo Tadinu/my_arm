@@ -16,6 +16,8 @@ INCLUDEPATH+= /usr/include \
               /usr/include/gazebo-7/gazebo \
               \ ## OGRE
               /usr/include/OGRE \
+              \ ## BULLET
+              /usr/include/bullet \
               \ ## my_arm
               $${MY_ARM_PROJ_DIR}/include        \
               $${MY_ARM_PROJ_DIR}/include/my_arm \
@@ -50,6 +52,7 @@ CONFIG(release, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             ##-lfcl \ ## Open Flexible Collision library
             \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
@@ -116,6 +119,7 @@ CONFIG(debug, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             ##-lfcl \ ## Open Flexible Collision library
             \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
@@ -173,7 +177,6 @@ CONFIG(debug, debug|release) {
 }
 
 SOURCES += \
-    tutorialCollisions-Finished.cpp \
     ../../../src/my_arm/RobotVoxelyzeAdapter.cpp \
     ../../../src/LeapMotion/hands_listener.cpp \
     ../../../src/LeapMotion/camera_listener.cpp \
@@ -181,7 +184,9 @@ SOURCES += \
     ../../../src/my_arm/KsGlobal.cpp \
     Util.cpp \
     MyWindow.cpp \
-    ../../../src/my_arm/commondefines.cpp
+    ../../../src/my_arm/commondefines.cpp \
+    \ #tutorialCollisions-Finished.cpp \
+    tutorialBiped-Finished.cpp
 HEADERS += \
     ../../../include/my_arm/RobotVoxelyzeAdapter.h \
     ../../../include/LeapMotion/hands_listener.h \
@@ -215,4 +220,5 @@ DISTFILES += \
     ../data/skel/soft_open_chain.skel \
     ../data/skel/softBodies.skel \
     ../data/skel/softVoxel.skel \
-    ../data/skel/softVoxel_2.skel
+    ../data/skel/softVoxel_2.skel \
+    ../data/skel/biped.skel

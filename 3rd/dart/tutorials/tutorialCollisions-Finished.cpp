@@ -41,7 +41,7 @@ void gbDoIdleTasks()
     }
 }
 
-int main(int argc, char* argv[])
+int main_(int argc, char* argv[])
 {
   QApplication app(argc, argv); // To run VoxCad
 

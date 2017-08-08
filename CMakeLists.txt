@@ -794,6 +794,9 @@ target_link_libraries(robotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdart.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-collision-bullet.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils-urdf.so
+                                         ${MY_ARM_DIR}/3rd/dart/build/dart/external/imgui/libdart-external-imgui.so
+                                         ${MY_ARM_DIR}/3rd/dart/build/dart/external/lodepng/libdart-external-lodepng.so
+                                         ${MY_ARM_DIR}/3rd/dart/build/dart/external/odelcpsolver/libdart-external-odelcpsolver.so
                                          assimp
                                          glut
                                          ##fcl
@@ -804,6 +807,9 @@ target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/dart/lib/libdar
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-collision-bullet.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils.so
                                          ${MY_ARM_DIR}/3rd/dart/lib/libdart-utils-urdf.so
+                                         ${MY_ARM_DIR}/3rd/dart/build/dart/external/imgui/libdart-external-imgui.so
+                                         ${MY_ARM_DIR}/3rd/dart/build/dart/external/lodepng/libdart-external-lodepng.so
+                                         ${MY_ARM_DIR}/3rd/dart/build/dart/external/odelcpsolver/libdart-external-odelcpsolver.so
                                          assimp
                                          glut
                                          ##fcl
@@ -819,6 +825,13 @@ target_link_libraries(gazeboRobotArmController ${SYSTEM_LIB_DIR}/libpcl_common.s
 target_link_libraries(gazeboRobotArmController ${SYSTEM_LIB_DIR}/libpcl_features.so)
 ##target_link_libraries(gazeboRobotArmController ${SYSTEM_LIB_DIR}/libpcl_apps.so)
 # PCL --
+
+# ReflexxesTypeII ++
+include_directories(3rd/ReflexxesTypeII/include)
+target_link_libraries(robotArmController       ${MY_ARM_DIR}/3rd/ReflexxesTypeII/Linux/x64/release/lib/shared/libReflexxesTypeII.so)
+target_link_libraries(gazeboRobotArmController ${MY_ARM_DIR}/3rd/ReflexxesTypeII/Linux/x64/release/lib/shared/libReflexxesTypeII.so)
+# ReflexxesTypeII --
+
 
 # Ignition Rendering ++
 ##if(libignition-rendering_FOUND)

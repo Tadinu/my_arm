@@ -26,6 +26,7 @@ CONFIG(release, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
             -lz \
@@ -79,7 +80,10 @@ CONFIG(release, debug|release) {
             \#-lopencv_imgcodecs2413 \
             -lopencv_highgui2413 \
             -lopencv_contrib2413 \
-            -lopencv_imgproc2413
+            -lopencv_imgproc2413 \
+            \ ## ReflexxesTypeII -- \
+            -L$${MY_ARM_PROJ_DIR}/3rd/ReflexxesTypeII/Linux/x64/release/lib/shared \
+            -lReflexxesTypeII
 }
 
 CONFIG(debug, debug|release) {
@@ -89,6 +93,7 @@ CONFIG(debug, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
             -lz \
@@ -140,7 +145,10 @@ CONFIG(debug, debug|release) {
             \#-lopencv_imgcodecs2413 \
             -lopencv_highgui2413 \
             -lopencv_contrib2413 \
-            -lopencv_imgproc2413
+            -lopencv_imgproc2413 \
+            \ ## ReflexxesTypeII -- \
+            -L$${MY_ARM_PROJ_DIR}/3rd/ReflexxesTypeII/Linux/x64/release/lib/shared \
+            -lReflexxesTypeII
 }
 
 SOURCES += main.cpp \
@@ -201,7 +209,43 @@ SOURCES += main.cpp \
     3rd/joint-control-pkgs/joint_trajectory_execution/src/TrajectoryActionServer.cpp \
     src/my_arm/RobotMoveIt.cpp \
     src/my_arm/commondefines.cpp \
-    src/my_arm/base64.cpp
+    src/my_arm/base64.cpp \
+    3rd/ReflexxesTypeII/src/RMLPositionSampleApplications/01_RMLPositionSampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLPositionSampleApplications/02_RMLPositionSampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLPositionSampleApplications/03_RMLPositionSampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLPositionSampleApplications/07_RMLPositionSampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/04_RMLVelocitySampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/05_RMLVelocitySampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/06_RMLVelocitySampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/08_RMLVelocitySampleApplication.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/ReflexxesAPI.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLCalculatePositionalExtrems.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisions.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree1A.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree1B.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree1C.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree2.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLFallBackStrategy.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLIsPhaseSynchronizationPossible.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLPolynomial.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLPosition.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLQuicksort.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLSetupModifiedSelectionVector.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep1.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep1IntermediateProfiles.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep1Profiles.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2IntermediateProfiles.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2PhaseSynchronization.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2Profiles.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2WithoutSynchronization.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep3.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocity.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityCalculatePositionalExtrems.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityFallBackStrategy.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityIsPhaseSynchronizationPossible.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityMethods.cpp \
+    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocitySetupPhaseSyncSelectionVector.cpp
 
 RESOURCES += qml.qrc
 
@@ -220,6 +264,8 @@ INCLUDEPATH+= /usr/include \
               /usr/include/gazebo-7/gazebo \
               \ ## OGRE
               /usr/include/OGRE \
+              \ ## BULLET
+              /usr/include/bullet \
               \ ## my_arm
               ./include        \
               ./include/my_arm \
@@ -243,7 +289,9 @@ INCLUDEPATH+= /usr/include \
               ./3rd/bullet_server/include \
               \ ## dart
               ./3rd/dart \
-              ./3rd/dart/build
+              ./3rd/dart/build \
+              \ ## ReflexxesTypeII
+              ./3rd/ReflexxesTypeII/include \
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -665,7 +713,10 @@ DISTFILES += \
     scripts/my_arm/grasp/convert_xml.py \
     scripts/my_arm/grasp/grasp_planner.py \
     scripts/my_arm/grasp/grasp.py \
-    scripts/my_arm/grasp/quick_grasp.py
+    scripts/my_arm/grasp/quick_grasp.py \
+    3rd/ReflexxesTypeII/Linux/ReflexxesTypeII/Makefile \
+    3rd/ReflexxesTypeII/Linux/RMLPositionSampleApplications/Makefile \
+    3rd/ReflexxesTypeII/Linux/RMLVelocitySampleApplications/Makefile
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \
@@ -888,7 +939,33 @@ HEADERS += \
     3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h \
     include/my_arm/RobotMoveIt.h \
     include/my_arm/base64.h \
-    include/my_arm/commondefines.h
+    include/my_arm/commondefines.h \
+    3rd/ReflexxesTypeII/include/ReflexxesAPI.h \
+    3rd/ReflexxesTypeII/include/RMLFlags.h \
+    3rd/ReflexxesTypeII/include/RMLInputParameters.h \
+    3rd/ReflexxesTypeII/include/RMLOutputParameters.h \
+    3rd/ReflexxesTypeII/include/RMLPositionFlags.h \
+    3rd/ReflexxesTypeII/include/RMLPositionInputParameters.h \
+    3rd/ReflexxesTypeII/include/RMLPositionOutputParameters.h \
+    3rd/ReflexxesTypeII/include/RMLVector.h \
+    3rd/ReflexxesTypeII/include/RMLVelocityFlags.h \
+    3rd/ReflexxesTypeII/include/RMLVelocityInputParameters.h \
+    3rd/ReflexxesTypeII/include/RMLVelocityOutputParameters.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLDecisions.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree1A.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree1B.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree1C.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree2.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLMath.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLPolynomial.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLPosition.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLQuicksort.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLStep1IntermediateProfiles.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLStep1Profiles.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLStep2IntermediateProfiles.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLStep2Profiles.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLStep2WithoutSynchronization.h \
+    3rd/ReflexxesTypeII/include/TypeIIRMLVelocity.h
 
 
 ##

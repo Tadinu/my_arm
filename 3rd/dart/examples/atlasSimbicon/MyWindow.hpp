@@ -45,6 +45,8 @@
 #include "my_arm/RobotVoxelyzeAdapter.h"
 
 #define DART_VOXEL_MESH
+//#define DAT_SOFT_GROUND_AS_VOXEL
+
 #define WORK_IN_WORLD
 #define FORCE_ON_RIGIDBODY 25.0
 #define FORCE_ON_VERTEX 1.00
@@ -91,7 +93,7 @@ class MyWindow : public dart::gui::SoftSimWindow
 
   const double default_vertex_stiffness = 500.0;
   const double default_edge_stiffness = 0.0;
-  const double default_soft_damping = 5.0;
+  const double default_soft_damping = 10.0;
 
 public:
   /// \brief Constructor
@@ -130,7 +132,7 @@ public:
 
   /// Add a soft body with the specified Joint type to a chain
   template<class JointType>
-  BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
+  BodyNode* createSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
                              BodyNode* parent = nullptr);
   void updateSoftGround();
 #endif

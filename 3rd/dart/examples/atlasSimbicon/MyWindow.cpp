@@ -31,7 +31,14 @@
 
 #include "examples/atlasSimbicon/MyWindow.hpp"
 
-#define CDART_SOFT_GROUND_NAME ("DartSoftGround")
+#define CDART_SOFT_GROUND_NAME  ("DartSoftGround")
+#define CROBOT_POS_X            (1)
+#define CROBOT_POS_Y            (1.5)
+#define CROBOT_POS_Z            (1)
+
+#define CDART_SOFT_GROUND_POS_X (0)
+#define CDART_SOFT_GROUND_POS_Y (0.1)
+#define CDART_SOFT_GROUND_POS_Z (0)
 
 //==============================================================================
 MyWindow::MyWindow(const WorldPtr& world)
@@ -40,7 +47,7 @@ MyWindow::MyWindow(const WorldPtr& world)
   setWorld(world);
   mForce = Eigen::Vector3d::Zero();
   mImpulseDuration = 0.0;
-  mSimulating = false;
+  dart::gui::SoftSimWindow::mSimulating  = false;
   dart::gui::SoftSimWindow::mShowMarkers = false;
   dart::gui::SoftSimWindow::mShowPointMasses = false;
   dart::gui::SoftSimWindow::mShowMeshs = false;
@@ -56,6 +63,9 @@ MyWindow::MyWindow(const WorldPtr& world)
 
   //4- Voxel Object
   updateSoftGround(); /* softVoxel.skel: world->getSkeleton(1); */
+
+  //cout << "TimeStep: " << mWorld->getTimeStep() << endl;
+  //mWorld->setTimeStep(0.0005);
 }
 
 //==============================================================================
@@ -86,8 +96,8 @@ void MyWindow::timeStepping()
   }
 
   // -----------------------------
-#if 1
   doIdleTasks();
+#ifdef DAT_SOFT_GROUND_AS_VOXEL
   determineRobotAndSoftGroundCollision();
 #endif
 }
@@ -216,9 +226,9 @@ void MyWindow::loadRobot()
     // Set initial configuration for Atlas robot
     VectorXd q = mRobot->getPositions();
     q[0] = -0.5 * constantsd::pi();
-    q[3] = 0;
-    q[4] = 1;
-    q[5] = 0;
+    q[3] = CROBOT_POS_X;
+    q[4] = CROBOT_POS_Y;
+    q[5] = CROBOT_POS_Z;
     mRobot->setPositions(q);
 }
 
@@ -338,8 +348,8 @@ SoftBodyNode::UniqueProperties MyWindow::makeMeshProperties(
 
 /// Add a soft body with the specified Joint type to a chain
 template<class JointType>
-BodyNode* MyWindow::addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
-                                     BodyNode* parent)
+BodyNode* MyWindow::createSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
+                                        BodyNode* parent)
 {
   // Set the Joint properties
   typename JointType::Properties joint_properties;
@@ -449,12 +459,14 @@ void MyWindow::updateSoftGround()
     //mOriginalSoftVoxelBody->setPositions(positions);
 
     // Add a soft body
-    BodyNode* bn = addSoftVoxelBody<FreeJoint>(newSoftGround, "Dart Soft Voxel");
-    setAllColors(newSoftGround, dart::Color::Gray());
+    BodyNode* bn = createSoftVoxelBody<FreeJoint>(newSoftGround, "Dart Soft Voxel");
+    setAllColors(newSoftGround, dart::Color::Orange());
 
     Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
     //Eigen::Vector3d axis = Eigen::Vector3d::UnitX(); // Any vector in the X/Y plane can be used
-    tf.translation() = Eigen::Vector3d(0, 0, 0);
+    tf.translation() = Eigen::Vector3d(CDART_SOFT_GROUND_POS_X,
+                                       CDART_SOFT_GROUND_POS_Y,
+                                       CDART_SOFT_GROUND_POS_Z);
     newSoftGround->getJoint(0)->setTransformFromParentBodyNode(tf);
 
     // ----------------------------------------------------------------------------------------------
@@ -478,16 +490,18 @@ void MyWindow::updateSoftGround()
 
 void MyWindow::doIdleTasks()
 {
+#ifdef DAT_SOFT_GROUND_AS_VOXEL
     if(RobotVoxelyzeAdapter::checkInstance()) {
-#if 1
+#if 0
         QFuture<void> future = QtConcurrent::run(this, &MyWindow::updateSoftGround);
 #else
         updateSoftGround();
 #endif
         // ----------------------------------------------------------------
         //VVOXELYZE_ADAPTER()->doVoxelyzeTimeStep();
-        VOXELYZE_ADAPTER()->updateVoxelMesh();
+        VVOXELYZE_ADAPTER()->updateVoxelMesh();
     }
+#endif
     // --------------------------------------------------------------------
     // HANDLE ROS CALLBACKS --
     //std::cout << "Ros spinning once!";

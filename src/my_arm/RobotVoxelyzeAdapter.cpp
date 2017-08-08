@@ -414,10 +414,10 @@ void RobotVoxelyzeAdapter::makeCantileverBeam()
 
 void RobotVoxelyzeAdapter::makeVoxelMesh()
 {
-    int x = 10, y = 1, z = 20;
+    int x = 10, y = 3, z = 10;
     std::vector<CVX_Voxel*> voxelList; voxelList.reserve(x*y*z);
     for(int i = 0; i < x; i++) {
-        for(int j = y-1; j < y; j++) {
+        for(int j = 0; j < y; j++) {
             for(int k = 0; k < z; k++) {
                 voxelList.push_back(_voxelyze->setVoxel(_voxelMaterial, i, j, k)); //Voxel at index x=0, y=0. z=0
             }
@@ -437,10 +437,9 @@ void RobotVoxelyzeAdapter::makeVoxelMesh()
 
 QVector3D RobotVoxelyzeAdapter::getVoxelMeshSize()
 {
-    // 2000-x, 1000-y, 700-z
-    return QVector3D(20*_voxelyze->voxelSize() * (_voxelyze->indexMaxX()-_voxelyze->indexMinX()+1),
-                     100*_voxelyze->voxelSize() * (_voxelyze->indexMaxY()-_voxelyze->indexMinY()+1),
-                     70*_voxelyze->voxelSize() * (_voxelyze->indexMaxZ()-_voxelyze->indexMinZ()+1));
+    return QVector3D(1000*_voxelyze->voxelSize() * (_voxelyze->indexMaxX()-_voxelyze->indexMinX()+1),
+                     300*_voxelyze->voxelSize() * (_voxelyze->indexMaxY()-_voxelyze->indexMinY()+1),
+                     1000 *_voxelyze->voxelSize() * (_voxelyze->indexMaxZ()-_voxelyze->indexMinZ()+1));
 }
 
 #endif

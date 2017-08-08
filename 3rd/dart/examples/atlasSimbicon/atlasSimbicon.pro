@@ -42,6 +42,8 @@ INCLUDEPATH+= /usr/include \
               /usr/include/gazebo-7/gazebo \
               \ ## OGRE
               /usr/include/OGRE \
+              \ ## BULLET
+              /usr/include/bullet \
               \ ## my_arm
               $${MY_ARM_PROJ_DIR}/include        \
               $${MY_ARM_PROJ_DIR}/include/my_arm \
@@ -72,6 +74,7 @@ CONFIG(release, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             ##-lfcl \ ## Open Flexible Collision library
             \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
@@ -133,6 +136,7 @@ CONFIG(debug, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             ##-lfcl \ ## Open Flexible Collision library
             \ ## VOXCAD --
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
@@ -202,4 +206,7 @@ DISTFILES += \
     CMakeLists.txt \
     ../../data/sdf/atlas/atlas_v3_no_head.urdf \
     ../../data/sdf/atlas/atlas_v3_no_head_soft_feet.sdf \
-    ../../data/sdf/atlas/atlas_v3_no_head.sdf
+    ../../data/sdf/atlas/atlas_v3_no_head.sdf \
+    ../../data/skel/softGround.skel \
+    ../../data/sdf/atlas/ground2.urdf \
+    ../../data/sdf/atlas/ground.urdf

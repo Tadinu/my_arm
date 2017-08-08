@@ -17,6 +17,8 @@ INCLUDEPATH+= /usr/include \
               /usr/include/gazebo-7/gazebo \
               \ ## OGRE
               /usr/include/OGRE \
+              \ ## BULLET
+              /usr/include/bullet \
               \ ## my_arm
               $${MY_ARM_PROJ_DIR}/include        \
               $${MY_ARM_PROJ_DIR}/include/my_arm \
@@ -45,6 +47,7 @@ CONFIG(release, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
             -lz \
@@ -101,6 +104,7 @@ CONFIG(debug, debug|release) {
             -lassimp \
             -lboost_system \
             -lglut \
+            -lLinearMath \
             -L$${MY_ARM_PROJ_DIR}/3rd/ros_vox_cad/lib \
             -lVoxCad \
             -lz \

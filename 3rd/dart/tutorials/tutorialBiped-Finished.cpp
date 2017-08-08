@@ -244,6 +244,15 @@ public:
       case 's':
         mController->changeWheelSpeed(-default_speed_increment);
         break;
+      case 'd':
+        mController->addAnkleStrategyForces();
+        break;
+      case 'f':
+        mController->addPDForces();
+        break;
+      case 'g':
+        mController->addSPDForces();
+        break;
       default:
         SimWindow::keyboard(key, x, y);
     }

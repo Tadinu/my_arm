@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         return -1; //do not start without ros.
     }
     // -----------------------------------------------------------------------
-#if 1
+#if 0
     dart::simulation::WorldPtr myWorld
         = dart::utils::SkelParser::readWorld(
           DART_DATA_PATH"skel/softGround.skel");

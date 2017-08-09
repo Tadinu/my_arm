@@ -47,6 +47,7 @@ INCLUDEPATH+= /usr/include \
               \ ## my_arm
               $${MY_ARM_PROJ_DIR}/include        \
               $${MY_ARM_PROJ_DIR}/include/my_arm \
+              $${MY_ARM_PROJ_DIR}/include/dart \
               $${MY_ARM_PROJ_DIR}/3rd \
               \ ## Kinect
               /home/brhm/LeapSDK/include \

@@ -19,6 +19,44 @@ TARGET = robotArmController
 TEMPLATE = app
 
 MY_ARM_PROJ_DIR = /home/brhm/DUC/RobotArm/src/my_arm
+INCLUDEPATH+= /usr/include \
+              /usr/local/include \
+              \ ## ROS
+              /opt/ros/kinetic/include \
+              \ ## GAZEBO
+              /usr/include/gazebo-7 \
+              /usr/include/gazebo-7/gazebo \
+              \ ## OGRE
+              /usr/include/OGRE \
+              \ ## BULLET
+              /usr/include/bullet \
+              \ ## my_arm
+              ./include        \
+              ./include/my_arm \
+              ./3rd \
+              \ ## Leap
+              /home/brhm/LeapSDK/include \
+              \ ## Kinect
+              ./include/Kinect    \
+              \ ## pcl
+              /usr/include/pcl-1.7 \
+              \ ## RealSense
+              ./3rd/RealSense/include \
+              ./3rd/RealSense/include/pxc \
+              \ ## ros_vox_cad
+              ./3rd/ros_vox_cad \
+              ./3rd/ros_vox_cad/VoxCad \
+              ./3rd/ros_vox_cad/VoxCad/Voxelyze \
+              ./3rd/ros_vox_cad/VoxCad/Voxelyze/Utils \
+              ./3rd/ros_vox_cad/Voxelyze/include \
+              \ ## bullet_server
+              ./3rd/bullet_server/include \
+              \ ## dart
+              ./3rd/dart \
+              ./3rd/dart/build \
+              \ ## ReflexxesTypeII
+              ./3rd/ReflexxesTypeII/include
+
 CONFIG(release, debug|release) {
     message(Release)
     LIBS += \ ## -L/usr/lib/x86_64-linux-gnu/ \ ## qt_version_tag error (Ubuntu default conflict with Qt5.7.1) since QtCreator automatically add this!
@@ -51,10 +89,10 @@ CONFIG(release, debug|release) {
             -ltf \
             -ltf_conversions \
             -ltf2_ros \
-            ## \ ## rviz --
-            ## -lrviz \
-            ## \ ## moveit_visual_tools --
-            ## -lrviz_visual_tools  \
+            \ ## \ ## rviz --
+            \ ## -lrviz \
+            \ ## \ ## moveit_visual_tools --
+            \ ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
@@ -73,7 +111,7 @@ CONFIG(release, debug|release) {
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
             -lcamera_info_manager \
-            -lcamera_calibration_parsers
+            -lcamera_calibration_parsers \
             \ ## OPENCV --
             -L./opencv/lib64/ \
             -lopencv_core2413 \
@@ -81,7 +119,7 @@ CONFIG(release, debug|release) {
             -lopencv_highgui2413 \
             -lopencv_contrib2413 \
             -lopencv_imgproc2413 \
-            \ ## ReflexxesTypeII -- \
+            \ ## ReflexxesTypeII --
             -L$${MY_ARM_PROJ_DIR}/3rd/ReflexxesTypeII/Linux/x64/release/lib/shared \
             -lReflexxesTypeII
 }
@@ -116,10 +154,10 @@ CONFIG(debug, debug|release) {
             -ltf \
             -ltf_conversions \
             -ltf2_ros \
-            ## \ ## rviz --
-            ## -lrviz \
-            ## \ ## moveit_visual_tools --
-            ## -lrviz_visual_tools  \
+            \ ## \ ## rviz --
+            \ ## -lrviz \
+            \ ## \ ## moveit_visual_tools --
+            \ ## -lrviz_visual_tools  \
             \ ## dart --
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
@@ -138,7 +176,7 @@ CONFIG(debug, debug|release) {
             -L/home/brhm/LeapSDK/lib/x64 \
             -lLeap \
             -lcamera_info_manager \
-            -lcamera_calibration_parsers
+            -lcamera_calibration_parsers \
             \ ## OPENCV --
             -L./opencv/lib64/ \
             -lopencv_core2413 \
@@ -146,7 +184,7 @@ CONFIG(debug, debug|release) {
             -lopencv_highgui2413 \
             -lopencv_contrib2413 \
             -lopencv_imgproc2413 \
-            \ ## ReflexxesTypeII -- \
+            \ ## ReflexxesTypeII --
             -L$${MY_ARM_PROJ_DIR}/3rd/ReflexxesTypeII/Linux/x64/release/lib/shared \
             -lReflexxesTypeII
 }
@@ -199,14 +237,6 @@ SOURCES += main.cpp \
     src/Gazebo/gazebo_selection_box.cpp \
     src/Gazebo/gazebo_voxel_mesh_renderer.cpp \
     src/shadow_hand/link_joints.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointControl.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointControlLocalImpl.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointControlLocalImplRegistration.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointStateClient.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointStatePublisher.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/GazeboJointTrajectoryServer.cpp \
-    3rd/joint-control-pkgs/gazebo_joint_control/src/JointController.cpp \
-    3rd/joint-control-pkgs/joint_trajectory_execution/src/TrajectoryActionServer.cpp \
     src/my_arm/RobotMoveIt.cpp \
     src/my_arm/commondefines.cpp \
     src/my_arm/base64.cpp \
@@ -217,35 +247,7 @@ SOURCES += main.cpp \
     3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/04_RMLVelocitySampleApplication.cpp \
     3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/05_RMLVelocitySampleApplication.cpp \
     3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/06_RMLVelocitySampleApplication.cpp \
-    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/08_RMLVelocitySampleApplication.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/ReflexxesAPI.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLCalculatePositionalExtrems.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisions.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree1A.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree1B.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree1C.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLDecisionTree2.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLFallBackStrategy.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLIsPhaseSynchronizationPossible.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLPolynomial.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLPosition.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLQuicksort.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLSetupModifiedSelectionVector.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep1.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep1IntermediateProfiles.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep1Profiles.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2IntermediateProfiles.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2PhaseSynchronization.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2Profiles.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep2WithoutSynchronization.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLStep3.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocity.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityCalculatePositionalExtrems.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityFallBackStrategy.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityIsPhaseSynchronizationPossible.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocityMethods.cpp \
-    3rd/ReflexxesTypeII/src/TypeIIRML/TypeIIRMLVelocitySetupPhaseSyncSelectionVector.cpp
+    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/08_RMLVelocitySampleApplication.cpp
 
 RESOURCES += qml.qrc
 
@@ -254,44 +256,6 @@ QML_IMPORT_PATH =
 
 # Additional import path used to resolve QML modules just for Qt Quick Designer
 QML_DESIGNER_IMPORT_PATH =
-
-INCLUDEPATH+= /usr/include \
-              /usr/local/include \
-              \ ## ROS
-              /opt/ros/kinetic/include \
-              \ ## GAZEBO
-              /usr/include/gazebo-7 \
-              /usr/include/gazebo-7/gazebo \
-              \ ## OGRE
-              /usr/include/OGRE \
-              \ ## BULLET
-              /usr/include/bullet \
-              \ ## my_arm
-              ./include        \
-              ./include/my_arm \
-              ./3rd \
-              \ ## Leap
-              /home/brhm/LeapSDK/include \
-              \ ## Kinect
-              ./include/Kinect    \
-              \ ## pcl
-              /usr/include/pcl-1.7 \
-              \ ## RealSense
-              ./3rd/RealSense/include \
-              ./3rd/RealSense/include/pxc \
-              \ ## ros_vox_cad
-              ./3rd/ros_vox_cad \
-              ./3rd/ros_vox_cad/VoxCad \
-              ./3rd/ros_vox_cad/VoxCad/Voxelyze \
-              ./3rd/ros_vox_cad/VoxCad/Voxelyze/Utils \
-              ./3rd/ros_vox_cad/Voxelyze/include \
-              \ ## bullet_server
-              ./3rd/bullet_server/include \
-              \ ## dart
-              ./3rd/dart \
-              ./3rd/dart/build \
-              \ ## ReflexxesTypeII
-              ./3rd/ReflexxesTypeII/include \
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -641,12 +605,6 @@ DISTFILES += \
     scripts/shadow_hand/hand_examples/sr_sinusoid_joint_example.py \
     scripts/shadow_hand/hand_examples/sr_store_hand.py \
     scripts/shadow_hand/__init__.py \
-    3rd/joint-control-pkgs/gazebo_joint_control/config/ControlTemplate.yaml \
-    3rd/joint-control-pkgs/joint_trajectory_execution/config/JointTrajectoryParamsTemplate.yaml \
-    3rd/joint-control-pkgs/gazebo_joint_control/package.xml \
-    3rd/joint-control-pkgs/gazebo_joint_control/CMakeLists.txt \
-    3rd/joint-control-pkgs/joint_trajectory_execution/package.xml \
-    3rd/joint-control-pkgs/joint_trajectory_execution/CMakeLists.txt \
     config/shadow_hand/gazebo/controller/hand_controllers_gazebo.yaml \
     config/shadow_hand/gazebo/controller/la_trajectory_controller.yaml \
     config/shadow_hand/gazebo/controller/ra_trajectory_controller.yaml \
@@ -929,43 +887,9 @@ HEADERS += \
     include/my_arm/RobotDartAdapter.h \
     include/Gazebo/gazebo_selection_box.h \
     include/Gazebo/gazebo_voxel_mesh_renderer.h \
-    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointControl.h \
-    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointControlLocalImpl.h \
-    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointStateClient.h \
-    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointStatePublisher.h \
-    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/GazeboJointTrajectoryServer.h \
-    3rd/joint-control-pkgs/gazebo_joint_control/include/gazebo_joint_control/JointController.h \
-    3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/JointVelocityTracker.hpp \
-    3rd/joint-control-pkgs/joint_trajectory_execution/include/joint_trajectory_execution/TrajectoryActionServer.h \
     include/my_arm/RobotMoveIt.h \
     include/my_arm/base64.h \
-    include/my_arm/commondefines.h \
-    3rd/ReflexxesTypeII/include/ReflexxesAPI.h \
-    3rd/ReflexxesTypeII/include/RMLFlags.h \
-    3rd/ReflexxesTypeII/include/RMLInputParameters.h \
-    3rd/ReflexxesTypeII/include/RMLOutputParameters.h \
-    3rd/ReflexxesTypeII/include/RMLPositionFlags.h \
-    3rd/ReflexxesTypeII/include/RMLPositionInputParameters.h \
-    3rd/ReflexxesTypeII/include/RMLPositionOutputParameters.h \
-    3rd/ReflexxesTypeII/include/RMLVector.h \
-    3rd/ReflexxesTypeII/include/RMLVelocityFlags.h \
-    3rd/ReflexxesTypeII/include/RMLVelocityInputParameters.h \
-    3rd/ReflexxesTypeII/include/RMLVelocityOutputParameters.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLDecisions.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree1A.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree1B.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree1C.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLDecisionTree2.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLMath.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLPolynomial.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLPosition.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLQuicksort.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLStep1IntermediateProfiles.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLStep1Profiles.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLStep2IntermediateProfiles.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLStep2Profiles.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLStep2WithoutSynchronization.h \
-    3rd/ReflexxesTypeII/include/TypeIIRMLVelocity.h
+    include/my_arm/commondefines.h
 
 
 ##

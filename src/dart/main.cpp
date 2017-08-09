@@ -29,8 +29,12 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "dart_utils.h"
+#include "DartUtils.h"
 #include "MainWindow.h"
+
+#define CSTR_DART_WORLD_PATH (DART_DATA_PATH"skel/ground.skel")
+#define CSTR_SHADOW_HAND_WORLD_PATH (DART_DATA_PATH"sdf/shadow_hand/shadow_hand_full.world")
+#define CSTR_DART_GROUND_PATH (DART_DATA_PATH"urdf/KR5/ground.urdf")
 
 int main(int argc, char* argv[])
 {
@@ -44,44 +48,39 @@ int main(int argc, char* argv[])
         return -1; //do not start without ros.
     }
     // -----------------------------------------------------------------------
-#if 0
-    WorldPtr world = dart::utils::SdfParser::readWorld(
-                DART_DATA_PATH"sdf/shadow_hand/shadow_hand_full.world");
+
+    // Initialize the world
+    bool isEmptyWorld;
+#if 1
+    isEmptyWorld = false;
+    WorldPtr myWorld = DartUtils::initializeDartWorld(CSTR_DART_WORLD_PATH);
 #else
-    // load a skeleton file
-    // create and initialize the world
-    dart::simulation::WorldPtr myWorld
-        = dart::utils::SkelParser::readWorld(
-          DART_DATA_PATH"skel/softVoxel.skel");
-    assert(myWorld != nullptr);
+    isEmptyWorld = true;
+    WorldPtr myWorld(new World); // std::make_shared<World>
+    // Gravity --
+    //
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+    myWorld->setGravity(gravity);
+    myWorld->setTimeStep(1.0/1000);
 
-    for(std::size_t i=0; i<myWorld->getNumSkeletons(); ++i)
-    {
-        dart::dynamics::SkeletonPtr skel = myWorld->getSkeleton(i);
-        for(std::size_t j=0; j<skel->getNumBodyNodes(); ++j)
-        {
-            dart::dynamics::BodyNode* bn = skel->getBodyNode(j);
-            Eigen::Vector3d color = dart::Color::Random();
-            auto shapeNodes = bn->getShapeNodesWith<dart::dynamics::VisualAspect>();
-            for(auto shapeNode : shapeNodes)
-                shapeNode->getVisualAspect(true)->setColor(color);
-        }
-    }
-
-    //WorldPtr world = std::make_shared<World>();
-    //myWorld->addSkeleton(createGround());
-    //myWorld->addSkeleton(createWall());
+    // load ground
+    dart::utils::DartLoader dl;
+    dart::dynamics::SkeletonPtr ground = dl.parseSkeleton(CSTR_DART_GROUND_PATH);
+    myWorld->addSkeleton(ground);
 #endif
+
+    //myWorld->addSkeleton(DartUtils::createGround());
+    //myWorld->addSkeleton(DartUtils::createWall());
 
 #ifdef DART_VOXEL_MESH
     VVOXELYZE_ADAPTER()->initVoxelyze(_node_handle, false);
     QThread::msleep(1000);
-    MyWindow window(myWorld, myWorld->getSkeleton(1)/*dartUtil::createSoftVoxelMesh()*/, dartUtil::loadShadowHand());
+    MainWindow window(myWorld);
 #ifdef VOX_CAD
     VVOXELYZE_ADAPTER()->deleteInstance();
 #endif
 #else
-    MyWindow window(world, dartUtil::createBall(), dartUtil::createSoftBody(),
+    MainWindow window(world, dartUtil::createBall(), dartUtil::createSoftBody(),
                     dartUtil::createHybridBody(),
                     dartUtil::createRigidChain(),
                     dartUtil::createRigidRing());
@@ -92,7 +91,7 @@ int main(int argc, char* argv[])
     // LEAP HANDS --
     VLEAP_INSTANCE()->initLeapMotion(_node_handle);
     ros::Subscriber _leap_listener = _node_handle->subscribe(CLEAP_HANDS_TOPIC, 1000,
-                                                         &MyWindow::leapCallback, &window);
+                                                         &MainWindow::leapCallback, &window);
 #endif
 
     std::cout << "space bar: simulation on/off" << std::endl;
@@ -116,6 +115,6 @@ int main(int argc, char* argv[])
 
     glutInit(&argc, argv);
     window.initWindow(640, 480, "Collisions");
-    glutIdleFunc(&dartUtil::gbHandleRosCallback);
+    glutIdleFunc(&DartUtils::gbHandleRosCallback);
     glutMainLoop();
 }

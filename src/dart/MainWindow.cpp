@@ -1,24 +1,31 @@
 #include "MainWindow.h"
+#include "DartUtils.h"
+
+
+#define CSTR_KR5_R650_NAME ("KR5_R650")
+#define CSTR_KR5_R650_PATH (DART_DATA_PATH"urdf/KR5/KR5_R650.urdf")
 
 #ifdef DART_VOXEL_MESH
-MyWindow::MyWindow(const WorldPtr& world,
-         const SkeletonPtr& softVoxelBody,
-         const SkeletonPtr& shadowHand)
+MainWindow::MainWindow(const WorldPtr& world)
   : mRandomize(true),
     mRD(),
     mMT(mRD()),
     mDistribution(-1.0, std::nextafter(1.0, 2.0)),
-    mOriginalSoftVoxelBody(softVoxelBody),
-    mShadowHand(shadowHand),
     mSkelCount(0),
     mForceOnRigidBody(Eigen::Vector3d::Zero()),
     mForceOnVertex(Eigen::Vector3d::Zero()),
     mImpulseDuration(0.0)
 {
     setWorld(world);
+#if 0
+    mOriginalSoftVoxelBody = DartUtils::createSoftVoxelMesh();
+    mShadowHand = DartUtils::loadShadowHand();
+    //addObject(mOriginalSoftVoxelBody->clone());
+#endif
+    addManipulator(CSTR_KR5_R650_PATH);
 }
 #else
-MyWindow::MyWindow(const WorldPtr& world, const SkeletonPtr& ball,
+MainWindow::MainWindow(const WorldPtr& world, const SkeletonPtr& ball,
          const SkeletonPtr& softBody, const SkeletonPtr& hybridBody,
          const SkeletonPtr& rigidChain, const SkeletonPtr& rigidRing)
   : mRandomize(true),
@@ -37,8 +44,28 @@ MyWindow::MyWindow(const WorldPtr& world, const SkeletonPtr& ball,
 #endif
 
 /// \brief
-void MyWindow::timeStepping()
+void MainWindow::timeStepping()
 {
+    if (true)
+    {
+      static double time = 0.0;
+      const double dt = 0.0005;
+      const double radius = 0.6;
+      Eigen::Vector3d center = Eigen::Vector3d(0.0, 0.1, 0.0);
+
+      mTargetPosition = center;
+      mTargetPosition[0] = radius * std::sin(time);
+      mTargetPosition[1] = 0.25 * radius * std::sin(time);
+      mTargetPosition[2] = radius * std::cos(time);
+
+      time += dt;
+    }
+
+    // Update the controller and apply control force to the robot
+    if(mController) {
+        mController->update(mTargetPosition);
+    }
+    // --------------------------------------------------------------------
 #ifdef DART_VOXEL_MESH
     if(mOriginalSoftVoxelBody != nullptr) {
         dart::dynamics::SoftBodyNode* softBodyNode = mOriginalSoftVoxelBody->getSoftBodyNode(0);
@@ -62,19 +89,23 @@ void MyWindow::timeStepping()
 
         mForceOnVertex /= 2.0;
     }
+
+    // -----------------------------------------------------------------------
+    // Step forward the simulation
+    mWorld->step();
 }
 
-void MyWindow::keyboard(unsigned char key, int x, int y)
+void MainWindow::keyboard(unsigned char key, int x, int y)
 {
+    double incremental = 0.01;
     switch(key)
     {
-#ifdef DART_VOXEL_MESH
     case '0':
         //addObject(mOriginalSoftVoxelBody->clone());
-        mWorld->addSkeleton(mShadowHand);
-        //mWorld->addSkeleton(createManipulator());
+        //mWorld->addSkeleton(mShadowHand);
+        addObject(DartUtils::createBall());
         break;
-#else
+#if 0
     case '1':
         addObject(mOriginalBall->clone());
         break;
@@ -94,7 +125,7 @@ void MyWindow::keyboard(unsigned char key, int x, int y)
     case '5':
         addRing(mOriginalRigidRing->clone());
         break;
-    #endif
+#endif
     case 'd':
         if(mWorld->getNumSkeletons() > 2)
           removeSkeleton(mWorld->getSkeleton(2));
@@ -169,14 +200,47 @@ void MyWindow::keyboard(unsigned char key, int x, int y)
         mForceOnRigidBody[2] = FORCE_ON_RIGIDBODY;
         mImpulseDuration = 100;
         break;
+
+    // --------------------------------------------------------------
+    //
+    case '7':
+      mTargetPosition[0] -= incremental;
+      break;
+    case '8':
+      mTargetPosition[0] += incremental;
+      break;
+    case '9':
+      mTargetPosition[1] -= incremental;
+      break;
+    case 'u':
+      mTargetPosition[1] += incremental;
+      break;
+    case 'i':
+      mTargetPosition[2] -= incremental;
+      break;
+    case 'o':
+      mTargetPosition[2] += incremental;
+      break;
+
     default:
         SimWindow::keyboard(key, x, y);
     }
     glutPostRedisplay();
 }
 
-void MyWindow::drawWorld() const
+void MainWindow::drawWorld() const
 {
+    // Draw the target position
+    if (mRI)
+    {
+      mRI->setPenColor(Eigen::Vector3d(0.8, 0.2, 0.2));
+      mRI->pushMatrix();
+      mRI->translate(mTargetPosition);
+      mRI->drawEllipsoid(Eigen::Vector3d(0.05, 0.05, 0.05));
+      mRI->popMatrix();
+    }
+    // ------------------------------------------------------------------------------------------
+    //
     // Make sure lighting is turned on and that polygons get filled in
     glEnable(GL_LIGHTING);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -212,20 +276,22 @@ void MyWindow::drawWorld() const
 #ifdef VOXELYZE_PURE
     // VOXEL MESH --
     if(RobotVoxelyzeAdapter::checkInstance()) {
-        VVOXELYZE_ADAPTER()->drawVoxelMesh();
+        //VVOXELYZE_ADAPTER()->drawVoxelMesh();
     }
 #endif
 
+#if 0
     // SHADOW HAND --
     drawSkeleton(mShadowHand.get());
+#endif
 
-#if 0
+#if 1
     // WORLD --
     SimWindow::drawWorld();
 #endif
 }
 
-void MyWindow::displayTimer(int _val)
+void MainWindow::displayTimer(int _val)
 {
     // We remove playback and baking, because we want to be able to add and
     // remove objects during runtime
@@ -239,7 +305,7 @@ void MyWindow::displayTimer(int _val)
     glutTimerFunc(mDisplayTimeout, refreshTimer, _val);
 }
 
-void MyWindow::leapCallback(const visualization_msgs::MarkerArray&)
+void MainWindow::leapCallback(const visualization_msgs::MarkerArray&)
 {
     determineHandArrangmentOnLeapHands();
 
@@ -253,7 +319,7 @@ void MyWindow::leapCallback(const visualization_msgs::MarkerArray&)
 #endif
 }
 
-void MyWindow::updateJointPosition(int jointId, double position)
+void MainWindow::updateJointPosition(int jointId, double position)
 {
     if(jointId < 0 || jointId >= KsGlobal::VSHADOW_HAND_ARM_JOINT_TOTAL) {
         return;
@@ -285,7 +351,7 @@ void MyWindow::updateJointPosition(int jointId, double position)
 #endif
 }
 
-void MyWindow::determineHandArrangmentOnLeapHands()
+void MainWindow::determineHandArrangmentOnLeapHands()
 {
 #ifdef ROBOT_LEAP_HANDS
     // Take the first hand data for convenience:
@@ -330,14 +396,16 @@ void MyWindow::determineHandArrangmentOnLeapHands()
 }
 
 /// Add an object to the world and toss it at the wall
-bool MyWindow::addObject(const SkeletonPtr& object)
+bool MainWindow::addObject(const SkeletonPtr& object)
 {
     // Set the starting position for the object
     Eigen::Vector6d positions(Eigen::Vector6d::Zero());
 
     // If randomization is on, we will randomize the starting y-location
-    if(mRandomize)
+    if(mRandomize) {
       positions[4] = default_spawn_range * mDistribution(mMT);
+      positions[3] = default_spawn_range * mDistribution(mMT);
+    }
 
     positions[5] = default_start_height;
     std::string objectName = object->getName();
@@ -359,16 +427,20 @@ bool MyWindow::addObject(const SkeletonPtr& object)
     // If the new object is not in collision
     if(!collision)
     {
-      mWorld->addSkeleton(object);
+        mWorld->addSkeleton(object);
     }
     else
     {
-      // or refuse to add the object if it is in collision
-      std::cout << "The new object " << objectName << " spawned in a collision. "
-                << "It will not be added to the world." << std::endl;
-      return false;
+        // or refuse to add the object if it is in collision
+        std::cout << "The new object " << objectName << " spawned in a collision. "
+                  << "It will not be added to the world." << std::endl;
+        return false;
     }
 
+    // ====================================================================================
+#if 0
+    // SET THE INITIAL VELOCITY OF THE BALL
+    //
     // Create reference frames for setting the initial velocity
     Eigen::Isometry3d centerTf(Eigen::Isometry3d::Identity());
     centerTf.translation() = object->getCOM();
@@ -399,15 +471,16 @@ bool MyWindow::addObject(const SkeletonPtr& object)
 
     // Use the reference frames to set the velocity of the Skeleton's root
     object->getJoint(0)->setVelocities(ref.getSpatialVelocity());
+#endif
 
     return true;
 }
 
 /// Add a ring to the world, and create a BallJoint constraint to ensure that
 /// it stays in a ring shape
-void MyWindow::addRing(const SkeletonPtr& ring)
+void MainWindow::addRing(const SkeletonPtr& ring)
 {
-    dartUtil::setupRing(ring);
+    DartUtils::setupRing(ring);
 
     if(!addObject(ring))
       return;
@@ -428,7 +501,7 @@ void MyWindow::addRing(const SkeletonPtr& ring)
 
 /// Remove a Skeleton and get rid of the constraint that was associated with
 /// it, if one existed
-void MyWindow::removeSkeleton(const SkeletonPtr& skel)
+void MainWindow::removeSkeleton(const SkeletonPtr& skel)
 {
     for(std::size_t i=0; i<mJointConstraints.size(); ++i)
     {
@@ -445,5 +518,24 @@ void MyWindow::removeSkeleton(const SkeletonPtr& skel)
     }
 
     mWorld->removeSkeleton(skel);
+}
+#include <ros/ros.h>
+#include <eigen_conversions/eigen_msg.h>
+
+
+void MainWindow::addManipulator(const Uri& uri)
+{
+    mRobot = DartUtils::createManipulator(uri);
+    mController = new DartRobotController(mRobot, mRobot->getBodyNode("palm"));
+    mWorld->addSkeleton(mRobot);
+
+    std::vector<BodyNode*> bodyNodeList = mRobot->getBodyNodes();
+    cout << "Robot Node Names:" << endl;
+    for(unsigned int i = 0; i < bodyNodeList.size(); i++) {
+        cout << "- " << bodyNodeList[i]->getName()<< endl;
+    }
+    // ----------------------------------------------------------------------------
+    // Set the initial target positon to the initial position of the end effector
+    mTargetPosition = mController->getEndEffector()->getTransform().translation();
 }
 

@@ -29,37 +29,51 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef DART_ROBOT_CONTROLLER_HPP_
+#define DART_ROBOT_CONTROLLER_HPP_
+
+#include <Eigen/Eigen>
+
 #include "dart/dart.hpp"
 
-#include "examples/operationalSpaceControl/MyWindow.hpp"
-
-int main(int argc, char* argv[])
+/// \brief Operational space controller for 6-dof manipulator
+class DartRobotController
 {
-  // create and initialize the world
-  dart::simulation::WorldPtr world(new dart::simulation::World);
-  assert(world != nullptr);
+public:
+  /// \brief Constructor
+  DartRobotController(dart::dynamics::SkeletonPtr _robot,
+             dart::dynamics::BodyNode* _endEffector);
 
-  // load skeletons
-  dart::utils::DartLoader dl;
-  dart::dynamics::SkeletonPtr ground
-      = dl.parseSkeleton(DART_DATA_PATH"urdf/KR5/ground.urdf");
-  dart::dynamics::SkeletonPtr robot
-      = dl.parseSkeleton(DART_DATA_PATH"urdf/KR5/KR5_R650.urdf");
-  world->addSkeleton(ground);
-  world->addSkeleton(robot);
+  /// \brief Destructor
+  virtual ~DartRobotController();
 
-  // create and initialize the world
-  Eigen::Vector3d gravity(0.0, -9.81, 0.0);
-  world->setGravity(gravity);
-  world->setTimeStep(1.0/1000);
+  /// \brief
+  void update(const Eigen::Vector3d& _targetPosition);
 
-  // create a window and link it to the world
-  MyWindow window(new Controller(robot, robot->getBodyNode("palm")));
-  window.setWorld(world);
+  /// \brief Get robot
+  dart::dynamics::SkeletonPtr getRobot() const;
 
-  glutInit(&argc, argv);
-  window.initWindow(640, 480, "Forward Simulation");
-  glutMainLoop();
+  /// \brief Get end effector of the robot
+  dart::dynamics::BodyNode* getEndEffector() const;
 
-  return 0;
-}
+  /// \brief Keyboard control
+  virtual void keyboard(unsigned char _key, int _x, int _y);
+
+private:
+  /// \brief Robot
+  dart::dynamics::SkeletonPtr mRobot;
+
+  /// \brief End-effector of the robot
+  dart::dynamics::BodyNode* mEndEffector;
+
+  /// \brief Control forces
+  Eigen::VectorXd mForces;
+
+  /// \brief Proportional gain for the virtual spring forces at the end effector
+  Eigen::Matrix3d mKp;
+
+  /// \brief Derivative gain for the virtual spring forces at the end effector
+  Eigen::Matrix3d mKv;
+};
+
+#endif  // DART_ROBOT_CONTROLLER_HPP_

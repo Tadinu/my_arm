@@ -19,8 +19,6 @@
 #define FORCE_ON_RIGIDBODY 25.0
 #define FORCE_ON_VERTEX 1.00
 
-
-
 using namespace std;
 using namespace dart::dynamics;
 using namespace dart::simulation;

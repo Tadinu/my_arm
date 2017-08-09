@@ -1,63 +1,66 @@
-#ifndef MY_ARM_DART_UTILS_H
-#define MY_ARM_DART_UTILS_H
-
-#include <QtWidgets/QApplication>
-#include <QThread>
-#include <QtGui/QVector3D>
-#include <random>
-
-#include "dart/dart.hpp"
-#include "dart/gui/gui.hpp"
+#include "DartUtils.h"
 #include "RobotVoxelyzeAdapter.h"
 
-using namespace std;
-using namespace dart::dynamics;
-using namespace dart::simulation;
-// using namespace dart::common;
-// using namespace dart::math;
-// using namespace dart::dynamics;
-// using namespace dart::utils;
+#define CSTR_DART_SOFT_BODY_NAME_DFT ("DartSoftBody")
+#define CSTR_MANIPULATOR_NAME_DFT    ("Manipulator")
+#define CSTR_SHADOW_HAND_NAME_DFT    ("ShadowHand")
 
-#define DART_VOXEL_MESH
-#define FORCE_ON_RIGIDBODY 25.0
-#define FORCE_ON_VERTEX 1.00
+void DartUtils::gbHandleRosCallback()
+{
+#if 1
+    if(RobotVoxelyzeAdapter::checkInstance()) {
+        //std::cout << "Rebuild Dart soft voxel body" << std::endl;
+        //mWorld->removeSkeleton(mDartSoftBody);
+        //mDartSoftBody.reset();
+        //mDartSoftBody = loadSoftVoxelMesh();
+        //mWorld->addSkeleton(mDartSoftBody);
+        // ----------------------------------------------------------------
+        //VVOXELYZE_ADAPTER()->doVoxelyzeTimeStep();
+        VVOXELYZE_ADAPTER()->updateVoxelMesh();
+    }
+#endif
+    // --------------------------------------------------------------------
+    // HANDLE ROS CALLBACKS --
+    //std::cout << "Ros spinning once!";
+    ros::spinOnce();
+}
 
-const double default_shape_density = 1000; // kg/m^3
-const double default_shape_height  = 0.1;  // m
-const double default_shape_width   = 0.03; // m
-const double default_skin_thickness = 1e-3; // m
+WorldPtr DartUtils::initializeDartWorld(const Uri& uri, bool isSkeletonWorld)
+{
+    // Create and initialize the world --
+    //
+    WorldPtr myWorld = nullptr;
+    if(isSkeletonWorld) {
+        myWorld = dart::utils::SkelParser::readWorld(uri);
+    }
+    else {
+        myWorld = dart::utils::SdfParser::readWorld(uri);
+    }
+    assert(myWorld != nullptr);
+    for(std::size_t i=0; i<myWorld->getNumSkeletons(); ++i)
+    {
+        dart::dynamics::SkeletonPtr skel = myWorld->getSkeleton(i);
+        for(std::size_t j=0; j<skel->getNumBodyNodes(); ++j)
+        {
+            dart::dynamics::BodyNode* bn = skel->getBodyNode(j);
+            Eigen::Vector3d color = dart::Color::Random();
+            auto shapeNodes = bn->getShapeNodesWith<dart::dynamics::VisualAspect>();
+            for(auto shapeNode : shapeNodes)
+                shapeNode->getVisualAspect(true)->setColor(color);
+        }
+    }
 
-const double default_start_height = 0.4;  // m
+    // Gravity --
+    //
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+    myWorld->setGravity(gravity);
+    myWorld->setTimeStep(1.0/1000);
 
-const double minimum_start_v = 2.5; // m/s
-const double maximum_start_v = 4.0; // m/s
-const double default_start_v = 3.5; // m/s
+    return myWorld;
+}
 
-const double minimum_launch_angle = 30.0*M_PI/180.0; // rad
-const double maximum_launch_angle = 70.0*M_PI/180.0; // rad
-const double default_launch_angle = 45.0*M_PI/180.0; // rad
 
-const double maximum_start_w = 6*M_PI; // rad/s
-const double default_start_w = 3*M_PI;  // rad/s
-
-const double ring_spring_stiffness = 0.5;
-const double ring_damping_coefficient = 0.05;
-const double default_damping_coefficient = 0.001;
-
-const double default_ground_width = 2;
-const double default_wall_thickness = 0.1;
-const double default_wall_height = 1;
-const double default_spawn_range = 0.9*default_ground_width/2;
-
-const double default_restitution = 0.6;
-
-const double default_vertex_stiffness = 500.0;
-const double default_edge_stiffness = 0.0;
-const double default_soft_damping = 5.0;
-
-namespace dartUtil {
-
-void setupRing(const SkeletonPtr& ring)
+void DartUtils::setupRing(const SkeletonPtr& ring)
 {
     // Set the spring and damping coefficients for the degrees of freedom
     for(std::size_t i=6; i < ring->getNumDofs(); ++i)
@@ -91,21 +94,10 @@ void setupRing(const SkeletonPtr& ring)
     }
 }
 
-void gbHandleRosCallback()
-{
-    if(RobotVoxelyzeAdapter::checkInstance()) {
-        VVOXELYZE_ADAPTER()->updateVoxelMesh();
-    }
-    // --------------------------------------------------------------------
-    // HANDLE ROS CALLBACKS --
-    //std::cout << "Ros spinning once!";
-    ros::spinOnce();
-}
-
 /// Add a rigid body with the specified Joint type to a chain
 template<class JointType>
-BodyNode* addRigidBody(const SkeletonPtr& chain, const std::string& name,
-                       Shape::ShapeType type, BodyNode* parent = nullptr)
+BodyNode* DartUtils::createRigidBody(const SkeletonPtr& chain, const std::string& name,
+                                     Shape::ShapeType type, BodyNode* parent)
 {
     // Set the Joint properties
     typename JointType::Properties properties;
@@ -147,7 +139,7 @@ BodyNode* addRigidBody(const SkeletonPtr& chain, const std::string& name,
     bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
 
     // Setup the inertia for the body
-    Inertia inertia;
+    dart::dynamics::Inertia inertia;
     double mass = default_shape_density * shape->getVolume();
     inertia.setMass(mass);
     inertia.setMoment(shape->computeInertia(mass));
@@ -167,16 +159,10 @@ BodyNode* addRigidBody(const SkeletonPtr& chain, const std::string& name,
     return bn;
 }
 
-enum SoftShapeType {
-    SOFT_BOX = 0,
-    SOFT_CYLINDER,
-    SOFT_ELLIPSOID
-};
-
 /// Add a soft body with the specified Joint type to a chain
 template<class JointType>
-BodyNode* addSoftBody(const SkeletonPtr& chain, const std::string& name,
-                      SoftShapeType type, BodyNode* parent = nullptr)
+BodyNode* DartUtils::createSoftBody(const SkeletonPtr& chain, const std::string& name,
+                                    SoftShapeType type, BodyNode* parent)
 {
     // Set the Joint properties
     typename JointType::Properties joint_properties;
@@ -240,7 +226,7 @@ BodyNode* addSoftBody(const SkeletonPtr& chain, const std::string& name,
           parent, joint_properties, body_properties).second;
 
     // Zero out the inertia for the underlying BodyNode
-    Inertia inertia;
+    dart::dynamics::Inertia inertia;
     inertia.setMoment(1e-8*Eigen::Matrix3d::Identity());
     inertia.setMass(1e-8);
     bn->setInertia(inertia);
@@ -254,8 +240,7 @@ BodyNode* addSoftBody(const SkeletonPtr& chain, const std::string& name,
     return bn;
 }
 
-#ifdef DART_VOXEL_MESH //ducta
-SoftBodyNode::UniqueProperties makeMeshProperties(
+SoftBodyNode::UniqueProperties  DartUtils::makeMeshProperties(
                                 const Eigen::Vector3d& _size,
                                 const Eigen::Isometry3d& _localTransform,
                                 double _totalMass,
@@ -369,8 +354,8 @@ SoftBodyNode::UniqueProperties makeMeshProperties(
 
 /// Add a soft body with the specified Joint type to a chain
 template<class JointType>
-BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
-                           BodyNode* parent = nullptr)
+BodyNode*  DartUtils::createSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
+                                          BodyNode* parent)
 {
     // Set the Joint properties
     typename JointType::Properties joint_properties;
@@ -434,7 +419,7 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
           parent, joint_properties, body_properties).second;
 
     // Zero out the inertia for the underlying BodyNode
-    Inertia inertia;
+    dart::dynamics::Inertia inertia;
     inertia.setMoment(1e-8*Eigen::Matrix3d::Identity());
     inertia.setMass(1e-8);
     bn->setInertia(inertia);
@@ -447,9 +432,8 @@ BodyNode* addSoftVoxelBody(const SkeletonPtr& chain, const std::string& name,
 
     return bn;
 }
-#endif
 
-void setAllColors(const SkeletonPtr& object, const Eigen::Vector3d& color)
+void  DartUtils::setAllColors(const SkeletonPtr& object, const Eigen::Vector3d& color)
 {
     // Set the color of all the shapes in the object
     for(std::size_t i=0; i < object->getNumBodyNodes(); ++i)
@@ -461,55 +445,55 @@ void setAllColors(const SkeletonPtr& object, const Eigen::Vector3d& color)
     }
 }
 
-SkeletonPtr createBall()
+SkeletonPtr DartUtils::createBall()
 {
     SkeletonPtr ball = Skeleton::create("rigid_ball");
 
     // Give the ball a body
-    addRigidBody<FreeJoint>(ball, "rigid ball", Shape::ELLIPSOID);
+    createRigidBody<FreeJoint>(ball, "rigid ball", Shape::ELLIPSOID);
 
     setAllColors(ball, dart::Color::Red());
 
     return ball;
 }
 
-SkeletonPtr createRigidChain()
+SkeletonPtr  DartUtils::createRigidChain()
 {
     SkeletonPtr chain = Skeleton::create("rigid_chain");
 
     // Add bodies to the chain
-    BodyNode* bn = addRigidBody<FreeJoint>(chain, "rigid box 1", Shape::BOX);
-    bn = addRigidBody<BallJoint>(chain, "rigid cyl 2", Shape::CYLINDER, bn);
-    bn = addRigidBody<BallJoint>(chain, "rigid box 3", Shape::BOX, bn);
+    BodyNode* bn = createRigidBody<FreeJoint>(chain, "rigid box 1", Shape::BOX);
+    bn = createRigidBody<BallJoint>(chain, "rigid cyl 2", Shape::CYLINDER, bn);
+    bn = createRigidBody<BallJoint>(chain, "rigid box 3", Shape::BOX, bn);
 
     setAllColors(chain, dart::Color::Orange());
 
     return chain;
 }
 
-SkeletonPtr createRigidRing()
+SkeletonPtr  DartUtils::createRigidRing()
 {
     SkeletonPtr ring = Skeleton::create("rigid_ring");
 
     // Add bodies to the ring
-    BodyNode* bn = addRigidBody<FreeJoint>(ring, "rigid box 1", Shape::BOX);
-    bn = addRigidBody<BallJoint>(ring, "rigid cyl 2", Shape::CYLINDER, bn);
-    bn = addRigidBody<BallJoint>(ring, "rigid box 3", Shape::BOX, bn);
-    bn = addRigidBody<BallJoint>(ring, "rigid cyl 4", Shape::CYLINDER, bn);
-    bn = addRigidBody<BallJoint>(ring, "rigid box 5", Shape::BOX, bn);
-    bn = addRigidBody<BallJoint>(ring, "rigid cyl 6", Shape::CYLINDER, bn);
+    BodyNode* bn = createRigidBody<FreeJoint>(ring, "rigid box 1", Shape::BOX);
+    bn = createRigidBody<BallJoint>(ring, "rigid cyl 2", Shape::CYLINDER, bn);
+    bn = createRigidBody<BallJoint>(ring, "rigid box 3", Shape::BOX, bn);
+    bn = createRigidBody<BallJoint>(ring, "rigid cyl 4", Shape::CYLINDER, bn);
+    bn = createRigidBody<BallJoint>(ring, "rigid box 5", Shape::BOX, bn);
+    bn = createRigidBody<BallJoint>(ring, "rigid cyl 6", Shape::CYLINDER, bn);
 
     setAllColors(ring, dart::Color::Blue());
 
     return ring;
 }
 
-SkeletonPtr createSoftBody()
+SkeletonPtr  DartUtils::createSoftBody()
 {
     SkeletonPtr soft = Skeleton::create("soft");
 
     // Add a soft body
-    BodyNode* bn = addSoftBody<FreeJoint>(soft, "soft box", SOFT_BOX);
+    BodyNode* bn = createSoftBody<FreeJoint>(soft, "soft box", SOFT_BOX);
 
     // Add a rigid collision geometry and inertia
     double width = default_shape_height, height = 2*default_shape_width;
@@ -518,7 +502,7 @@ SkeletonPtr createSoftBody()
     std::shared_ptr<BoxShape> box = std::make_shared<BoxShape>(dims);
     bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(box);
 
-    Inertia inertia;
+    dart::dynamics::Inertia inertia;
     inertia.setMass(default_shape_density * box->getVolume());
     inertia.setMoment(box->computeInertia(inertia.getMass()));
     bn->setInertia(inertia);
@@ -528,19 +512,18 @@ SkeletonPtr createSoftBody()
     return soft;
 }
 
-#ifdef DART_VOXEL_MESH
-SkeletonPtr createSoftVoxelMesh()
+SkeletonPtr DartUtils::createSoftVoxelMesh()
 {
     SkeletonPtr soft = Skeleton::create("softVoxel");
 
     // Add a soft body
-    BodyNode* bn = addSoftVoxelBody<FreeJoint>(soft, "soft voxel");
+    BodyNode* bn = createSoftVoxelBody<FreeJoint>(soft, "soft voxel");
     setAllColors(soft, dart::Color::Fuchsia());
 
     return soft;
 }
 
-SkeletonPtr loadShadowHand()
+SkeletonPtr DartUtils::loadShadowHand()
 {
 #if 0
     SkeletonPtr shadow_hand = dart::utils::SdfParser::readSkeleton(
@@ -592,9 +575,8 @@ SkeletonPtr loadShadowHand()
 
     return shadow_hand;
 }
-#endif
 
-SkeletonPtr createFloor()
+SkeletonPtr DartUtils::createFloor()
 {
     SkeletonPtr floor = Skeleton::create("floor");
 
@@ -619,22 +601,37 @@ SkeletonPtr createFloor()
     return floor;
 }
 
-SkeletonPtr createManipulator()
+SkeletonPtr DartUtils::createManipulator(const Uri& uri)
 {
     // Load the Skeleton from a file
     dart::utils::DartLoader loader;
-    SkeletonPtr manipulator =
-        loader.parseSkeleton(DART_DATA_PATH"urdf/KR5/KR5 sixx R650.urdf");
-    manipulator->setName("manipulator");
+    SkeletonPtr manipulator = loader.parseSkeleton(uri);
+    manipulator->setName(CSTR_MANIPULATOR_NAME_DFT);
+
+#if 1
+    //note that you have to create a Translation because multiplying a
+    //Transform with a vector will _apply_ the transform to the vector
+    Eigen::Translation<double, 3> translation(Vector3d(0.5, -1, 0.5));
+    Eigen::Quaterniond rotation; rotation = AngleAxisd(-M_PI/2, Vector3d::UnitX());
+    //Eigen::Transform<double, 3, Affine> combined =
+    //      translation * rotation;
 
     // Position its base in a reasonable way
-    Eigen::Isometry3d tf = Eigen::Isometry3d::Identity();
-    tf.translation() = Eigen::Vector3d(-0.65, 0.0, 0.0);
+#if 1
+    // Eigen::Isometry3d = Eigen::Translation<double, 3> * Eigen::Quaterniond;
+    Eigen::Isometry3d tf = translation * rotation;
+#else
+    geometry_msgs::Pose pose;
+    Eigen::Isometry3d tf  = Eigen::Isometry3d::Identity();
+    //tf.translation() = trans_vec_A;
+    tf::poseMsgToEigen(pose, tf);
+#endif
     manipulator->getJoint(0)->setTransformFromParentBodyNode(tf);
 
     // Get it into a useful configuration
     manipulator->getDof(1)->setPosition(140.0 * M_PI / 180.0);
     manipulator->getDof(2)->setPosition(-140.0 * M_PI / 180.0);
+#endif
 
 #if 1
     std::size_t numJoints = manipulator->getNumJoints();
@@ -652,12 +649,12 @@ SkeletonPtr createManipulator()
   return manipulator;
 }
 
-SkeletonPtr createHybridBody()
+SkeletonPtr DartUtils::createHybridBody()
 {
     SkeletonPtr hybrid = Skeleton::create("hybrid");
 
     // Add a soft body
-    BodyNode* bn = addSoftBody<FreeJoint>(hybrid, "soft sphere", SOFT_ELLIPSOID);
+    BodyNode* bn = createSoftBody<FreeJoint>(hybrid, "soft sphere", SOFT_ELLIPSOID);
 
     // Add a rigid body attached by a WeldJoint
     bn = hybrid->createJointAndBodyNodePair<WeldJoint>(bn).second;
@@ -672,7 +669,7 @@ SkeletonPtr createHybridBody()
     tf.translation() = Eigen::Vector3d(box_shape_height/2.0, 0, 0);
     bn->getParentJoint()->setTransformFromParentBodyNode(tf);
 
-    Inertia inertia;
+    dart::dynamics::Inertia inertia;
     inertia.setMass(default_shape_density * box->getVolume());
     inertia.setMoment(box->computeInertia(inertia.getMass()));
     bn->setInertia(inertia);
@@ -682,7 +679,7 @@ SkeletonPtr createHybridBody()
     return hybrid;
 }
 
-SkeletonPtr createGround()
+SkeletonPtr DartUtils::createGround()
 {
   SkeletonPtr ground = Skeleton::create("ground");
 
@@ -698,7 +695,7 @@ SkeletonPtr createGround()
   return ground;
 }
 
-SkeletonPtr createWall()
+SkeletonPtr DartUtils::createWall()
 {
   SkeletonPtr wall = Skeleton::create("wall");
 
@@ -721,5 +718,3 @@ SkeletonPtr createWall()
 
   return wall;
 }
-}
-#endif // MY_ARM_DART_UTIL_H

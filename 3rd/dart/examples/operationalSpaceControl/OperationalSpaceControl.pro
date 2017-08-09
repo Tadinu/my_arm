@@ -3,7 +3,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
 
-TARGET = my_arm_dart
+TARGET = OperationalSpaceControl
 TEMPLATE = app
 DEFINES += MY_ARM VOXELYZE_PURE QT_XML_LIB QT_OPENGL_LIB USE_ZLIB_COMPRESSION USE_OPEN_GL PREC_MED USE_OMP ## QT_DLL // VOX_CAD For VoxCad, USE_OMP & VOXELYZE_PURE, PARDISO_5 for Voxelyze
 MY_ARM_PROJ_DIR = /home/brhm/DUC/RobotArm/src/my_arm
@@ -82,22 +82,19 @@ CONFIG(release, debug|release) {
             -lrosconsole \
             -lrosconsole_log4cxx \
             -lrosconsole_backend_interface \
-            -leigen_conversions \ # ros-eigen conversions
             -linteractive_markers \
             -ltf \
             -ltf_conversions \
             -ltf2_ros \
-            \ ## orocos_kdl
-            -lorocos-kdl \
-            \ ## \ ## rviz --
-            \ ## -lrviz \
-            \ ## \ ## moveit_visual_tools --
-            \ ## -lrviz_visual_tools  \
+            ## \ ## rviz --
+            ## -lrviz \
+            ## \ ## moveit_visual_tools --
+            ## -lrviz_visual_tools  \
             \ ## dart --
-            \ ## https://dartsim.github.io/install_dart_on_ubuntu.html
-            \ ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
-            \ ## -> THEREFORE, FOR NOW WE CANNOT USE -lfcl
-            \ ##
+            ## https://dartsim.github.io/install_dart_on_ubuntu.html
+            ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
+            ## -> THEREFORE, FOR NOW WE CANNOT USE -lfcl
+            ##
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
@@ -152,24 +149,19 @@ CONFIG(debug, debug|release) {
             -lroscpp_serialization \
             -lrostime \
             -lrosconsole \
-            -lrosconsole_log4cxx \
-            -lrosconsole_backend_interface \
-            -leigen_conversions \ # ros-eigen conversions
             -linteractive_markers \
             -ltf \
             -ltf_conversions \
             -ltf2_ros \
-            \ ## orocos_kdl
-            -lorocos-kdl \
-            \ ## \ ## rviz --
-            \ ## -lrviz \
-            \ ## \ ## moveit_visual_tools --
-            \ ## -lrviz_visual_tools  \
+            ## \ ## rviz --
+            ## -lrviz \
+            ## \ ## moveit_visual_tools --
+            ## -lrviz_visual_tools  \
             \ ## dart --
-            \ ## https://dartsim.github.io/install_dart_on_ubuntu.html
-            \ ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
-            \ ## -> THEREFORE, FOR NOW WE CANNOT USE -lfcl
-            \ ##
+            ## https://dartsim.github.io/install_dart_on_ubuntu.html
+            ## -> The fcl version required by dart is libfcl-dev, while moveit requires libfcl0.5-dev
+            ## -> THEREFORE, FOR NOW WE CANNOT USE -lfcl
+            ##
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/lib \
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/lodepng \
             -L$${MY_ARM_PROJ_DIR}/3rd/dart/build/dart/external/imgui \
@@ -194,28 +186,13 @@ CONFIG(debug, debug|release) {
 }
 
 SOURCES += \
-    main.cpp \
-    MainWindow.cpp \
-    DartUtils.cpp \
-    ../my_arm/RobotVoxelyzeAdapter.cpp \
-    ../LeapMotion/hands_listener.cpp \
-    ../LeapMotion/camera_listener.cpp \
-    ../my_arm/RobotLeapAdapter.cpp \
-    ../my_arm/KsGlobal.cpp \
-    ../my_arm/commondefines.cpp \
-    DartRobotController.cpp
-HEADERS += \
-    ../../include/dart/MainWindow.h \
-    ../../include/dart/DartUtils.h \
-    ../../include/my_arm/RobotVoxelyzeAdapter.h \
-    ../../include/LeapMotion/hands_listener.h \
-    ../../include/LeapMotion/camera_listener.h \
-    ../../include/LeapMotion/leap_msg.h \
-    ../../include/LeapMotion/leapros_msg.h \
-    ../../include/my_arm/RobotLeapAdapter.h \
-    ../../include/my_arm/KsGlobal.h \
-    ../../include/my_arm/commondefines.h \
-    ../../include/dart/DartRobotController.hpp
+    Controller.cpp \
+    Main.cpp \
+    MyWindow.cpp \
+    ../../../../src/dart/DartUtils.cpp \
+    ../../../../src/my_arm/KsGlobal.cpp \
+    ../../../../src/my_arm/commondefines.cpp \
+    ../../../../src/my_arm/RobotVoxelyzeAdapter.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -228,19 +205,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+HEADERS += \
+    Controller.hpp \
+    MyWindow.hpp \
+    ../../../../include/dart/DartUtils.h \
+    ../../../../include/my_arm/KsGlobal.h \
+    ../../../../include/my_arm/commondefines.h \
+    ../../../../include/my_arm/RobotVoxelyzeAdapter.h
+
 DISTFILES += \
-    ../../3rd/dart/data/sdf/shadow_hand/shadow_hand.sdf \
-    ../../3rd/dart/data/sdf/shadow_hand/shadow_hand_full.world \
-    ../../3rd/dart/data/urdf/shadow_hand/shadow_hand.urdf \
-    ../../3rd/dart/data/skel/soft_cubes.skel \
-    ../../3rd/dart/data/skel/soft_open_chain.skel \
-    ../../3rd/dart/data/skel/softBodies.skel \
-    ../../3rd/dart/data/skel/softVoxel.skel \
-    ../../3rd/dart/data/skel/softVoxel.skel \
-    ../../3rd/dart/data/skel/mesh_collision.skel \
-    ../../3rd/dart/data/skel/spheres.skel \
-    ../../3rd/dart/data/urdf/KR5/ground.urdf \
-    ../../3rd/dart/data/urdf/KR5/KR5_R650.urdf \
-    ../../3rd/dart/data/urdf/KR5/KR5 sixx R650.urdf \
-    ../../3rd/dart/data/skel/empty.skel \
-    ../../3rd/dart/data/skel/ground.skel
+    CMakeLists.txt \
+    ../../data/urdf/KR5/KR5_R650.urdf

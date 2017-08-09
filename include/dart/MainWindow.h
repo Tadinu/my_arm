@@ -1,21 +1,35 @@
 #ifndef MY_ARM_DART_MAIN_WINDOW_H
 #define MY_ARM_DART_MAIN_WINDOW_H
 
-#include "my_arm/KsGlobal.h"
+#include "dart/dart.hpp"
+#include "dart/gui/gui.hpp"
+#if HAVE_BULLET_COLLISION
+  #include "dart/collision/bullet/bullet.hpp"
+#endif
+
+//#include "my_arm/KsGlobal.h"
 #include "my_arm/RobotVoxelyzeAdapter.h"
 #include "my_arm/RobotLeapAdapter.h"
-#include "dart_utils.h"
+#include "DartRobotController.hpp"
 
-class MyWindow : public dart::gui::SoftSimWindow
+using namespace std;
+using namespace Eigen;
+using namespace dart::common;
+using namespace dart::math;
+using namespace dart::dynamics;
+using namespace dart::simulation;
+using namespace dart::utils;
+
+#define DART_VOXEL_MESH
+
+class MainWindow : public dart::gui::SoftSimWindow
 {
 public:
 
 #ifdef DART_VOXEL_MESH
-    MyWindow(const WorldPtr& world,
-             const SkeletonPtr& softVoxelBody,
-             const SkeletonPtr& shadowHand);
+    MainWindow(const WorldPtr& world);
 #else
-    MyWindow(const WorldPtr& world, const SkeletonPtr& ball,
+    MainWindow(const WorldPtr& world, const SkeletonPtr& ball,
              const SkeletonPtr& softBody, const SkeletonPtr& hybridBody,
              const SkeletonPtr& rigidChain, const SkeletonPtr& rigidRing);
 #endif
@@ -46,6 +60,11 @@ protected:
     /// it, if one existed
     void removeSkeleton(const SkeletonPtr& skel);
 
+    // -----------------------------------------------------------------------------
+    // Add the manipulator
+    void addManipulator(const Uri& _uri);
+
+    // -----------------------------------------------------------------------------
     /// Flag to keep track of whether or not we are randomizing the tosses
     bool mRandomize;
 
@@ -91,6 +110,16 @@ protected:
 
     /// \brief
     Eigen::Vector3d mForceOnVertex;
+
+    // --------------------------------------------------------------------------
+    // ROBOT CONTROLLER --
+    /// \brief Operational space controller
+    DartRobotController* mController;
+    //
+    SkeletonPtr mRobot;
+
+    /// \brief Target end effector position of the robot
+    Eigen::Vector3d mTargetPosition;
 };
-// End class MyWindow : public dart::gui::SimWindow
+// End class MainWindow : public dart::gui::SimWindow
 #endif // MY_ARM_DART_MAIN_WINDOW_H

@@ -18,7 +18,7 @@ def callback(lcl, glb):
 
 def main():
 
-    env = KukaFallingObjsGymEnv(renders=False)
+    env = KukaFallingObjsGymEnv(renders=True)
     env.mainControlRobot()
     #model = deepq.models.mlp([64])
     #act = deepq.learn(

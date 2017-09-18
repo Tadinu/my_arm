@@ -55,13 +55,8 @@ class KukaFallingObjsGymEnv(gym.Env):
     self._observation = []
     self._envStepCounter = 0
     self._renders = renders
-    self.terminated = 0
+    self._terminated = 0
     self._p = p
-
-    ## FALLING OBJECTS --
-    self._objs = []
-    self.__reward = 0
-    #self._timer = Timer(1, self.timerTask)
 
     if self._renders:
       p.connect(p.GUI)
@@ -70,6 +65,11 @@ class KukaFallingObjsGymEnv(gym.Env):
       p.connect(p.DIRECT)
     #timinglog = p.startStateLogging(p.STATE_LOGGING_PROFILE_TIMINGS, "kukaTimings.json")
     self._seed()
+
+    # INITIALIZE ENVIRONMENT
+    self.loadEnvironmentObjects()
+
+    # Reset
     self.reset() ## --> Call self._reset() defined  below!
 
     # After loading the robot!
@@ -83,7 +83,7 @@ class KukaFallingObjsGymEnv(gym.Env):
     self.viewer = None
 
     ## DEBUG STUFFS --
-    self._colSphereId = p.createCollisionShape(p.GEOM_SPHERE, radius=0.1)
+    self.initializeDebugShapes()
 
     ## ducta++
     self.printMotorNames()
@@ -97,31 +97,40 @@ class KukaFallingObjsGymEnv(gym.Env):
 
     #print ("JOINT KEY DICTS:", len(JOINT_KEYS_DICT)," --", JOINT_KEYS_DICT, )
 
+  def loadEnvironmentObjects(self):
+      ## FALLING OBJECTS --
+      self._CNUM_OBJS = 5
+      self._objs = []
+      self._sphereUid = self._cubeUId = -1
+      self.__reward = 0
+      self._CKUKA_MOVE_INTERVAL = 0.5
+      #self._timer = Timer(1, self.timerTask)
+
+      ## SETUP ENVIRONMENT --
+      p.resetSimulation()
+      p.setPhysicsEngineParameter(numSolverIterations=150)
+      p.setTimeStep(self._timeStep)
+      p.setGravity(0,0,-10)
+
+      ## LOAD GROUND --
+      self._groundUId = p.loadURDF("%splane.urdf" % self._urdfRoot,[0,0,-1])
+      #print("GROUND ID: ", self._groundUId)
+
+      ## LOAD TABLE --
+      self._tableUId = p.loadURDF("table/table.urdf", 0.5000000,0.00000,-.820000,0.000000,0.000000,0.0,1.0)
+      #print("TABLE ID: ", self._tableUId)
+
+      ## LOAD MANIPULATOR KUKA --
+      self._kuka = kuka.Kuka(urdfRootPath=self._urdfRoot, timeStep=self._timeStep)
+      kukaBasePos, kukaBaseOrn = self._kuka.getBasePosOrient()
+      #print("KUKA BASE POS:", kukaBasePos)
+
+      # Initialize the bot
+      self._kukaBot = KukaBot()
+
   def _reset(self):
-    print("reset")
-
-    ## SETUP ENVIRONMENT --
-    self.terminated = 0
-    p.resetSimulation()
-    p.setPhysicsEngineParameter(numSolverIterations=150)
-    p.setTimeStep(self._timeStep)
-    p.setGravity(0,0,-10)
-
-    ## LOAD GROUND --
-    self._groundUId = p.loadURDF("%splane.urdf" % self._urdfRoot,[0,0,-1])
-    print("GROUND: ", self._groundUId)
-
-    ## LOAD TABLE --
-    self._tableUId = p.loadURDF("table/table.urdf", 0.5000000,0.00000,-.820000,0.000000,0.000000,0.0,1.0)
-    print("TABLE: ", self._tableUId)
-
-    ## LOAD MANIPULATOR KUKA --
-    self._kuka = kuka.Kuka(urdfRootPath=self._urdfRoot, timeStep=self._timeStep)
-    kukaBasePos, kukaBaseOrn = self._kuka.getBasePosOrient()
-    print(kukaBasePos)
-
-    # Initialize the bot
-    self._kukaBot = KukaBot()
+    print("_reset")
+    self._terminated = 0
 
     ## LOAD FALLING OBJS --
     self.loadFallingObjects()
@@ -138,14 +147,14 @@ class KukaFallingObjsGymEnv(gym.Env):
     return np.array(self._observation)
 
   def loadFallingObjects(self):
-      ##for x in self._objs:
-      ##    self.removeObject(x.id())
+      # Remove debug shapes
+      #self.removeObject(self._sphereUid)
 
       # Replace with the news ones
-      for x in self._objs:
-          del x
+      for x in self._objs: self.removeObject(x.id())
+      for x in self._objs: del x
       #self._objs = [MenaceObject(self) for i in range(self._kuka.numJoints)]
-      self._objs = [MenaceObject(self) for i in range(5)]
+      self._objs = [MenaceObject(self) for i in range(self._CNUM_OBJS)]
       for i in range(len(self._objs)):
           linkState = self._kuka.getLinkState(i+2)
           xpos = linkState[4][0]
@@ -155,8 +164,8 @@ class KukaFallingObjsGymEnv(gym.Env):
           orn = p.getQuaternionFromEuler([0,0,ang])
           self._objs[i].load("sphere_5cm.urdf", xpos,ypos,zpos,orn[0],orn[1],orn[2],orn[3])
 
-  def removeObject(self, objectId):
-      p.removeBody(objectId)
+  def removeObject(self, objectUId):
+      p.removeBody(objectUId)
 
   def printMotorNames(self):
       motorsIds=[]
@@ -164,7 +173,7 @@ class KukaFallingObjsGymEnv(gym.Env):
           motor = self._kuka.motorNames[i]
           motorJointIndex = self._kuka.motorIndices[i]
           motorsIds.append(self._p.addUserDebugParameter(motor,-3,3,self._kuka.jointPositions[i]))
-          print(motor, '-',motorJointIndex)
+          print(motor, '-', motorJointIndex)
           #print(motor, self._kuka.getJointInfo(motorJointIndex))
 
   # This requires a physics server to be run!
@@ -257,8 +266,14 @@ class KukaFallingObjsGymEnv(gym.Env):
 
       robotBaseJointLimit = self._kuka.getJointLimit(0)
 
-      while True:
+      ## DEBUG ++
+      self.drawDebugShape(self._cubeUId, [1,1,1])
+      self.drawDebugShape(self._cubeUId, [0,0,0])
+      ## DEBUG --
 
+      run_count = 1
+      print('RUN # 1 ---------------------------------')
+      while True:
           # 1. ROBOT BASE LINK POSITION & ORIENTATION ----------------------------------------
           robotPos, robotOrn = self._kuka.getBasePosOrient()
 
@@ -269,22 +284,31 @@ class KukaFallingObjsGymEnv(gym.Env):
           # 3. FALLING OBJECTS ---------------------------------------------------------------
           # self._objs
           #
-          # 3.1 Objects Velocity
+          # 3.1 Objects Pos & Velocity
+          # Compose Environment Info (State input)
+          envInfo = []
           objsPos = []
-          objsLinearVel = []
           for i in range(len(self._objs)):
+              objInfo = []
               #print("Obj Ids: ", i, self._objs[i].id())
               objPos, objOrn = p.getBasePositionAndOrientation(self._objs[i].id())
               objsPos.append(objPos)
+              # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
+              # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
               objLinearVel, objAngularVel = p.getBaseVelocity(self._objs[i].id())
-              objsLinearVel.append(objLinearVel)
 
+              objInfo+= objPos
+              objInfo.append(objLinearVel[2])
+              envInfo.append(objInfo)
+              #print("OBJINFO:", objInfo)
+
+          #print(envInfo)
           # 4. ROBOT SHORTEST DISTANCE TO OBJECTS ---------------------------------------------
-          objIdList = []
-          for i in range(len(self._objs)):
-              objIdList.append(self._objs[i].id())
-
-          robotDistanceToObjs = self._kuka.getShortestDistanceToObjects(objIdList)
+          #objIdList = []
+          #for i in range(len(self._objs)):
+          #    objIdList.append(self._objs[i].id())
+          #
+          #robotDistanceToObjs = self._kuka.getShortestDistanceToObjects(objIdList)
 
           #####################################################################################
           # Get the object of the lowest pos in X
@@ -297,30 +321,34 @@ class KukaFallingObjsGymEnv(gym.Env):
           #print('LOWEST OBJ:', objsPos[lowestObjId], 'DIST', robotDistanceToObjs)
 
           # 5. ACTION -------------------------------------------------------------------------
-          if(self._kukaBot.act(objsPos[lowestObjId][0], objsPos[lowestObjId][1], robotDistanceToObjs, int(robotBaseJointState[1]))):
-              self._kuka.moveJoint(0, 0.1)  ## Move Right
-          else:
-              self._kuka.moveJoint(0, -0.1) ## Move Left
+          #
+          if(self._kukaBot.act(envInfo) == 1):
+              self._kuka.moveJoint(0, -self._CKUKA_MOVE_INTERVAL) ## Move Left
+          elif(self._kukaBot.act(envInfo) == 2):
+              self._kuka.moveJoint(0, self._CKUKA_MOVE_INTERVAL)  ## Move Right
+          #else if(self._kukaBot.act(envInfo) == 0): NON_MOVE
 
           # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
           for i in range(len(self._objs)):
               #print("CHECK KUKA COLLISION WITH BALL", i)
               if(self._kuka.detectCollisionWith(self._objs[i].id())):
                   self._objs[i].robotHit()
-                  self.terminated = 1
+                  self._terminated = 1
                   basePos, baseOrn = self._objs[i].getBasePosAndOrn()
-                  print("COLLIDING OBJ:", self._objs[i].id(), "-", basePos, "-", robotDistanceToObjs)
-                  sphereUid = p.createMultiBody(1, self._colSphereId, -1, basePos, baseOrn)
+                  print("COLLIDING OBJ:", self._objs[i].id(), "-", basePos)
+                  self._sphereUid = self.drawDebugShape(self._sphere, basePos)
                   break
 
-          if self.terminated: # Terminal state
-              # Update the q scores
+          if self._terminated: # Terminal state
+              run_count += 1
+              print('RUN #', run_count, '---------------------------------')
+              # Update the q_values
               self._kukaBot.update_qvalues()
 
               ## 0. RELOAD FALLING OBJS --
               self._p.stepSimulation()
-              if self._renders:
-                  time.sleep(5)
+              #if self._renders:
+              #    time.sleep(5)
               self._reset()
               continue
 
@@ -328,7 +356,7 @@ class KukaFallingObjsGymEnv(gym.Env):
           # Avoid all balls as much as possible
           # LET THE BALLS SIGNAL UPDATE REWARD TO THE ENV UPON EACH ONE TOUCH THE GROUND
           # WITHOUT HITTING THE KUKA
-          reward = self.updateReward() ## Actually, this is just score being given if NOT terminated!
+          reward = self.updateReward() ## Actually, this is just score being given if NOT _terminated!
 
           #######################################################################################
           # 8. STEPPING --
@@ -410,7 +438,7 @@ class KukaFallingObjsGymEnv(gym.Env):
   def _termination(self):
     #print("self._envStepCounter")
     #print(self._envStepCounter)
-    if (self.terminated or self._envStepCounter>1000):
+    if (self._terminated or self._envStepCounter>1000):
       self._observation = self.getExtendedObservation()
       return True
 
@@ -431,3 +459,10 @@ class KukaFallingObjsGymEnv(gym.Env):
     #print("reward")
     #print(__reward)
     return self.__reward
+
+  def initializeDebugShapes(self):
+    self._sphere = p.createCollisionShape(p.GEOM_SPHERE, radius=0.1)
+    self._cube   = p.createCollisionShape(p.GEOM_BOX, halfExtents=[0.1,0.1,0.1])
+
+  def drawDebugShape(self, shapeId, pos):
+    return p.createMultiBody(1, shapeId, -1, pos, [0,0,0,1])

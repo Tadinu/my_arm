@@ -1,5 +1,5 @@
 import json
-
+import random
 
 class KukaBot(object):
     '''
@@ -9,18 +9,19 @@ class KukaBot(object):
     '''
     def __init__(self):
         self._actions = {
-            "left" : 0,
-            "right": 1
+            "stand_still": 0,
+            "left"       : 1,
+            "right"      : 2
         }
 
         self.gameCNT = 0 # Game count of current run, incremented after every death
-        self.DUMPING_N = 25 # Number of iterations to dump Q values to JSON after
+        self.DUMPING_N = 3 # Number of iterations to dump Q values to JSON after
         self.discount = 1.0
-        self.r = {0: 1, 1: -1000} # Reward function
+        self.r = {0: 1, 1:-1, 2: -1000} # Reward function
         self.lr = 0.7
         self.load_qvalues()
-        self.latest_state  = "-3_-29_24_0"
-        self.latest_action = self._actions["left"]
+        self.latest_state  = "0_0_0_-6_0_0_0_-6_0_0_0_-6_0_0_0_-6_0_0_0_-6_"
+        self.latest_action = self._actions["stand_still"]
         self.move_history = [] ## The history of moves for each session (start -> terminated)
 
     def load_qvalues(self):
@@ -38,21 +39,36 @@ class KukaBot(object):
     ## 1. Query the database for the state that correspond to the input env elements(xPos, yPos, vel)
     ## 2. Check the current Q-values of that state -> Pick out the action that has largest value!
     ## => Set it to the latest action!
-    def act(self, xPos, yPos, zdif, vel):
+    def act(self, envInfo):
         '''
         Chooses the best action with respect to the current state - Chooses 0 (don't flap) to tie-break
         '''
-        state = self.map_state(xPos, yPos, zdif, vel)
+        current_state = self.map_state(envInfo)
 
-        self.move_history.append( [self.latest_state, self.latest_action, state] ) # Add the experience to the history
+        self.move_history.append( [self.latest_state, self.latest_action, current_state] ) # Add the experience to the history
 
-        self.latest_state = state # Update the latest_state with the current state
+        self.latest_state = current_state # Update the latest_state with the current state
 
-        if self.qvalues[state][0] > self.qvalues[state][1]:
-            self.latest_action = self._actions["left"]
+        # New observed state: Make a random move
+        if (not current_state in self.qvalues):
+            self.latest_action = random.choice([0,1,2])
+            #print('New State:', self.latest_action)
+
+        # Observed state: Make the movement that has the largest qvalue!
         else:
-            self.latest_action = self._actions["right"]
+            max_act_qvalue = max(self.qvalues[current_state])
+            print('Current State max QValue:', max_act_qvalue)
+            if (max_act_qvalue == self.qvalues[current_state][0]):
+                print(current_state, 'Stand still')
+                self.latest_action = self._actions["stand_still"]
+            elif (max_act_qvalue == self.qvalues[current_state][1]):
+                print(current_state, 'Move Left')
+                self.latest_action = self._actions["left"]
+            elif (max_act_qvalue == self.qvalues[current_state][2]):
+                print(current_state, 'Move Right')
+                self.latest_action = self._actions["right"]
 
+        #print ('Current State:', current_state, 'Action:', self.latest_action)
         return self.latest_action
 
     def get_latest_state(self):
@@ -64,26 +80,39 @@ class KukaBot(object):
         Update qvalues via iterating over experiences
         '''
         ## Moves: [latest_state, latest_action, "zdif_vel"]
-        history = list(reversed(self.move_history))
+        move_history = list(reversed(self.move_history))
 
         #Q-learning score updates
         t = 1
-        for exp in history:
-            state = exp[0]
+        for exp in move_history:
+            latest_state = exp[0]
             act = exp[1]
-            res_state = exp[2]
+            current_state = exp[2]
+            if not latest_state in self.qvalues:
+                self.qvalues[latest_state] = [0,0,0]
+
+            if not current_state in self.qvalues:
+                self.qvalues[current_state] = [0,0,0]
+
             if t==1 or t==2:
-                self.qvalues[state][act] = (1- self.lr) * (self.qvalues[state][act]) + (self.lr) * ( self.r[1] + (self.discount)*max(self.qvalues[res_state]) )
+                reward = self.r[2]
+
+            elif act == 0: # Non-move
+                reward = self.r[2]
 
             else:
-                self.qvalues[state][act] = (1- self.lr) * (self.qvalues[state][act]) + (self.lr) * ( self.r[0] + (self.discount)*max(self.qvalues[res_state]) )
+                reward = self.r[1]
+
+            self.qvalues[latest_state][act] = (1- self.lr) * (self.qvalues[latest_state][act]) + (self.lr) * ( reward + (self.discount)*max(self.qvalues[current_state]) )
             t += 1
 
         self.gameCNT += 1 #increase game count
         self.dump_qvalues() # Dump q values (if game count % DUMPING_N == 0)
         self.move_history = []  #clear history after updating strategies
 
-    def map_state(self, xPos, yPos, zdif, vel):
+    ## Input: The pos of objects
+    ## Output: The corresponding env state {Unit coor of objs & vel in air}
+    def map_state(self, envInfo):
         '''
         Map the (xdif, ydif, vel) to the respective state, with regards to the grids
         The state is a string, "xdif_ydif_vel"
@@ -91,12 +120,16 @@ class KukaBot(object):
         X -> [-40,-30...120] U [140, 210 ... 420]
         Y -> [-300, -290 ... 160] U [180, 240 ... 420]
         '''
-        if zdif < 0.1:
-            zdif = int(zdif) - (int(zdif) % 1)
-        else:
-            zdif = int(zdif) - (int(zdif) % 6)
+        state_str = ''
+        for objInfo in envInfo:
+            xPos = (objInfo[0]*100) % 5
+            yPos = (objInfo[1]*100) % 5
+            zPos = (objInfo[2]*100) % 5
+            zVel = objInfo[3]
+            state_str += str(int(xPos)) + '_' + str(int(yPos)) + '_' + str(int(zPos))+'_'+str(int(zVel))+'_'
 
-        return str(int(xPos)) + '_' + str(int(yPos)) + '_' + str(int(zdif))+'_'+str(vel)
+        #print (state_str)
+        return state_str
 
     def dump_qvalues(self):
         '''

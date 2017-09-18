@@ -14,6 +14,7 @@ class MenaceObject(object):
         self._env = env
         self.__id = -1
         self.__robotHit = False
+        self._vel = 0
 
     def id(self):
         return self.__id
@@ -24,6 +25,9 @@ class MenaceObject(object):
 
     def getBasePosAndOrn(self):
         return p.getBasePositionAndOrientation(self.__id)
+
+    def setVel(self, vel):
+        self._vel = vel
 
     def isGroundHit(self):
         basePos, baseOrn = p.getBasePositionAndOrientation(self.__id)

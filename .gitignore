@@ -6,3 +6,4 @@ moc_*
 Makefile
 *.so
 *.so.*
+*.pyc

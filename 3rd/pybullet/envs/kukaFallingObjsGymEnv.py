@@ -55,7 +55,6 @@ class KukaFallingObjsGymEnv(gym.Env):
     self._observation = []
     self._envStepCounter = 0
     self._renders = renders
-    self._terminated = 0
     self._p = p
 
     if self._renders:
@@ -133,7 +132,7 @@ class KukaFallingObjsGymEnv(gym.Env):
     self._terminated = 0
 
     ## LOAD FALLING OBJS --
-    self.loadFallingObjects()
+    self.reloadFallingObjects()
 
     ## STEP SIMULATION --
     self._envStepCounter = 0
@@ -146,7 +145,7 @@ class KukaFallingObjsGymEnv(gym.Env):
     #self._timer.start()
     return np.array(self._observation)
 
-  def loadFallingObjects(self):
+  def reloadFallingObjects(self):
       # Remove debug shapes
       #self.removeObject(self._sphereUid)
 
@@ -261,7 +260,7 @@ class KukaFallingObjsGymEnv(gym.Env):
           if self._renders:
               time.sleep(self._timeStep)
 
-  def mainControlRobot(self):
+  def mainRobotTraining(self):
       score = 0
 
       robotBaseJointLimit = self._kuka.getJointLimit(0)

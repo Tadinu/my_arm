@@ -34,4 +34,5 @@ DISTFILES += \
     menace_object.py \
     RobotOperationEnv.py \
     robot.py \
-    kukaBot.py
+    robotBot.py \
+    robotCommon.py

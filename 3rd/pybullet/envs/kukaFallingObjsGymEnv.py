@@ -125,7 +125,7 @@ class KukaFallingObjsGymEnv(gym.Env):
       #print("KUKA BASE POS:", kukaBasePos)
 
       # Initialize the bot
-      self._kukaBot = KukaBot()
+      self._robotBot = KukaBot()
 
   def _reset(self):
     print("_reset")
@@ -274,18 +274,20 @@ class KukaFallingObjsGymEnv(gym.Env):
       print('RUN # 1 ---------------------------------')
       while True:
           # 1. ROBOT BASE LINK POSITION & ORIENTATION ----------------------------------------
-          robotPos, robotOrn = self._kuka.getBasePosOrient()
+          #robotPos, robotOrn = self._kuka.getBasePosOrient()
 
           # 2. ROBOT BASE JOINT CURRENT POS, MAX POS, MIN POS, VELOCITY ----------------------
-          robotBaseJointInfo  = self._kuka.getJointInfo(0)
-          robotBaseJointState = self._kuka.getJointState(0)
+          #robotBaseJointInfo  = self._kuka.getJointInfo(0)
+          #robotBaseJointState = self._kuka.getJointState(0)
 
           # 3. FALLING OBJECTS ---------------------------------------------------------------
           # self._objs
           #
           # 3.1 Objects Pos & Velocity
           # Compose Environment Info (State input)
-          envInfo = []
+          baseCurPos = self.getCurrentBaseJointPos()
+          print('BASE CUR POS:', baseCurPos)
+          envInfo = [baseCurPos]
           objsPos = []
           for i in range(len(self._objs)):
               objInfo = []
@@ -297,7 +299,7 @@ class KukaFallingObjsGymEnv(gym.Env):
               objLinearVel, objAngularVel = p.getBaseVelocity(self._objs[i].id())
 
               objInfo+= objPos
-              objInfo.append(objLinearVel[2])
+              objInfo.append(objLinearVel[2]) # zVel only
               envInfo.append(objInfo)
               #print("OBJINFO:", objInfo)
 
@@ -310,22 +312,12 @@ class KukaFallingObjsGymEnv(gym.Env):
           #robotDistanceToObjs = self._kuka.getShortestDistanceToObjects(objIdList)
 
           #####################################################################################
-          # Get the object of the lowest pos in X
-          lowestObjId = 0
-          lowestPosZ = objsPos[0][2]
-          for i in range(len(objsPos)):
-              if(lowestPosZ > objsPos[i][2]):
-                  lowestObjId = i
-                  lowestPosZ = objsPos[i][2]
-          #print('LOWEST OBJ:', objsPos[lowestObjId], 'DIST', robotDistanceToObjs)
 
           # 5. ACTION -------------------------------------------------------------------------
           #
-          if(self._kukaBot.act(envInfo) == 1):
-              self._kuka.moveJoint(0, -self._CKUKA_MOVE_INTERVAL) ## Move Left
-          elif(self._kukaBot.act(envInfo) == 2):
-              self._kuka.moveJoint(0, self._CKUKA_MOVE_INTERVAL)  ## Move Right
-          #else if(self._kukaBot.act(envInfo) == 0): NON_MOVE
+          action = self._robotBot.act(envInfo)
+          print("Robot Act: ", action)
+          self.actRobot(action)
 
           # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
           for i in range(len(self._objs)):
@@ -342,7 +334,7 @@ class KukaFallingObjsGymEnv(gym.Env):
               run_count += 1
               print('RUN #', run_count, '---------------------------------')
               # Update the q_values
-              self._kukaBot.update_qvalues()
+              self._robotBot.update_qvalues()
 
               ## 0. RELOAD FALLING OBJS --
               self._p.stepSimulation()
@@ -365,31 +357,47 @@ class KukaFallingObjsGymEnv(gym.Env):
           if self._renders:
               time.sleep(self._timeStep)
 
-  def moveRobotJoint(self, jointIndex, dv):
-      # PREPARE MOTOR COMMANDS --
-      #
-      motorsIds=[]
-      #for i in range (len(self._kuka.motorNames)):
-      #    motorName = self._kuka.motorNames[i]
-      #    motorJointIndex = self._kuka.motorIndices[i]
-      #    motorsIds.append(self._p.addUserDebugParameter(motorName,-3,3,self._kuka.jointPositions[i]))
+  def getCurrentBaseJointPos(self):
+      pos = self._kuka.getJointState(0)[0] # 0: Joint Pos
+      return pos
 
-      motorsIds.append(self._p.addUserDebugParameter(self._kuka.motorNames[jointIndex], -dv, dv, dv))
-      print("dv:", dv)
-      print("Base Joint- ", self._kuka.getJointState(jointIndex))
-      #motorsIds.append(self._p.addUserDebugParameter("posX",-dv,dv,0))
-      #motorsIds.append(self._p.addUserDebugParameter("posY",-dv,dv,0))
-      #motorsIds.append(self._p.addUserDebugParameter("posZ",-dv,dv,-dv))
-      #motorsIds.append(self._p.addUserDebugParameter("yaw",-dv,dv,0))
-      #motorsIds.append(self._p.addUserDebugParameter("fingerAngle",0,0.3,.3))
+  def actRobot(self, actionId):
 
-      # PREPARE ACTIONS --
+      dv = 0
+      if (actionId == 1):
+          dv = -self._CKUKA_MOVE_INTERVAL  ## Move Left
+      elif (actionId == 2):
+          dv = self._CKUKA_MOVE_INTERVAL  ## Move Right
+      ##elif(actionId == 0): ## NON_MOVE
+      ##    dv = 0 ## Stand Still
+      if (dv!=0):
+          self._kuka.moveJoint(0, dv)
+
+      ###################################################################################################
+      ## PREPARE MOTOR COMMANDS --
+      ##
+      #motorsIds=[]
+      ##for i in range (len(self._kuka.motorNames)):
+      ##    motorName = self._kuka.motorNames[i]
+      ##    motorJointIndex = self._kuka.motorIndices[i]
+      ##    motorsIds.append(self._p.addUserDebugParameter(motorName,-3,3,self._kuka.jointPositions[i]))
       #
-      action=[]
-      for motorId in motorsIds:
-          action.append(self._p.readUserDebugParameter(motorId))
-          #print (action)
-      self._kuka.applyAction(action)
+      #motorsIds.append(self._p.addUserDebugParameter(self._kuka.motorNames[0], -dv, dv, dv))
+      #print("dv:", dv)
+      #print("Base Joint- ", self._kuka.getJointState(0))
+      ##motorsIds.append(self._p.addUserDebugParameter("posX",-dv,dv,0))
+      ##motorsIds.append(self._p.addUserDebugParameter("posY",-dv,dv,0))
+      ##motorsIds.append(self._p.addUserDebugParameter("posZ",-dv,dv,-dv))
+      ##motorsIds.append(self._p.addUserDebugParameter("yaw",-dv,dv,0))
+      ##motorsIds.append(self._p.addUserDebugParameter("fingerAngle",0,0.3,.3))
+      #
+      ## PREPARE ACTIONS --
+      ##
+      #action=[]
+      #for motorId in motorsIds:
+      #    action.append(self._p.readUserDebugParameter(motorId))
+      #    #print (action)
+      #self._kuka.applyAction(action)
 #ducta --
 
   def createRobotAction(self, action):

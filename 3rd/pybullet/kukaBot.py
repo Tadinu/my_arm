@@ -14,6 +14,8 @@ class KukaBot(object):
             "right"      : 2
         }
 
+        self._CINITIAL_ACT_IDS = [0] * 3
+
         self.gameCNT = 0 # Game count of current run, incremented after every death
         self.DUMPING_N = 3 # Number of iterations to dump Q values to JSON after
         self.discount = 1.0
@@ -23,6 +25,22 @@ class KukaBot(object):
         self.latest_state  = "0_0_0_-6_0_0_0_-6_0_0_0_-6_0_0_0_-6_0_0_0_-6_"
         self.latest_action = self._actions["stand_still"]
         self.move_history = [] ## The history of moves for each session (start -> terminated)
+
+        self._DELTA_X = 0.1
+        self._DELTA_Y = 0.1
+        self._DELTA_Z = 1
+
+        self._MAX_X   = 1
+        self._MAX_Y   = 1
+        self._MAX_Z   = 10
+
+        self._MIN_X   = -1
+        self._MIN_Y   = -1
+        self._MIN_Z   = -0.1
+
+        self._CELL_NO_X = (self._MAX_X - self._MIN_X)/self._DELTA_X
+        self._CELL_NO_Y = (self._MAX_Y - self._MIN_Y)/self._DELTA_Y
+        self._CELL_NO_Z = (self._MAX_Z - self._MIN_Z)/self._DELTA_Z
 
     def load_qvalues(self):
         '''
@@ -52,21 +70,16 @@ class KukaBot(object):
         # New observed state: Make a random move
         if (not current_state in self.qvalues):
             self.latest_action = random.choice([0,1,2])
-            #print('New State:', self.latest_action)
+            print('New State:', self.latest_action) ### <------------ !!!!!!!!!!!!!!!
 
         # Observed state: Make the movement that has the largest qvalue!
         else:
             max_act_qvalue = max(self.qvalues[current_state])
-            print('Current State max QValue:', max_act_qvalue)
-            if (max_act_qvalue == self.qvalues[current_state][0]):
-                print(current_state, 'Stand still')
-                self.latest_action = self._actions["stand_still"]
-            elif (max_act_qvalue == self.qvalues[current_state][1]):
-                print(current_state, 'Move Left')
-                self.latest_action = self._actions["left"]
-            elif (max_act_qvalue == self.qvalues[current_state][2]):
-                print(current_state, 'Move Right')
-                self.latest_action = self._actions["right"]
+            for key in self._actions.keys():
+                actionId = self._actions[key] # set the same as the index
+                if (self.qvalues[current_state][actionId] == max_act_qvalue):
+                    self.latest_action = actionId
+                    break
 
         #print ('Current State:', current_state, 'Action:', self.latest_action)
         return self.latest_action
@@ -89,10 +102,10 @@ class KukaBot(object):
             act = exp[1]
             current_state = exp[2]
             if not latest_state in self.qvalues:
-                self.qvalues[latest_state] = [0,0,0]
+                self.qvalues[latest_state] = self._CINITIAL_ACT_IDS
 
             if not current_state in self.qvalues:
-                self.qvalues[current_state] = [0,0,0]
+                self.qvalues[current_state] = self._CINITIAL_ACT_IDS
 
             if t==1 or t==2:
                 reward = self.r[2]
@@ -121,14 +134,28 @@ class KukaBot(object):
         Y -> [-300, -290 ... 160] U [180, 240 ... 420]
         '''
         state_str = ''
-        for objInfo in envInfo:
-            xPos = (objInfo[0]*100) % 5
-            yPos = (objInfo[1]*100) % 5
-            zPos = (objInfo[2]*100) % 5
-            zVel = objInfo[3]
-            state_str += str(int(xPos)) + '_' + str(int(yPos)) + '_' + str(int(zPos))+'_'+str(int(zVel))+'_'
+        ## Base joint current pos
+        baseJointPos = envInfo[0]
+        print
+        for i in range(len(envInfo)):
+            if i!=0:
+                objInfo = envInfo[i]
 
-        #print (state_str)
+                ## --
+                #print("objInfo:", objInfo[0],"-", objInfo[1],"-", objInfo[2])
+                xPos = int(abs(objInfo[0]-self._MIN_X)/self._DELTA_X)
+                yPos = int(abs(objInfo[1]-self._MIN_Y)/self._DELTA_Y)
+                zPos = int(abs(objInfo[2]-self._MIN_Z)/self._DELTA_Z)
+
+                ##--
+                objIndex = self._CELL_NO_X * self._CELL_NO_Y * (zPos-1) + \
+                           xPos * yPos - 1
+                print("XYZ:", xPos,"-", yPos,"-", zPos, "- ObjIndex:", int(objIndex))
+                state_str += str(int(objIndex)) + '_'
+
+        state_str += str(int(baseJointPos*10))
+
+        print (state_str)
         return state_str
 
     def dump_qvalues(self):

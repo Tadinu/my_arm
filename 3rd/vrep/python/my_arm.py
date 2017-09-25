@@ -22,12 +22,14 @@ except:
 
 import time
 
+import robotCommon
 from RobotOperationEnv import RobotOperationEnvironment
 
-CSERVER_PORT = 19999
-CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
-CSERVER_ROBOT_NAME = 'LBR4p#'
 
+CSERVER_PORT = 19999
+CSERVER_ROBOT_NAME = 'Robot1#' #'youBot#' #'LBR4p#'
+
+CSERVER_ROBOT_ID = robotCommon.CMANIPULATOR
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -55,7 +57,7 @@ if clientID!=-1:
     # Retrieve some handles:
     res, robotHandle = vrep.simxGetObjectHandle(clientID, CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
 
-    env = RobotOperationEnvironment(clientID, robotHandle)
+    env = RobotOperationEnvironment(clientID, CSERVER_ROBOT_ID, robotHandle)
     env.mainRobotTraining()
 
     ## -----------------------------------------------------------------------------------------------------------------------------

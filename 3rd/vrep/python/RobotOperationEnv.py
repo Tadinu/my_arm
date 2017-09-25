@@ -7,8 +7,9 @@ from threading import Timer
 ## threading.Timer(1, self.timerTask).start()
 
 from robot import Robot
-from kukaBot import KukaBot
+from robotBot import RobotBot
 from menace_object import MenaceObject
+import robotCommon
 
 try:
     import vrep
@@ -21,19 +22,22 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_REMOTE_API_OBJECT_NAME       = 'remoteApiCommandServer'
-CSERVER_REMOTE_FUNC_MOVE_JOINT       = 'moveJoint'
-CSERVER_REMOTE_FUNC_SHOW_MESSAGE     = 'displayMessage'
-CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS = 'reloadFallingObjects'
-CSERVER_REMOTE_FUNC_DETECT_COLLISION = 'detectCollisionWith'
-CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND= 'detectObjectsOnGround'
+CSERVER_REMOTE_API_OBJECT_NAME          = 'remoteApiCommandServer'
+CSERVER_REMOTE_FUNC_ROBOT_ACT           = 'actRobot'
+CSERVER_REMOTE_FUNC_SHOW_MESSAGE        = 'displayMessage'
+CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS    = 'reloadFallingObjects'
+CSERVER_REMOTE_FUNC_DETECT_COLLISION    = 'detectCollisionWith'
+CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND   = 'detectObjectsOnGround'
+CSERVER_REMOTE_FUNC_RESET_ROBOT_POS     = 'resetRobotPos'
+CSERVER_REMOTE_FUNC_GET_OPERATION_STATE = 'getOperationState'
 
 CFALL_OBJS_NAMES = ['Obj1', 'Obj2', 'Obj3', 'Obj4', 'Obj5']
 
 class RobotOperationEnvironment():
 
-    def __init__(self, clientID, robotHandle):
+    def __init__(self, clientID, robotId, robotHandle):
         self._clientID = clientID
+        self._robotId  = robotId
         self._robotHandle = robotHandle
 
         # INITIALIZE ENVIRONMENT
@@ -64,10 +68,10 @@ class RobotOperationEnvironment():
         ## SETUP ENVIRONMENT --
         ##
         ## LOAD MANIPULATOR KUKA --
-        self._robot = Robot(self._robotHandle)
+        self._robot = Robot(self._robotId, self._robotHandle)
 
         # Initialize the bot
-        self._robotBot = KukaBot()
+        self._robotBot = RobotBot(self._robotId)
 
     def reset(self):
         print("reset")
@@ -75,6 +79,9 @@ class RobotOperationEnvironment():
 
         ## LOAD FALLING OBJS --
         self.reloadFallingObjects()
+
+        ## RESET ROBOT POS --
+        #self.resetRobotPos()
 
         ## STEP SIMULATION --
         self._envStepCounter = 0
@@ -107,6 +114,78 @@ class RobotOperationEnvironment():
 
     #def __del__(self):
 
+    def objectAvoidanceTraining(self):
+        # self._objs
+        #
+        # 3.1 Objects Pos & Velocity
+        # Compose Environment Info (State input)
+        baseCurPos = self.getCurrentBaseJointPos()
+        print('BASE CUR POS:', baseCurPos)
+        envInfo = [baseCurPos]
+        objsPos = []
+        for i in range(self._CNUM_OBJS):
+            objInfo = []
+            #print("Obj Ids: ", i, self._objs[i].id())
+            objPos = self.getObjectWorldPosition(CFALL_OBJS_NAMES[i])
+            objsPos.append(objPos)
+            # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
+            # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
+            objLinearVel = self.getObjectVelocity(CFALL_OBJS_NAMES[i])
+            #print("OBJPS:",i, objPos)
+            objInfo+= objPos
+            #objInfo.append(objLinearVel[2]) # zVel only
+            envInfo.append(objInfo)
+            #print("OBJINFO:", objInfo)
+
+        # 5. ACTION -------------------------------------------------------------------------
+        #
+        action = self._robotBot.act(envInfo)
+        print("Robot Act: ", action)
+        self.actRobot(action)
+
+        # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
+        for i in range(self._CNUM_OBJS):
+            #print("CHECK KUKA COLLISION WITH BALL", CFALL_OBJS_NAMES[i])
+            if(self.detectCollisionWith(CFALL_OBJS_NAMES[i]) or \
+               self.detectObjectsReachGround()):
+                self._terminated = 1
+                print('Terminate')
+                break
+
+    def objectCatchTraining(self):
+        # self._objs
+        #
+        # 3.1 Objects Pos & Velocity
+        # Compose Environment Info (State input)
+        baseCurPos = self.getCurrentBaseJointPos()
+        print('BASE CUR POS:', baseCurPos)
+        envInfo = [baseCurPos]
+        objsPos = []
+        for i in range(self._CNUM_OBJS):
+            objInfo = []
+            #print("Obj Ids: ", i, self._objs[i].id())
+            objPos = self.getObjectWorldPosition(CFALL_OBJS_NAMES[i])
+            objsPos.append(objPos)
+            # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
+            # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
+            objLinearVel = self.getObjectVelocity(CFALL_OBJS_NAMES[i])
+            #print("OBJPS:",i, objPos)
+            objInfo+= objPos
+            #objInfo.append(objLinearVel[2]) # zVel only
+            envInfo.append(objInfo)
+            #print("OBJINFO:", objInfo)
+
+        # 5. ACTION -------------------------------------------------------------------------
+        #
+        action = self._robotBot.act(envInfo)
+        print("Robot Act: ", action)
+        self.actRobot(action)
+
+        # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
+        if(self.getRobotOperationState() == 0 or self.getRobotOperationState() == 4):
+            self._terminated = 1
+            print('Terminate')
+
     def mainRobotTraining(self):
         score = 0
 
@@ -121,46 +200,11 @@ class RobotOperationEnvironment():
         print('RUN # 1 ---------------------------------')
 
         while True:
-            # 3. FALLING OBJECTS ---------------------------------------------------------------
-            # self._objs
-            #
-            # 3.1 Objects Pos & Velocity
-            # Compose Environment Info (State input)
-            envInfo = []
-            objsPos = []
-            for i in range(self._CNUM_OBJS):
-                objInfo = []
-                #print("Obj Ids: ", i, self._objs[i].id())
-                objPos = self.getObjectWorldPosition(CFALL_OBJS_NAMES[i])
-                objsPos.append(objPos)
-                # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
-                # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-                objLinearVel = self.getObjectVelocity(CFALL_OBJS_NAMES[i])
-                #print("OBJPS:",i, objPos)
-                objInfo+= objPos
-                objInfo.append(objLinearVel[2]) # zVel only
-                envInfo.append(objInfo)
-                #print("OBJINFO:", objInfo)
+            # OBJECTS AVOIDANCE ---------------------------------------------------------------
+            #self.objectAvoidanceTraining()
 
-            # 5. ACTION -------------------------------------------------------------------------
-            #
-            if(self._robotBot.act(envInfo) == 1):
-                print('Move Left')
-                self.moveJoint('2', self._CKUKA_MOVE_INTERVAL) ## Move Left
-            elif(self._robotBot.act(envInfo) == 2):
-                print('Move Right')
-                self.moveJoint('2', -self._CKUKA_MOVE_INTERVAL)  ## Move Right
-            #else if(self._robotBot.act(envInfo) == 0): NON_MOVE
-
-            # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
-            for i in range(self._CNUM_OBJS):
-                #print("CHECK KUKA COLLISION WITH BALL", CFALL_OBJS_NAMES[i])
-                if(self.detectCollisionWith(CFALL_OBJS_NAMES[i]) or \
-                   self.detectObjectsReachGround()):
-                    self._terminated = 1
-                    print('Terminate')
-                    break
-
+            # OBJECTS CATCH -------------------------------------------------------------------
+            self.objectCatchTraining()
             if self._terminated: # Terminal state
                 run_count += 1
                 print('RUN #', run_count, '---------------------------------')
@@ -169,9 +213,13 @@ class RobotOperationEnvironment():
 
                 ## 0. RELOAD FALLING OBJS --
                 self.reset()
+                time.sleep(0.5)
                 continue
 
-            #time.sleep(500)
+    def getCurrentBaseJointPos(self):
+        res, jointHandle = vrep.simxGetObjectHandle(self._clientID, "LBR4p_joint1", vrep.simx_opmode_oneshot_wait)
+        res, pos         = vrep.simxGetJointPosition(self._clientID, jointHandle, vrep.simx_opmode_streaming)
+        return pos
 
     def getObjectWorldPosition(self, objectName):
         res, objectHandle = vrep.simxGetObjectHandle(self._clientID, objectName, vrep.simx_opmode_oneshot_wait)
@@ -183,14 +231,52 @@ class RobotOperationEnvironment():
         res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(self._clientID, objectHandle, vrep.simx_opmode_buffer)
         return objectLinearVel
 
-    def moveJoint(self, jointName, jointDeltaPos):
-        inputInts    = [self._robotHandle] #[objHandles[16]]
-        inputFloats  = [jointDeltaPos]
-        inputStrings = [jointName]
+    def actRobot(self, actionId):
+        inputInts    = [actionId] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
         inputBuffer  = bytearray()
-        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, CSERVER_REMOTE_API_OBJECT_NAME,    \
+        if(self._robotId == robotCommon.CYOUBOT):
+            remoteObjectName = 'youBot'
+        else:
+            remoteObjectName = CSERVER_REMOTE_API_OBJECT_NAME
+
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
                                                                                      vrep.sim_scripttype_childscript,                   \
-                                                                                     CSERVER_REMOTE_FUNC_MOVE_JOINT,                    \
+                                                                                     CSERVER_REMOTE_FUNC_ROBOT_ACT,                     \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+
+    def getRobotOperationState(self):
+        inputInts    = [] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        if(self._robotId == robotCommon.CYOUBOT):
+            remoteObjectName = 'youBot'
+        else:
+            remoteObjectName = CSERVER_REMOTE_API_OBJECT_NAME
+
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_GET_OPERATION_STATE,           \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        return retInts[0]
+
+    def resetRobotPos(self):
+        inputInts    = [] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        if(self._robotId == robotCommon.CYOUBOT):
+            remoteObjectName = 'youBot'
+        else:
+            remoteObjectName = CSERVER_REMOTE_API_OBJECT_NAME
+
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_RESET_ROBOT_POS,               \
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
 

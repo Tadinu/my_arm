@@ -1,8 +1,10 @@
 #add parent dir to find package. Only needed for source code build, pip install doesn't need it.
 import os, inspect
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(os.path.dirname(currentdir))
-os.sys.path.insert(0,parentdir)
+print('CURRENT DIR:', currentdir)
+parentdir = os.path.dirname(currentdir)
+print('PARENT DIR:', parentdir)
+os.sys.path.insert(0, parentdir)
 
 import gym
 from envs.racecarGymEnv import RacecarGymEnv
@@ -43,7 +45,7 @@ def playGame(train_indicator=0):    #1 means Train, 0 means simply Run
     LRC = 0.001     #Lerning rate for Critic
 
     action_dim = 3  #Steering/Acceleration/Brake
-    state_dim = 29  #of sensors input
+    state_dim = 4  #of sensors input
 
     np.random.seed(1337)
 
@@ -69,7 +71,7 @@ def playGame(train_indicator=0):    #1 means Train, 0 means simply Run
     critic = CriticNetwork(sess, state_dim, action_dim, BATCH_SIZE, TAU, LRC)
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
-    env = RacecarGymEnv(renders=True,isDiscrete=True)
+    env = RacecarGymEnv(renders=True,isDiscrete=False)
     ## ---------------------------------------------------------------
 
     #Now load the weight
@@ -91,7 +93,7 @@ def playGame(train_indicator=0):    #1 means Train, 0 means simply Run
         if np.mod(i, 3) == 0:
             ob = env.reset()
 
-        s_t = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY,  ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
+        s_t = np.hstack((ob[0], ob[1], ob[2], ob[3]))
      
         total_reward = 0.
         for j in range(max_steps):
@@ -116,7 +118,7 @@ def playGame(train_indicator=0):    #1 means Train, 0 means simply Run
 
             ob, r_t, done, info = env.step(a_t[0])
 
-            s_t1 = np.hstack((ob.angle, ob.track, ob.trackPos, ob.speedX, ob.speedY, ob.speedZ, ob.wheelSpinVel/100.0, ob.rpm))
+            s_t1 = np.hstack((ob[0], ob[1], ob[2], ob[3]))
         
             buff.add(s_t, a_t[0], r_t, s_t1, done)      #Add replay buffer
             

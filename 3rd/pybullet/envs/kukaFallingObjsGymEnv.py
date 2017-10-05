@@ -128,7 +128,7 @@ class KukaFallingObjsGymEnv(gym.Env):
       self._robotBot = KukaBot()
 
   def _reset(self):
-    print("_reset")
+    #print("_reset")
     self._terminated = 0
 
     ## LOAD FALLING OBJS --
@@ -286,7 +286,7 @@ class KukaFallingObjsGymEnv(gym.Env):
           # 3.1 Objects Pos & Velocity
           # Compose Environment Info (State input)
           baseCurPos = self.getCurrentBaseJointPos()
-          print('BASE CUR POS:', baseCurPos)
+          #print('BASE CUR POS:', baseCurPos)
           envInfo = [baseCurPos]
           objsPos = []
           for i in range(len(self._objs)):
@@ -316,7 +316,7 @@ class KukaFallingObjsGymEnv(gym.Env):
           # 5. ACTION -------------------------------------------------------------------------
           #
           action = self._robotBot.act(envInfo)
-          print("Robot Act: ", action)
+          #print("Robot Act: ", action)
           self.actRobot(action)
 
           # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
@@ -326,13 +326,13 @@ class KukaFallingObjsGymEnv(gym.Env):
                   self._objs[i].robotHit()
                   self._terminated = 1
                   basePos, baseOrn = self._objs[i].getBasePosAndOrn()
-                  print("COLLIDING OBJ:", self._objs[i].id(), "-", basePos)
+                  #print("COLLIDING OBJ:", self._objs[i].id(), "-", basePos)
                   self._sphereUid = self.drawDebugShape(self._sphere, basePos)
                   break
 
           if self._terminated: # Terminal state
               run_count += 1
-              print('RUN #', run_count, '---------------------------------')
+              #print('RUN #', run_count, '---------------------------------')
               # Update the q_values
               self._robotBot.update_qvalues()
 

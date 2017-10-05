@@ -27,9 +27,8 @@ from RobotOperationEnv import RobotOperationEnvironment
 
 
 CSERVER_PORT = 19999
-CSERVER_ROBOT_NAME = 'Robot1#' #'youBot#' #'LBR4p#'
-
-CSERVER_ROBOT_ID = robotCommon.CMANIPULATOR
+CSERVER_ROBOT_NAME = 'youBot#' #'LBR4p#'
+CSERVER_ROBOT_ID = robotCommon.CYOUBOT #CMANIPULATOR
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 

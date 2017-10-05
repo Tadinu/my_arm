@@ -200,11 +200,13 @@ class RobotOperationEnvironment():
         print('RUN # 1 ---------------------------------')
 
         while True:
-            # OBJECTS AVOIDANCE ---------------------------------------------------------------
-            #self.objectAvoidanceTraining()
+            if(self._robotId == robotCommon.CYOUBOT):
+                # OBJECTS AVOIDANCE ---------------------------------------------------------------
+                self.objectAvoidanceTraining()
+            else:
+                # OBJECTS CATCH -------------------------------------------------------------------
+                self.objectCatchTraining()
 
-            # OBJECTS CATCH -------------------------------------------------------------------
-            self.objectCatchTraining()
             if self._terminated: # Terminal state
                 run_count += 1
                 print('RUN #', run_count, '---------------------------------')

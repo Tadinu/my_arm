@@ -7,3 +7,6 @@ Makefile
 *.so
 *.so.*
 *.pyc
+*.h5
+*.json
+*.BRHM

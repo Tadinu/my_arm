@@ -79,6 +79,7 @@ class KukaBot(object):
                 actionId = self._actions[key] # set the same as the index
                 if (self.qvalues[current_state][actionId] == max_act_qvalue):
                     self.latest_action = actionId
+                    print('State:', current_state,' - Action:', actionId)
                     break
 
         #print ('Current State:', current_state, 'Action:', self.latest_action)
@@ -150,12 +151,12 @@ class KukaBot(object):
                 ##--
                 objIndex = self._CELL_NO_X * self._CELL_NO_Y * (zPos-1) + \
                            xPos * yPos - 1
-                print("XYZ:", xPos,"-", yPos,"-", zPos, "- ObjIndex:", int(objIndex))
+                #print("XYZ:", xPos,"-", yPos,"-", zPos, "- ObjIndex:", int(objIndex))
                 state_str += str(int(objIndex)) + '_'
 
         state_str += str(int(baseJointPos*10))
 
-        print (state_str)
+        #print (state_str)
         return state_str
 
     def dump_qvalues(self):
@@ -166,4 +167,4 @@ class KukaBot(object):
             fil = open('qvalues.json', 'w')
             json.dump(self.qvalues, fil)
             fil.close()
-            print('Q-values updated on local file.')
+            #print('Q-values updated on local file.')

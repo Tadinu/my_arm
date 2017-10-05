@@ -84,7 +84,7 @@ class RobotBot(object):
                 self.latest_action = random.randrange(0,10,1)
             elif (self._robotId == robotCommon.CMANIPULATOR):
                 self.latest_action = random.randrange(0,2,1)
-            #print('New State:', self.latest_action)
+            print('New State:', self.latest_action)
 
         # Observed state: Make the movement that has the largest qvalue!
         else:
@@ -93,6 +93,7 @@ class RobotBot(object):
                 actionId = self._actions[key] # set the same as the index
                 if (self.qvalues[current_state][actionId] == max_act_qvalue):
                     self.latest_action = actionId
+                    print('Latest Action:', actionId)
                     break
 
         #print ('Current State:', current_state, 'Action:', self.latest_action)

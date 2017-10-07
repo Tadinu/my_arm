@@ -665,7 +665,6 @@ DISTFILES += \
     scripts/shadow_hand/tactile_receiver.py \
     scripts/shadow_hand/smart_handle.py \
     setup.py \
-    scripts/my_arm/my_arm_controller.py \
     scripts/my_arm/my_arm_controller2.py \
     scripts/my_arm/my_arm_utils.py \
     scripts/my_arm/grasp/convert_xml.py \
@@ -674,7 +673,11 @@ DISTFILES += \
     scripts/my_arm/grasp/quick_grasp.py \
     3rd/ReflexxesTypeII/Linux/ReflexxesTypeII/Makefile \
     3rd/ReflexxesTypeII/Linux/RMLPositionSampleApplications/Makefile \
-    3rd/ReflexxesTypeII/Linux/RMLVelocitySampleApplications/Makefile
+    3rd/ReflexxesTypeII/Linux/RMLVelocitySampleApplications/Makefile \
+    scripts/my_arm/gazebo_env.py \
+    scripts/my_arm/hand_balance_env.py \
+    scripts/my_arm/my_arm_controller.py \
+    scripts/my_arm/shadow_hand_agent.py
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

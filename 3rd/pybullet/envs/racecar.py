@@ -66,8 +66,8 @@ class Racecar:
         observation = []
         pos,orn=self._p.getBasePositionAndOrientation(self.racecarUniqueId)
 
-        observation.extend(list(pos))
-        observation.extend(list(orn))
+        observation.extend(np.array(pos))
+        observation.extend(np.array(orn))
 
         linearVel, angularVel = self.getVelocity()
         observation.extend(np.array(linearVel, dtype=np.float32))

@@ -677,7 +677,15 @@ DISTFILES += \
     scripts/my_arm/gazebo_env.py \
     scripts/my_arm/hand_balance_env.py \
     scripts/my_arm/my_arm_controller.py \
-    scripts/my_arm/shadow_hand_agent.py
+    scripts/my_arm/shadow_hand_agent.py \
+    scripts/my_arm/train_hand_balance.py \
+    scripts/my_arm/partial_trajectory_listener.py \
+    scripts/my_arm/smart_grasp.py \
+    scripts/my_arm/ddpg/ActorNetwork.py \
+    scripts/my_arm/ddpg/CriticNetwork.py \
+    scripts/my_arm/ddpg/OU.py \
+    scripts/my_arm/ddpg/replay_buffer.py \
+    scripts/my_arm/ddpg/ReplayBuffer.py
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

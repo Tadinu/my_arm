@@ -1,0 +1,361 @@
+# ########################################################################################################
+# SMART GRASPING
+#
+
+# smart_grasping_sandbox.py
+# https://github.com/shadow-robot/smart_grasping_sandbox/blob/master/smart_grasping_sandbox/src/smart_grasping_sandbox/smart_grasper.py
+#
+class SmartGrasp(object):
+    """
+    This is the helper library to easily access the different functionalities of the simulated robot
+    from python.
+    """
+
+    __last_joint_state = None
+
+    def __init__(self):
+        self.__joint_state_sub = rospy.Subscriber("/joint_states", JointState,
+                                                  self.__joint_state_cb, queue_size=1)
+
+        self.arm_commander  = MoveGroupCommander(MAIN_ARM_GROUP_NAME)
+        self.hand_commander = MoveGroupCommander(MAIN_HAND_GROUP_NAME)
+        # !NOTE: These below don't work!
+        #self.arm_commander  = gb_arm_commander._move_group_commander
+        #self.hand_commander = gb_hand_commander._move_group_commander
+
+        # self.__hand_traj_client = SimpleActionClient("/hand_controller/follow_joint_trajectory",
+        #                                              FollowJointTrajectoryAction)
+        # self.__arm_traj_client = SimpleActionClient("/arm_controller/follow_joint_trajectory",
+        #                                             FollowJointTrajectoryAction)
+        #
+        # if self.__hand_traj_client.wait_for_server(timeout=rospy.Duration(4.0)) is False:
+        #     rospy.logfatal("Failed to connect to /hand_controller/follow_joint_trajectory in 4sec.")
+        #     raise Exception("Failed to connect to /hand_controller/follow_joint_trajectory in 4sec.")
+        #
+        # if self.__arm_traj_client.wait_for_server(timeout=rospy.Duration(4.0)) is False:
+        #     rospy.logfatal("Failed to connect to /arm_controller/follow_joint_trajectory in 4sec.")
+        #     raise Exception("Failed to connect to /arm_controller/follow_joint_trajectory in 4sec.")
+
+        self.reset_world()
+        arm_target = self.__compute_arm_target_for_ball()
+        rospy.loginfo('ARM_TARGET:' + str(arm_target.position.x) + '-' + \
+                                      str(arm_target.position.y) + '-' + \
+                                      str(arm_target.position.z) + '\n')
+        rospy.loginfo('ARM GROUP NAME:'  + self.arm_commander.get_name())
+        rospy.loginfo('HAND GROUP NAME:' + self.hand_commander.get_name())
+
+        self.__lift(arm_target)
+        self.__pre_grasp(arm_target)
+        self.__grasp(arm_target)
+        # OR
+        #self.pick()
+
+    def reset_world(self):
+        """
+        Resets the object poses in the world and the robot joint angles.
+        """
+        gb_gz_srv_switch_ctrl.call(start_controllers=[],
+                                stop_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
+                                strictness=SwitchControllerRequest.BEST_EFFORT)
+        gb_gz_srv_pause_physics.call()
+
+        joint_names = ['ra_shoulder_pan_joint', 'ra_shoulder_lift_joint', 'ra_elbow_joint',
+                       'ra_wrist_1_joint', 'ra_wrist_2_joint', 'ra_wrist_3_joint']
+        joint_positions = [1.2, 0.5, -1.5, -0.5, -1.5, 0.0]
+
+        gb_gz_srv_set_model.call(model_name="ur10srh",
+                              urdf_param_name="robot_description",
+                              joint_names=joint_names,
+                              joint_positions=joint_positions)
+
+        timer = Timer(0.0, self.__start_ctrl)
+        timer.start()
+
+        time.sleep(0.1)
+        gb_gz_srv_unpause_physics.call()
+
+        gb_gz_srv_reset_world.call()
+
+    def get_tip_pose(self):
+        """
+        Gets the current pose of the robot's tooltip in the world frame.
+        @return the tip pose
+        """
+        return self.arm_commander.get_current_pose(self.arm_commander.get_end_effector_link()).pose
+
+    def move_tip_absolute(self, target):
+        """
+        Moves the tooltip to the absolute target in the world frame
+        @param target is a geometry_msgs.msg.Pose
+        @return True on success
+        """
+        self.arm_commander.set_start_state_to_current_state()
+        self.arm_commander.set_pose_targets([target])
+        plan = self.arm_commander.plan()
+        if not self.arm_commander.execute(plan):
+            return False
+        return True
+
+    def move_tip(self, x=0., y=0., z=0., roll=0., pitch=0., yaw=0.):
+        """
+        Moves the tooltip in the world frame by the given x,y,z / roll,pitch,yaw.
+        @return True on success
+        """
+        transform = PyKDL.Frame(PyKDL.Rotation.RPY(pitch, roll, yaw),
+                                PyKDL.Vector(-x, -y, -z))
+
+        tip_pose = self.get_tip_pose()
+        tip_pose_kdl = posemath.fromMsg(tip_pose)
+        final_pose = toMsg(tip_pose_kdl * transform)
+
+        self.arm_commander.set_start_state_to_current_state()
+        self.arm_commander.set_pose_targets([final_pose])
+        plan = self.arm_commander.plan()
+        if not  self.arm_commander.execute(plan):
+            return False
+        return True
+
+    def send_command(self, command, duration=0.2):
+        """
+        Send a dictionnary of joint targets to the arm and hand directly.
+
+        @param command: a dictionnary of joint names associated with a target:
+                        {"H1_F1J1": -1.0, "shoulder_pan_joint": 1.0}
+        @param duration: the amount of time it will take to get there in seconds. Needs to be bigger than 0.0
+        """
+        hand_goal = None
+        arm_goal = None
+
+        for joint, target in command.items():
+            if "rh_FFJ1" in joint:
+                if not hand_goal:
+                    hand_goal = FollowJointTrajectoryGoal()
+
+                    point = JointTrajectoryPoint()
+                    point.time_from_start = rospy.Duration.from_sec(duration)
+
+                    hand_goal.trajectory.points.append(point)
+
+                hand_goal.trajectory.joint_names.append(joint)
+                hand_goal.trajectory.points[0].positions.append(target)
+            else:
+                if not arm_goal:
+                    arm_goal = FollowJointTrajectoryGoal()
+
+                    point = JointTrajectoryPoint()
+                    point.time_from_start = rospy.Duration.from_sec(duration)
+
+                    arm_goal.trajectory.points.append(point)
+
+                arm_goal.trajectory.joint_names.append(joint)
+                arm_goal.trajectory.points[0].positions.append(target)
+
+        if arm_goal:
+            self.__arm_traj_client.send_goal_and_wait(arm_goal)
+        if hand_goal:
+            self.__hand_traj_client.send_goal_and_wait(hand_goal)
+
+    def get_current_joint_state(self):
+        """
+        Gets the current state of the robot.
+
+        @return joint positions, velocity and efforts as three dictionnaries
+        """
+        joints_position = {n: p for n, p in
+                           zip(self.__last_joint_state.name,
+                               self.__last_joint_state.position)}
+        joints_velocity = {n: v for n, v in
+                           zip(self.__last_joint_state.name,
+                           self.__last_joint_state.velocity)}
+        joints_effort = {n: v for n, v in
+                         zip(self.__last_joint_state.name,
+                         self.__last_joint_state.effort)}
+        return joints_position, joints_velocity, joints_effort
+
+    def open_hand(self):
+        """
+        Opens the hand.
+
+        @return True on success
+        """
+        self.hand_commander.set_named_target("open") # <group_state> defined in SRDF file
+        plan = self.hand_commander.plan()
+        if not self.hand_commander.execute(plan, wait=True):
+            return False
+
+        return True
+
+    def close_hand(self):
+        """
+        Closes the hand.
+
+        @return True on success
+        """
+        self.hand_commander.set_named_target("pack") # <group_state> defined in SRDF file
+        plan = self.hand_commander.plan()
+        if not self.hand_commander.execute(plan, wait=True):
+            return False
+
+        return True
+
+    def check_fingers_collisions(self, enable=True):
+        """
+        Disables or enables the collisions check between the fingers and the objects / table
+
+        @param enable: set to True to enable / False to disable
+        @return True on success
+        """
+        objects = ["cricket_ball__link", "drill__link", "cafe_table__link"]
+
+        while gb_gz_pub_planning_scene.get_num_connections() < 1:
+            rospy.loginfo("waiting for someone to subscribe to the /planning_scene")
+            rospy.sleep(0.1)
+
+        request = PlanningSceneComponents(components=PlanningSceneComponents.ALLOWED_COLLISION_MATRIX)
+        response = gb_gz_srv_get_planning_scene(request)
+        acm = response.scene.allowed_collision_matrix
+
+        for object_name in objects:
+            if object_name not in acm.entry_names:
+                # add object to allowed collision matrix
+                acm.entry_names += [object_name]
+                for row in range(len(acm.entry_values)):
+                    acm.entry_values[row].enabled += [False]
+
+                new_row = deepcopy(acm.entry_values[0])
+                acm.entry_values += {new_row}
+
+        for index_entry_values, entry_values in enumerate(acm.entry_values):
+            if "H1_F" in acm.entry_names[index_entry_values]:
+                for index_value, _ in enumerate(entry_values.enabled):
+                    if acm.entry_names[index_value] in objects:
+                        if enable:
+                            acm.entry_values[index_entry_values].enabled[index_value] = False
+                        else:
+                            acm.entry_values[index_entry_values].enabled[index_value] = True
+            elif acm.entry_names[index_entry_values] in objects:
+                for index_value, _ in enumerate(entry_values.enabled):
+                    if "H1_F" in acm.entry_names[index_value]:
+                        if enable:
+                            acm.entry_values[index_entry_values].enabled[index_value] = False
+                        else:
+                            acm.entry_values[index_entry_values].enabled[index_value] = True
+
+        planning_scene_diff = PlanningScene(is_diff=True, allowed_collision_matrix=acm)
+        gb_gz_pub_planning_scene.publish(planning_scene_diff)
+        rospy.sleep(1.0)
+
+        return True
+
+    def pick(self):
+        """
+        Does its best to pick the ball.
+        """
+        #rospy.loginfo("Moving to Pregrasp")
+        #self.open_hand()
+        #time.sleep(0.1)
+
+        ball_pose = gb_gz_get_ball_pose()
+        rospy.loginfo('BALL POSE:' + str(ball_pose.position.x) + '-' + str(ball_pose.position.y) + '-' + str(ball_pose.position.z) + '\n')
+        ball_pose.position.z += 0.5
+
+        #setting an absolute orientation (from the top)
+        quaternion = quaternion_from_euler(-pi/2., 0.0, 0.0)
+        ball_pose.orientation.x = quaternion[0]
+        ball_pose.orientation.y = quaternion[1]
+        ball_pose.orientation.z = quaternion[2]
+        ball_pose.orientation.w = quaternion[3]
+
+        self.move_tip_absolute(ball_pose)
+        time.sleep(0.1)
+
+        rospy.loginfo("Pick - Grasping")
+        self.move_tip(y=-0.16)
+        time.sleep(0.1)
+        self.check_fingers_collisions(False)
+        time.sleep(0.1)
+        #gbGraspPose()
+        self.close_hand()
+        time.sleep(0.1)
+
+        rospy.loginfo("Pick - Lifting")
+        for _ in range(50):
+            self.move_tip(y=0.001)
+            time.sleep(0.1)
+
+        self.check_fingers_collisions(True)
+
+    def __compute_arm_target_for_ball(self):
+        ball_pose = gb_gz_get_ball_pose()
+
+        # come at it from the top
+        arm_target = ball_pose
+        arm_target.position.z += 0.5
+
+        quaternion = quaternion_from_euler(-pi/2., 0.0, 0.0)
+        arm_target.orientation.x = quaternion[0]
+        arm_target.orientation.y = quaternion[1]
+        arm_target.orientation.z = quaternion[2]
+        arm_target.orientation.w = quaternion[3]
+
+        return arm_target
+
+    def __pre_grasp(self, arm_target):
+        self.hand_commander.set_named_target("open")
+        plan = self.hand_commander.plan()
+        self.hand_commander.execute(plan, wait=True)
+
+        for _ in range(10):
+            self.arm_commander.set_start_state_to_current_state()
+            self.arm_commander.set_pose_targets([arm_target])
+            plan = self.arm_commander.plan()
+            if self.arm_commander.execute(plan):
+                rospy.loginfo("__pre_grasp done!")
+                return True
+            rospy.loginfo("__pre_grasp failed!")
+
+    def __grasp(self, arm_target):
+        waypoints = []
+        waypoints.append(self.arm_commander.get_current_pose(self.arm_commander.get_end_effector_link()).pose)
+        arm_above_ball = deepcopy(arm_target)
+        arm_above_ball.position.z -= 0.12
+        waypoints.append(arm_above_ball)
+
+        self.arm_commander.set_start_state_to_current_state()
+        (plan, fraction) = self.arm_commander.compute_cartesian_path(waypoints, 0.01, 0.0)
+        print fraction
+        if not self.arm_commander.execute(plan):
+            return False
+
+        self.hand_commander.set_named_target("pack")
+        plan = self.hand_commander.plan()
+        if not self.hand_commander.execute(plan, wait=True):
+            rospy.loginfo("__grasp failed!")
+            return False
+
+        rospy.loginfo("__grasp failed!")
+        self.hand_commander.attach_object("cricket_ball__link")
+
+    def __lift(self, arm_target):
+        waypoints = []
+        waypoints.append(self.arm_commander.get_current_pose(self.arm_commander.get_end_effector_link()).pose)
+        arm_above_ball = deepcopy(arm_target)
+        arm_above_ball.position.z += 0.1
+        waypoints.append(arm_above_ball)
+
+        self.arm_commander.set_start_state_to_current_state()
+        (plan, fraction) = self.arm_commander.compute_cartesian_path(waypoints, 0.01, 0.0)
+        print fraction
+        if not self.arm_commander.execute(plan):
+            rospy.loginfo("__lift failed!")
+            return False
+        rospy.loginfo("__lift done!")
+
+    def __start_ctrl(self):
+        rospy.loginfo("STARTING CONTROLLERS")
+        gb_gz_srv_switch_ctrl.call(start_controllers=["hand_controller", "arm_controller", "joint_state_controller"],
+                                stop_controllers=[], strictness=1)
+
+    def __joint_state_cb(self, msg):
+        self.__last_joint_state = msg
+

@@ -20,7 +20,7 @@ class GazeboEnv(gym.Env):
     """
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, rosPackName, launchFileName):
+    def __init__(self, rosPackName, launchFileName, rosNodeName):
 
         # if not path.exists(fullpath):
         #     raise IOError("File "+launchFilePath+" does not exist")
@@ -30,9 +30,9 @@ class GazeboEnv(gym.Env):
         #print ("Roscore launched!")
 
         # Launch the simulation with the given launchfile name
-        rospy.init_node('gym', anonymous=True)
+        rospy.init_node(rosNodeName, anonymous=True)
 
-        subprocess.Popen(["roslaunch",rosPackName, launchFileName])
+        # subprocess.Popen(["roslaunch",rosPackName, launchFileName])
         print ("Gazebo launched!")
 
         self.gzclient_pid = 0

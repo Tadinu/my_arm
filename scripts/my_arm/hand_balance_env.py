@@ -31,7 +31,7 @@ class HandBalanceEnv(GazeboEnv):
         self._envStepCounter = 0
 
         self._hand = ShadowHandAgent()
-        action_dim = self._hand.getJointQuant()
+        action_dim = self._hand.getActionDimension()
         self._action_bound = 1
         action_high = np.array([self._action_bound] * action_dim)
         self.action_space = spaces.Box(-action_high, action_high)
@@ -126,9 +126,7 @@ class HandBalanceEnv(GazeboEnv):
         """
 
     def _termination(self):
-        return self._envStepCounter>1000
+        return self._hand.isPlateOnGround()
 
     def _reward(self):
-        reward=-1000
-        #print(numPt)
-        return reward
+        return self._hand.getReward()

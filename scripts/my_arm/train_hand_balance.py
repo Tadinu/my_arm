@@ -59,8 +59,9 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     LRA = 0.0001    #Learning rate for Actor
     LRC = 0.001     #Lerning rate for Critic
 
-    action_dim = 24 # len(gb_hand_joint_names)  #Steering/Acceleration/Brake
-    state_dim  = 24 # len(gb_hand_joint_names) + 6  # joint info + 5 finger touch point info + plate tilt angle
+    action_dim = 6  # 6 hand eigentgrasps
+    # Each contacting scenario consists of hand and plate state (well enough to be used as Environment Observation)
+    state_dim  = 13  # Hand_Info(6 hand eigentgrasps) + Plate_info(plate position + orientation)
 
     np.random.seed(1337)
 
@@ -87,6 +88,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
     env = HandBalanceEnv()
+
     ## ---------------------------------------------------------------
 
     #Now load the weight
@@ -105,12 +107,13 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
         print("Episode : " + str(i) + " Replay Buffer " + str(buff.count()))
 
-        if np.mod(i, 3) == 0:
-            ob = env.reset()
+        ob = env.reset()
 
-        print('OB', ob)
-        s_t = np.reshape(ob, (-1, action_dim))
-        print('OB reshape', s_t)
+        #s_t = np.reshape(ob, (-1, action_dim))
+        s_t = np.hstack((ob.amps0, ob.amps1, ob.amps2, ob.amps3, ob.amps4, ob.amps5,
+                         ob.plate_posX, ob.plate_posY, ob.plate_posZ,
+                         ob.plate_ornX, ob.plate_ornY, ob.plate_ornZ, ob.plate_ornW))
+        #print('OB', s_t)
 
         total_reward = 0.
         for j in range(max_steps):
@@ -119,12 +122,14 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             a_t = np.zeros([1,action_dim])
             noise_t = np.zeros([1,action_dim])
 
-            a_t_original = actor.model.predict(np.reshape(s_t, (1, action_dim)))
-            print("a_t", a_t)
-            print("noise_t", noise_t)
-            print("a_t_original", a_t_original)
+            #print("ST RESHAPE", s_t.reshape(1, s_t.shape[0]), s_t.shape[0])
+            a_t_original = actor.model.predict(np.reshape(s_t, (1, s_t.shape[0])))
+
+            #print("a_t", a_t)
+            #print("noise_t", noise_t)
+            #print("a_t_original", a_t_original)
             for i in range(action_dim):
-                noise_t[0][i] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][0],  0.0 , 0.60, 0.30)
+                noise_t[0][i] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][i],  0.0 , 0.60, 0.30)
 
             #The following code do the stochastic brake
             #if random.random() <= 0.1:
@@ -132,25 +137,30 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #    noise_t[0][2] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][2],  0.2 , 1.00, 0.10)
 
             for i in range(action_dim):
-                a_t[0][i] = a_t_original[0][0] + noise_t[0][i]
+                a_t[0][i] = a_t_original[0][i] + noise_t[0][i]
             ob, r_t, done, info = env.step(a_t[0])
 
-            s_t1 = np.reshape(ob, (-1, action_dim))
+            s_t1 = np.hstack((ob.amps0, ob.amps1, ob.amps2, ob.amps3, ob.amps4, ob.amps5,
+                              ob.plate_posX, ob.plate_posY, ob.plate_posZ,
+                              ob.plate_ornX, ob.plate_ornY, ob.plate_ornZ, ob.plate_ornW))
             #print('OB reshape', s_t1)
 
             buff.add(s_t, a_t[0], r_t, s_t1, done)      #Add replay buffer
 
             #Do the batch update
             batch = buff.getBatch(BATCH_SIZE)
+
             states = np.asarray([e[0] for e in batch])
             actions = np.asarray([e[1] for e in batch])
             rewards = np.asarray([e[2] for e in batch])
             new_states = np.asarray([e[3] for e in batch])
+            #print('New State:', new_states)
             dones = np.asarray([e[4] for e in batch])
             y_t = np.asarray([e[1] for e in batch])
 
             target_q_values = critic.target_model.predict([new_states, actor.target_model.predict(new_states)])
-
+            #print('target_q_values:', target_q_values)
+            #print('batch:', len(batch))
             for k in range(len(batch)):
                 if dones[k]:
                     y_t[k] = rewards[k]

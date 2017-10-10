@@ -685,7 +685,8 @@ DISTFILES += \
     scripts/my_arm/ddpg/CriticNetwork.py \
     scripts/my_arm/ddpg/OU.py \
     scripts/my_arm/ddpg/replay_buffer.py \
-    scripts/my_arm/ddpg/ReplayBuffer.py
+    scripts/my_arm/ddpg/ReplayBuffer.py \
+    scripts/my_arm/eigen_grasp.py
 
 HEADERS += \
     include/my_arm/GeopadMainWindowAgent.h \

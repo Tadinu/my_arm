@@ -51,10 +51,11 @@ class ActorNetwork(object):
 
         action_list = []
         for i in range(action_dim):
-            action = Dense(1,activation='tanh',init=lambda shape: VarianceScaling(scale=1e-4)(shape))(h1)
+            action = Dense(1,activation='sigmoid',init=lambda shape: VarianceScaling(scale=1e-4)(shape))(h1)
             action_list.append(action)
 
-        V = Add()(action_list) # mode='concat'
+        #V = Add()(action_list) # mode='concat'
+        V = merge(action_list,mode='concat')
         model = Model(output=V, input=S)
         return model, model.trainable_weights, S
 

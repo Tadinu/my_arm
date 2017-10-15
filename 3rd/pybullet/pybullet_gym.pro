@@ -41,5 +41,12 @@ DISTFILES += \
     data/kuka_iiwa/kuka_with_gripper2.sdf \
     envs/racecar.py \
     envs/racecarGymEnv.py \
-    envs/racecarZEDGymEnv.py
+    envs/racecarZEDGymEnv.py \
+    train_kuka_catch_fall_objs.py \
+    ddpg/ActorNetwork.py \
+    ddpg/CriticNetwork.py \
+    ddpg/OU.py \
+    ddpg/replay_buffer.py \
+    ddpg/ReplayBuffer.py \
+    envs/kukaCatchObjsGymEnv.py
 

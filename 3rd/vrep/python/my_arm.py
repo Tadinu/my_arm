@@ -22,13 +22,13 @@ except:
 
 import time
 
-import robotCommon
+import robotCommon as RC
 from RobotOperationEnv import RobotOperationEnvironment
 
 
 CSERVER_PORT = 19999
 CSERVER_ROBOT_NAME = 'youBot#' #'LBR4p#'
-CSERVER_ROBOT_ID = robotCommon.CYOUBOT #CMANIPULATOR
+CSERVER_ROBOT_ID = RC.CYOUBOT #CMANIPULATOR
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 

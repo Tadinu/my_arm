@@ -35,4 +35,10 @@ DISTFILES += \
     RobotOperationEnv.py \
     robot.py \
     robotBot.py \
-    robotCommon.py
+    robotCommon.py \
+    train_robot_operation.py \
+    ddpg/ActorNetwork.py \
+    ddpg/CriticNetwork.py \
+    ddpg/OU.py \
+    ddpg/replay_buffer.py \
+    ddpg/ReplayBuffer.py

@@ -218,7 +218,7 @@ def gb_gz_spawn_plate_model():
     mpose.orientation.w = 1.0
     mpose.position.x = 1.17
     mpose.position.y = -0.39
-    mpose.position.z = 1.29
+    mpose.position.z = 1.13
 
     gb_gz_spawn_model(GAZEBO_MODEL_THIN_PLATE_NAME, GAZEBO_MODEL_THIN_PLATE_PATH, mpose)
 
@@ -239,7 +239,7 @@ def gb_gz_spawn_plate_model_loop(lapse_time):
     mpose.orientation.w = 1.0
     mpose.position.x = 1.17
     mpose.position.y = -0.29
-    mpose.position.z = 1.29
+    mpose.position.z = 1.13
 
     gb_gz_spawn_model_loop(GAZEBO_MODEL_PLATE_NAME, GAZEBO_MODEL_PLATE_PATH, mpose, lapse_time)
 
@@ -760,10 +760,10 @@ class ShadowHandAgent(object):
         new_dict = dict(gb_hand_joint_goals_1)
         del new_dict['rh_WRJ1']
         del new_dict['rh_WRJ2']
-        rospy.loginfo("Moving fingers to joint states\n" + str(new_dict) + "\n")
+        #rospy.loginfo("Moving fingers to joint states\n" + str(new_dict) + "\n")
         self._hand_commander.move_to_joint_value_target_unsafe(new_dict, GB_CHAND_MOVE_TIME, True)
         hand_tactile_state = self._hand_commander.get_tactile_state() # as a msg from a callback
-        rospy.loginfo('HAND TACTILE STATE:' + str(hand_tactile_state))
+        #rospy.loginfo('HAND TACTILE STATE:' + str(hand_tactile_state))
         return
 
     def getReward(self):
@@ -836,7 +836,7 @@ class ShadowHandAgent(object):
 
         @param joint_state: the message containing the joints data.
         """
-        print('ON JOINT STATES ##################################################\n')
+        #print('ON JOINT STATES ##################################################\n')
 
         with self._joint_states_lock:
             #print(joint_states)

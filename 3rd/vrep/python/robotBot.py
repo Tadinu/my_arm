@@ -1,7 +1,7 @@
 import json
 import random
 
-import robotCommon
+import robotCommon as RC
 
 class RobotBot(object):
     '''
@@ -25,7 +25,7 @@ class RobotBot(object):
             "moveSW"     : 9,
             "moveWN"     : 10,
         }
-        if(self._robotId == robotCommon.CYOUBOT):
+        if(self._robotId == RC.CYOUBOT):
             self._CINITIAL_ACT_IDS = [0] * 11
         else:
             self._CINITIAL_ACT_IDS = [0] * 3
@@ -80,9 +80,9 @@ class RobotBot(object):
 
         # New observed state: Make a random move
         if (not current_state in self.qvalues):
-            if(self._robotId == robotCommon.CYOUBOT):
+            if(self._robotId == RC.CYOUBOT):
                 self.latest_action = random.randrange(0,10,1)
-            elif (self._robotId == robotCommon.CMANIPULATOR):
+            elif (self._robotId == RC.CMANIPULATOR):
                 self.latest_action = random.randrange(0,2,1)
             print('New State:', self.latest_action)
 

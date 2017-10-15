@@ -9,6 +9,8 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
+CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
+
 CMANIPULATOR = 1
 CYOUBOT = 2
 

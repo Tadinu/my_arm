@@ -1,11 +1,15 @@
 import pybullet as p
 import numpy as np
 import copy
+from copy import deepcopy
+import collections as col
 import math
+from math import degrees
+from math import pi
 
 class Kuka:
 
-  def __init__(self, urdfRootPath='', timeStep=0.01):
+  def __init__(self, urdfRootPath='', timeStep=0.01, inverseKinematics=1):
     self.urdfRootPath = urdfRootPath
     self.timeStep = timeStep
     
@@ -13,7 +17,7 @@ class Kuka:
     self.fingerAForce = 6
     self.fingerBForce = 5.5
     self.fingerTipForce = 6
-    self.useInverseKinematics = 1
+    self.useInverseKinematics = inverseKinematics
     self.useSimulation = 1
     self.useNullSpace = 1
     self.useOrientation = 1
@@ -69,14 +73,23 @@ class Kuka:
 
   def getObservation(self):
     observation = []
-    state = p.getLinkState(self.kukaUid,self.kukaEndEffectorIndex)
-    pos = state[0]
-    orn = state[1]
-    euler = p.getEulerFromQuaternion(orn)
-        
-    observation.extend(list(pos))
-    observation.extend(list(euler))
-    
+    # Joint State
+    for i in range (self.numJoints-7):
+        jointState = self.getJointState(i)
+        observation.append(np.array(jointState[0], dtype=np.float32)) # Pos
+        observation.append(np.array(jointState[1], dtype=np.float32)) # Vel
+
+    #print ('KUKA OBSERVATION ONLY', self.numJoints, observation)
+
+    # Link State
+    #state = p.getLinkState(self.kukaUid,self.kukaEndEffectorIndex)
+    #pos = state[0]
+    #orn = state[1]
+    #euler = p.getEulerFromQuaternion(orn)
+    #
+    #observation.extend(list(pos))
+    #observation.extend(list(euler))
+
     return observation
 
   ## Output: returns the position list of 3 floats and orientation as list of 4 floats in [x,y,z,w] order.
@@ -150,14 +163,17 @@ class Kuka:
   def getLinkState(self, linkIndex):
     return p.getLinkState(self.kukaUid, linkIndex, 1) ## 1: Compute Link Velocity
 
+  def detectCollision(self, objectId1, objectId2):
+      # To compute closest points of objects within an arbitrary distance.
+      # --> Collision within a given distance!
+      closestPoints = p.getClosestPoints(objectId1, objectId2, 0.01)
+      numPt = len(closestPoints)
+      #if(numPt > 0):
+      #  print ("CLOSEST POINTS : ", numPt, " - DISTANCE : ", closestPoints[0][8])
+      return (numPt > 0)
+
   def detectCollisionWith(self, objectId):
-    # To compute closest points of objects within an arbitrary distance.
-    # --> Collision within a given distance!
-    closestPoints = p.getClosestPoints(self.kukaUid, objectId, 0.01)
-    numPt = len(closestPoints)
-    #if(numPt > 0):
-    #  print ("CLOSEST POINTS : ", numPt, " - DISTANCE : ", closestPoints[0][8])
-    return (numPt > 0)
+      return self.detectCollision(self.kukaUid, objectId)
 
   def getShortestDistanceToObjects(self, objectIdList):
     dist = 0.01
@@ -170,6 +186,27 @@ class Kuka:
           dist = contactDistance
 
     return dist
+
+  def distanceFromEndTipToObj(self, objectId):
+      pos, orn = p.getBasePositionAndOrientation(objectId)
+      endTipPos = self.getEndEffectorPos()
+      #print('END TIP POS', endTipPos)
+      #linearVel, angularVel = p.getBaseVelocity()
+      dist = math.sqrt((pos[0] - endTipPos[0])**2 +
+                       (pos[1] - endTipPos[1])**2 +
+                       (pos[2] - endTipPos[2])**2
+                       )
+      #print('DIST', dist)
+      return dist
+
+  def getEndEffectorPos(self):
+      state = p.getLinkState(self.kukaUid,self.kukaEndEffectorIndex)
+      actualEndEffectorPos = state[0]
+      return actualEndEffectorPos
+
+  def detectEndEffectorHitObj(self, objectId):
+      contactPoints = p.getContactPoints(self.kukaUid, objectId, self.kukaEndEffectorIndex, 0)
+      return (len(contactPoints) > 0)
 
   def applyAction(self, motorCommands):
     
@@ -187,9 +224,7 @@ class Kuka:
       actualEndEffectorPos = state[0]
       #print("pos[2] (getLinkState(kukaEndEffectorIndex)")
       #print(actualEndEffectorPos[2])
-      
-    
-      
+
       self.endEffectorPos[0] = self.endEffectorPos[0]+dx
       if (self.endEffectorPos[0]>0.75):
         self.endEffectorPos[0]=0.75
@@ -244,9 +279,9 @@ class Kuka:
       
       p.setJointMotorControl2(self.kukaUid,10,p.POSITION_CONTROL,targetPosition=0,force=self.fingerTipForce)
       p.setJointMotorControl2(self.kukaUid,13,p.POSITION_CONTROL,targetPosition=0,force=self.fingerTipForce)
-      
-      
+
     else:
+      #print('MOTOR COMMANDS', motorCommands)
       for action in range (len(motorCommands)):
         motor = self.motorIndices[action]
         p.setJointMotorControl2(self.kukaUid,motor,p.POSITION_CONTROL,targetPosition=motorCommands[action],force=self.maxForce)

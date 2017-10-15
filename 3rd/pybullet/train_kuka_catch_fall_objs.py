@@ -7,22 +7,17 @@ print('PARENT DIR:', parentdir)
 os.sys.path.insert(0, parentdir)
 
 import gym
-from hand_balance_env import HandBalanceEnv
+from envs.kukaCatchObjsGymEnv import KukaCatchObjsGymEnv
+import pybullet as p
 
 from gym import utils, spaces
-from gym_gazebo.envs import gazebo_env
-from geometry_msgs.msg import Twist
+from gym.utils import seeding
 from std_srvs.srv import Empty
 
-from sensor_msgs.msg import LaserScan
+#from baselines import deepq
 
-from gym.utils import seeding
-
-import rospy
-import roslaunch
 import time
 import datetime
-
 import numpy as np
 import random
 import argparse
@@ -41,15 +36,17 @@ from ddpg.CriticNetwork import CriticNetwork
 from ddpg.OU import OU
 import timeit
 
-from shadow_hand_agent import gb_hand_joint_names
-
 OU = OU()       #Ornstein-Uhlenbeck Process
+
+gb_trace = 0
 
 def callback(lcl, glb):
     # stop training if reward exceeds 199
     total = sum(lcl['episode_rewards'][-101:-1]) / 100
     totalt = lcl['t']
-    is_solved = totalt > 2000 and total >= -50
+    #print("totalt")
+    #print(totalt)
+    is_solved = totalt > 2000 and total >= 10
     return is_solved
 
 def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
@@ -60,9 +57,9 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     LRA = 0.0001    #Learning rate for Actor
     LRC = 0.001     #Lerning rate for Critic
 
-    action_dim = 6  # 6 hand eigentgrasps
+    action_dim = 7  # Joint Movement
     # Each contacting scenario consists of hand and plate state (well enough to be used as Environment Observation)
-    state_dim  = 13  # Hand_Info(6 hand eigentgrasps) + Plate_info(plate position + orientation)
+    state_dim  = 20  # Joint Ball Pos + Velocity
 
     np.random.seed(1337)
 
@@ -88,7 +85,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     critic = CriticNetwork(sess, state_dim, action_dim, BATCH_SIZE, TAU, LRC)
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
-    env = HandBalanceEnv()
+    env = KukaCatchObjsGymEnv(renders=True)
 
     ## ---------------------------------------------------------------
 
@@ -100,20 +97,26 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         actor.target_model.load_weights("actormodel.h5")
         critic.target_model.load_weights("criticmodel.h5")
         print("Weight load successfully")
+        print("######################################################")
+        print("######################################################")
+        print("######################################################")
     except:
         print("Cannot find the weight")
 
-    print("Hand Object Balancing Experiment Start.")
+    print("Falling obj catching Experiment Start.")
     for episode in range(episode_count):
 
-        print("Episode : " + str(episode) + " Replay Buffer " + str(buff.count()))
+        if(gb_trace):
+            print("Episode : " + str(episode) + " Replay Buffer " + str(buff.count()))
 
         ob = env.reset()
 
         #s_t = np.reshape(ob, (-1, action_dim))
-        s_t = np.hstack((ob.amps0, ob.amps1, ob.amps2, ob.amps3, ob.amps4, ob.amps5,
-                         ob.plate_posX, ob.plate_posY, ob.plate_posZ,
-                         ob.plate_ornX, ob.plate_ornY, ob.plate_ornZ, ob.plate_ornW))
+        s_t = np.hstack((ob[0], ob[1], ob[2], ob[3],  ob[4],  ob[5],  ob[6], # Joint i (pos & vel)
+                         ob[7], ob[8], ob[9], ob[10], ob[11], ob[12], ob[13],
+                         ob[14], ob[15], ob[16], # Ball pos X,Y,Z
+                         ob[17], ob[18], ob[19]  # Ball linear vel X,Y,Z
+                         ))
         #print('OB', s_t)
 
         total_reward = 0.
@@ -130,7 +133,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #print("noise_t", noise_t)
             #print("a_t_original", a_t_original)
             for i in range(action_dim):
-                noise_t[0][i] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][i],  0.0 , 0.60, 0.30)
+                noise_t[0][i] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][i], 0.0 , 0.60, 0.30)
 
             #The following code do the stochastic brake
             #if random.random() <= 0.1:
@@ -141,9 +144,11 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 a_t[0][i] = a_t_original[0][i] + noise_t[0][i]
             ob, r_t, done, info = env.step(a_t[0])
 
-            s_t1 = np.hstack((ob.amps0, ob.amps1, ob.amps2, ob.amps3, ob.amps4, ob.amps5,
-                              ob.plate_posX, ob.plate_posY, ob.plate_posZ,
-                              ob.plate_ornX, ob.plate_ornY, ob.plate_ornZ, ob.plate_ornW))
+            s_t1 = np.hstack((ob[0], ob[1], ob[2], ob[3],  ob[4],  ob[5],  ob[6], # Joint i (pos & vel)
+                              ob[7], ob[8], ob[9], ob[10], ob[11], ob[12], ob[13],
+                              ob[14], ob[15], ob[16], # Ball pos X,Y,Z
+                              ob[17], ob[18], ob[19]  # Ball linear vel X,Y,Z
+                             ))
             #print('OB reshape', s_t1)
 
             buff.add(s_t, a_t[0], r_t, s_t1, done)      #Add replay buffer
@@ -179,16 +184,17 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             total_reward += r_t
             s_t = s_t1
 
-            print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
+            #if(gb_trace):
+            #print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
 
             step += 1
             if done:
                 break
 
-        print ('A:',episode, np.mod(episode, 3))
         if np.mod(episode, 3) == 0:
             if (train_indicator):
-                print("Now we save the model and its weights")
+                if(gb_trace):
+                    print("Now we save model")
                 actor.model.save_weights("actormodel.h5", overwrite=True)
                 with open("actormodel.json", "w") as outfile:
                     json.dump(actor.model.to_json(), outfile)
@@ -197,36 +203,12 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 with open("criticmodel.json", "w") as outfile:
                     json.dump(critic.model.to_json(), outfile)
 
-        print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
-        print("Total Step: " + str(step))
-        print("")
+        if(gb_trace):
+            print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
+            print("Total Step: " + str(step))
+            print("")
 
-    #env.end()  # This is for shutting down GAZEBO
-    #rospy.spin()
     print("Finish.")
 
 if __name__ == "__main__":
     startTraining(1)
-
-# http://wiki.ros.org/rospy_tutorials/Tutorials/WritingPublisherSubscriber
-# rate = rospy.Rate(10) # 10hz
-# while not rospy.is_shutdown():
-#     hello_str = "hello world %s" % rospy.get_time()
-#     rospy.loginfo(hello_str)
-#     pub.publish(hello_str)
-#     rate.sleep()
-
-# The most common usage patterns for testing for shutdown in rospy are:
-#
-# while not rospy.is_shutdown():
-#    do some work
-#
-# and
-#
-# ... setup callbacks
-# rospy.spin()
-#
-# The spin() code simply sleeps until the is_shutdown() flag is True. It is mainly used to prevent your Python Main thread from exiting.
-#
-# There are multiple ways in which a node can receive a shutdown request, so it is important that you use one of the two methods above for ensuring your program terminates properly.
-

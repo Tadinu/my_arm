@@ -41,7 +41,7 @@ from ddpg.CriticNetwork import CriticNetwork
 from ddpg.OU import OU
 import timeit
 
-from shadow_hand_agent import gb_hand_joint_names
+from shadow_hand_agent import GB_HAND_JOINT_NAMES
 
 OU = OU()       #Ornstein-Uhlenbeck Process
 

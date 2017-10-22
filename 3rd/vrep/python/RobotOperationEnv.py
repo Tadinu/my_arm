@@ -31,9 +31,6 @@ CSERVER_REMOTE_FUNC_SHOW_MESSAGE          = 'displayMessage'
 CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS      = 'reloadFallingObjects'
 CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND     = 'detectObjectsOnGround'
 
-#CFALL_OBJS_NAMES = ['Obj1', 'Obj2', 'Obj3', 'Obj4', 'Obj5']
-CFALL_OBJS_NAMES = ['Obj1']
-
 class RobotOperationEnvironment(gym.Env):
 
     def __init__(self, clientID, robotId, robotHandle):
@@ -52,12 +49,11 @@ class RobotOperationEnvironment(gym.Env):
         self.reset() ## --> Call self._reset() defined  below!
 
         # After loading the robot!
-        observationDim = len(self.getObservation())
-        #print("observationDim")
-        #print(observationDim)
+        observationDim = len(self.getObservation()) ## !!NOTE: Don't use GB_STATE_DIM here due to the need of verification!
+        print("observationDim", observationDim)
 
         observation_high = np.array([np.finfo(np.float32).max] * observationDim)
-        self.action_space = spaces.Discrete(7)
+        self.action_space = spaces.Discrete(RC.GB_ACTION_DIM)
         self.observation_space = spaces.Box(-observation_high, observation_high)
         self.viewer = None
 
@@ -89,14 +85,16 @@ class RobotOperationEnvironment(gym.Env):
         self._robotBot = RobotBot(self._robotId)
 
     def _reset(self):
-        print("_reset")
+        if(RC.GB_TRACE):
+            print("_reset")
         self._terminated = 0
 
+        ## RESET ROBOT POS --
+        self._robot.resetRobot()
+
+        time.sleep(2)
         ## LOAD FALLING OBJS --
         self.reloadFallingObjects()
-
-        ## RESET ROBOT POS --
-        #self._robot.resetRobotPos()
 
         ## STEP SIMULATION --
         self._envStepCounter = 0
@@ -106,6 +104,7 @@ class RobotOperationEnvironment(gym.Env):
 
         ## ducta--
         #self._timer.start()
+        time.sleep(1)
         return self._observation
 
     def _seed(self, seed=None):
@@ -115,25 +114,40 @@ class RobotOperationEnvironment(gym.Env):
     def getObservation(self):
         self._observation = self._robot.getObservation()
 
-        pos       = self.getObjectWorldPosition(CFALL_OBJS_NAMES[0])
-        linearVel = self.getObjectVelocity(CFALL_OBJS_NAMES[0])
+        robotId = self._robot.id()
 
-        print('OBJECT OBSERVED:', pos, linearVel)
+        objectName   = RC.CFALL_OBJS_NAMES[0] if(robotId == RC.CKUKA_ARM) else RC.CPLATE_OBJ_NAME
+        objPos       = RC.getObjectWorldPosition(objectName)
+        objLinearVel = RC.getObjectVelocity(objectName)
+        objOrient    = RC.getObjectOrientation(objectName)
+        if(RC.GB_TRACE):
+            print('OBJECT OBSERVED:', objPos, objLinearVel, objOrient)
 
-        self._observation.append(np.array(pos[0], dtype=np.float32))
-        self._observation.append(np.array(pos[1], dtype=np.float32))
-        self._observation.append(np.array(pos[2], dtype=np.float32))
+        if(robotId == RC.CKUKA_ARM):
+            x = 1
+            #self._observation.append(np.array(pos[0], dtype=np.float32))
+            #self._observation.append(np.array(pos[1], dtype=np.float32))
+            #self._observation.append(np.array(pos[2], dtype=np.float32))
+            #
+            #self._observation.append(np.array(linearVel[0], dtype=np.float32))
+            #self._observation.append(np.array(linearVel[1], dtype=np.float32))
+            #self._observation.append(np.array(linearVel[2], dtype=np.float32))
 
-        self._observation.append(np.array(linearVel[0], dtype=np.float32))
-        self._observation.append(np.array(linearVel[1], dtype=np.float32))
-        self._observation.append(np.array(linearVel[2], dtype=np.float32))
+        elif(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND):
+            self._observation.append(np.array(objPos[0], dtype=np.float32))
+            self._observation.append(np.array(objPos[1], dtype=np.float32))
+            self._observation.append(np.array(objPos[2], dtype=np.float32))
+
+            self._observation.append(np.array(objOrient[0], dtype=np.float32)) # alpha
+            self._observation.append(np.array(objOrient[1], dtype=np.float32)) # beta
+            self._observation.append(np.array(objOrient[2], dtype=np.float32)) # gamma
 
         return self._observation
 
     def reloadFallingObjects(self):
         inputInts    = [self._robotHandle] #[objHandles[16]]
         inputFloats  = [53.21,17.39]
-        inputStrings = CFALL_OBJS_NAMES
+        inputStrings = RC.CFALL_OBJS_NAMES
         inputBuffer  = bytearray()
         inputBuffer.append(78)
         inputBuffer.append(42)
@@ -157,7 +171,8 @@ class RobotOperationEnvironment(gym.Env):
 
     def _step(self, action):
         ## ----------------------------------------------------------------------------------------
-        print('ACTION:', action)
+        if(RC.GB_TRACE):
+            print('ACTION:', action)
         self._robot.applyAction(action)
         time.sleep(self._timeStep)
         self._observation = self.getObservation()
@@ -177,25 +192,62 @@ class RobotOperationEnvironment(gym.Env):
     def _termination(self):
         #print("self._envStepCounter")
         #print(self._envStepCounter)
-        if (self._terminated or self._envStepCounter>1000):
+        if (self._terminated or self._envStepCounter>1000): # Reset as step counter exceeds certain value to avoid underfitting
             return True
 
         # Hit the object or object hit the ground
-        if(self._robot.detectCollisionWith(CFALL_OBJS_NAMES[0]) or \
-           self.detectObjectsReachGround()):
+        #self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[0])
+        platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
+        #print('Plate Pos:', platePos)
+        if (platePos[2] < 1.2):
             return True
 
-        return False
+        return self.detectObjectsReachGround()
 
     def _reward(self):
         #print("reward")
         #print(__reward)
+        self.__reward = 1000
 
-        objPos   = self.getObjectWorldPosition(CFALL_OBJS_NAMES[0])
-        distance = self._robot.distanceFromEndTipToPos(objPos)
-        print('DISTANCE:', distance)
-        self.__reward = 1000 - distance
+        robotId = self._robot.id()
+        if(robotId == RC.CKUKA_ARM):
+            objPos   = RC.getObjectWorldPosition(RC.CFALL_OBJS_NAMES[0])
+            distance = self._robot.distanceFromEndTipToPos(objPos)
 
+            #Table Position
+            tableColliding = self._robot.detectCollisionWith(RC.CTABLE_OBJ_NAME)
+            if(tableColliding):
+                self.__reward -= 100
+
+            self.__reward -= distance
+
+        elif(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND):
+            # Distance of plate away from hand palm center
+            platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
+            endTipPos   = self._robot.getEndTipWorldPosition()
+            #print('Plate Pos:', platePos)
+            #print('Endtip Pos:', endTipPos)
+            d = math.sqrt((platePos[0] - endTipPos[0])**2 +
+                          (platePos[1] - endTipPos[1])**2)
+            #print('DDDD:', d)
+            self.__reward -= d
+
+            # Orientation of the plate
+            plateOrient = RC.getObjectOrientation(RC.CPLATE_OBJ_NAME) # Must be the same name set in V-Rep
+            alpha = plateOrient[0]
+            beta  = plateOrient[1]
+            gamma = plateOrient[2]
+            #print('Plate Orient', plateOrient)
+            self.__reward -= abs(plateOrient[0])
+
+            #endTipOrient = self._robot.getEndTipOrientation()
+            #print('Endtip Orient', endTipOrient)
+            #
+            #endTipVelocity = self._robot.getEndTipVelocity()
+            #print('Endtip Vel', endTipVelocity)
+
+        if(RC.GB_TRACE):
+            print('self.__reward:', self.__reward)
         return self.__reward
 
     def objectAvoidanceTraining(self):
@@ -210,11 +262,11 @@ class RobotOperationEnvironment(gym.Env):
         for i in range(self._CNUM_OBJS):
             objInfo = []
             #print("Obj Ids: ", i, self._objs[i].id())
-            objPos = self.getObjectWorldPosition(CFALL_OBJS_NAMES[i])
+            objPos = RC.getObjectWorldPosition(RC.CFALL_OBJS_NAMES[i])
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = self.getObjectVelocity(CFALL_OBJS_NAMES[i])
+            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only
@@ -229,8 +281,8 @@ class RobotOperationEnvironment(gym.Env):
 
         # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
         for i in range(self._CNUM_OBJS):
-            #print("CHECK KUKA COLLISION WITH BALL", CFALL_OBJS_NAMES[i])
-            if(self._robot.detectCollisionWith(CFALL_OBJS_NAMES[i]) or \
+            #print("CHECK KUKA COLLISION WITH BALL", RC.CFALL_OBJS_NAMES[i])
+            if(self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[i]) or \
                self.detectObjectsReachGround()):
                 self._terminated = 1
                 print('Terminate')
@@ -248,11 +300,11 @@ class RobotOperationEnvironment(gym.Env):
         for i in range(self._CNUM_OBJS):
             objInfo = []
             #print("Obj Ids: ", i, self._objs[i].id())
-            objPos = self.getObjectWorldPosition(CFALL_OBJS_NAMES[i])
+            objPos = RC.getObjectWorldPosition(RC.CFALL_OBJS_NAMES[i])
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = self.getObjectVelocity(CFALL_OBJS_NAMES[i])
+            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only
@@ -262,13 +314,13 @@ class RobotOperationEnvironment(gym.Env):
         # 5. ACTION -------------------------------------------------------------------------
         #
         actionId = self._robotBot.act(envInfo)
-        print("Robot Act: ", actionId)
+        #print("Robot Act: ", actionId)
         self._robot.actRobot(actionId)
 
         # 6. UPDATE OBJECTS ROBOT-HIT & GROUND-HIT STATUS
         for i in range(self._CNUM_OBJS):
-            #print("CHECK KUKA COLLISION WITH BALL", CFALL_OBJS_NAMES[i])
-            if(self._robot.detectCollisionWith(CFALL_OBJS_NAMES[i]) or \
+            #print("CHECK KUKA COLLISION WITH BALL", RC.CFALL_OBJS_NAMES[i])
+            if(self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[i]) or \
                self.detectObjectsReachGround()):
                 self._terminated = 1
                 print('Terminate')
@@ -304,16 +356,6 @@ class RobotOperationEnvironment(gym.Env):
                 self.reset()
                 time.sleep(0.5)
                 continue
-
-    def getObjectWorldPosition(self, objectName):
-        res, objectHandle = vrep.simxGetObjectHandle(self._clientID, objectName, vrep.simx_opmode_oneshot_wait)
-        res, objectPos    =  vrep.simxGetObjectPosition(self._clientID, objectHandle, -1, vrep.simx_opmode_oneshot)
-        return objectPos
-
-    def getObjectVelocity(self, objectName):
-        res, objectHandle = vrep.simxGetObjectHandle(self._clientID, objectName, vrep.simx_opmode_oneshot_wait)
-        res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(self._clientID, objectHandle, vrep.simx_opmode_buffer)
-        return objectLinearVel
 
     def showMessage(self, message):
         # Display a message:

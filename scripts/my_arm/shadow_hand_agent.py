@@ -272,12 +272,20 @@ def gb_gz_get_plate_pose():
 #
 GB_CJOINT_STATES_TOPIC = "joint_states"
 GB_CHAND_MOVE_TIME = 0.1
-gb_hand_joint_names = ['rh_FFJ1', 'rh_FFJ2', 'rh_FFJ3', 'rh_FFJ4',
+GB_HAND_JOINT_NAMES = ['rh_FFJ1', 'rh_FFJ2', 'rh_FFJ3', 'rh_FFJ4',
                        'rh_MFJ1', 'rh_MFJ2', 'rh_MFJ3', 'rh_MFJ4',
                        'rh_RFJ1', 'rh_RFJ2', 'rh_RFJ3', 'rh_RFJ4',
                        'rh_LFJ1', 'rh_LFJ2', 'rh_LFJ3', 'rh_LFJ4', 'rh_LFJ5',
                        'rh_THJ1', 'rh_THJ2', 'rh_THJ3', 'rh_THJ4', 'rh_THJ5',
                        'rh_WRJ1', 'rh_WRJ2']
+
+# couplingRatioValue, a value that represents the relationship between a dof and one of its joint
+GB_SHADOW_HAND_JOINT_DICT = {'rh_FFJ1': 1.0, 'rh_FFJ2': 1.0, 'rh_FFJ3': 1.0, 'rh_FFJ4': 1.0,
+                             'rh_MFJ1': 1.0, 'rh_MFJ2': 1.0, 'rh_MFJ3': 1.0, 'rh_MFJ4': 1.0,
+                             'rh_RFJ1': 1.0, 'rh_RFJ2': 1.0, 'rh_RFJ3': 1.0, 'rh_RFJ4': 1.0,
+                             'rh_LFJ1': 1.0, 'rh_LFJ2': 1.0, 'rh_LFJ3': 1.0, 'rh_LFJ4': 1.0, 'rh_LFJ5': 1.0,
+                             'rh_THJ1': 1.0, 'rh_THJ2': 1.0, 'rh_THJ3': 1.0, 'rh_THJ4': 1.0, 'rh_THJ5': 1.0,
+                             'rh_WRJ1': 1.0, 'rh_WRJ2': 1.0}
 
 gb_hand_joint_names_dict = {0: 'rh_FFJ1', 1 : 'rh_FFJ2', 2 : 'rh_FFJ3',  3: 'rh_FFJ4',
                             4: 'rh_MFJ1', 5 : 'rh_MFJ2', 6 : 'rh_MFJ3',  7: 'rh_MFJ4',
@@ -293,7 +301,7 @@ gb_hand_joint_goals_1 = {'rh_FFJ1': 1.25, 'rh_FFJ2': 1.71, 'rh_FFJ3': 1.49, 'rh_
                          'rh_THJ1': 0.43, 'rh_THJ2': 0.64, 'rh_THJ3': -0.088, 'rh_THJ4': 0.49, 'rh_THJ5': 0.35,
                          'rh_WRJ1':0.00, 'rh_WRJ2':0.00}
 
-GB_CHAND_DOF_NO = len(gb_hand_joint_names)
+GB_CHAND_DOF_NO = len(GB_HAND_JOINT_NAMES)
 
 # From GRASPIT/graspit/models/robots/HumanHand/eigen/human_eigen_cgdb_refined.xml
 gb_hand_eigengrasp_values = [ [0.050409 ,-0.41296 ,-0.042016 ,-0.00754 ,0.00000,
@@ -487,7 +495,7 @@ class ShadowHandAgent(object):
         # Eigen Graps List
         #
         global gb_hand_eigengrasps
-        gb_hand_eigengrasps = [EigenGrasp(self.getJointsCount(), 0.0) for i in range(GB_CEIGENGRASP_NO)]
+        gb_hand_eigengrasps = [EigenGrasp(self.getDofsCount(), 0.0) for i in range(GB_CEIGENGRASP_NO)]
         for i in range(len(gb_hand_eigengrasps)):
             gb_hand_eigengrasps[i].setVals(gb_hand_eigengrasp_values[i])
 
@@ -495,6 +503,13 @@ class ShadowHandAgent(object):
         #
         global gb_hand_eigengrasp_interface
         gb_hand_eigengrasp_interface = EigenGraspInterface(self, gb_hand_eigengrasps, gb_hand_eigengrasp_ori)
+
+    def accumulateMove(self, dofs):
+        jointPoses = self.getCurrentJointPoses()
+        for dof in dofs:
+            for j in range(self.getJointsCount()):
+                jointPoses[i] = dof * SHADOW_HAND_JOINT_DICT[jointName]
+        return jointPoses
 
     # ########################################################################################################
     # INIT ROS SERVICES
@@ -671,13 +686,15 @@ class ShadowHandAgent(object):
         dofs = []
         for joint_name, joint_pos in hand_joints_poses.items():
             if(not joint_name in ['rh_WRJ1', 'rh_WRJ2', 'rh_LFJ1', 'rh_THJ1']):
-                dofs.append(joint_pos)
+                dofs.append(joint_pos/GB_SHADOW_HAND_JOINT_DICT[joint_name])
 
         return dofs
 
-    def getJointsCount(self):
+    def getDofsCount(self):
         return len(gb_hand_eigengrasp_ori)
-        #return len(self._hand_joints)
+
+    def getJointsCount(self):
+        return len(self._hand_joints)
 
     # http://www.cs.columbia.edu/~cmatei/graspit/html-manual/graspit-manual_11.html
     # The EigenGraps are discovered through human hand survey by Santello et al.
@@ -736,7 +753,8 @@ class ShadowHandAgent(object):
     def applyAction(self, action):
         #print('ACTION', action)
         hand_eigengrasp_amps = action
-        hand_joint_poses = gb_hand_eigengrasp_interface.toDOF(hand_eigengrasp_amps)
+        dofs = gb_hand_eigengrasp_interface.toDOF(hand_eigengrasp_amps)
+        hand_joint_poses = self.accumulateMove(dofs)
         self.applyActionFromJointPoses(hand_joint_poses)
 
     def applyActionFromJointPoses(self, joint_poses):
@@ -755,7 +773,7 @@ class ShadowHandAgent(object):
         # TBD...
         #
         for l in range(len(gb_hand_joint_goals_1.items())):
-            gb_hand_joint_goals_1[gb_hand_joint_names[l]] = hand_joint_poses[l]
+            gb_hand_joint_goals_1[GB_HAND_JOINT_NAMES[l]] = hand_joint_poses[l]
 
         new_dict = dict(gb_hand_joint_goals_1)
         del new_dict['rh_WRJ1']
@@ -1156,7 +1174,7 @@ class ShadowHandAgent(object):
                     0.35, 0.69, 0.18, 1.20, -0.11,
                     0.35, 0.69]
 
-        grasp_pose = dict(zip(gb_hand_joint_names, position))
+        grasp_pose = dict(zip(GB_HAND_JOINT_NAMES, position))
 
         # Adjust poses according to the hand loaded
         open_hand_current  = dict([(i, open_hand_pose[i]) for i in self._hand_joints if i in open_hand_pose])

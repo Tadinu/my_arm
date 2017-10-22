@@ -28,7 +28,7 @@ from RobotOperationEnv import RobotOperationEnvironment
 
 CSERVER_PORT = 19999
 CSERVER_ROBOT_NAME = 'youBot#' #'LBR4p#'
-CSERVER_ROBOT_ID = RC.CYOUBOT #CMANIPULATOR
+RC.GB_CSERVER_ROBOT_ID = RC.CYOUBOT
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -56,7 +56,7 @@ if clientID!=-1:
     # Retrieve some handles:
     res, robotHandle = vrep.simxGetObjectHandle(clientID, CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
 
-    env = RobotOperationEnvironment(clientID, CSERVER_ROBOT_ID, robotHandle)
+    env = RobotOperationEnvironment(clientID, RC.GB_CSERVER_ROBOT_ID, robotHandle)
     env.mainRobotTraining()
 
     ## -----------------------------------------------------------------------------------------------------------------------------

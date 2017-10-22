@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 __author__ = 'flier'
 
+# SOURCE:
+# https://github.com/ros-drivers/leap_motion
+# https://github.com/warp1337/rosleapmotion
+
 import rospy
-from leap_motion.msg import leap
-from leap_motion.msg import leapros
+# RobotArm/src/my_arm/msg
+from LeapMotion.msg import leap
+from LeapMotion.msg import leapros
 
 # Native datatypes, I've heard this is bad practice, use the geometry messages instead.
 # def callback(data):

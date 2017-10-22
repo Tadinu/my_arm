@@ -1,12 +1,19 @@
 #!/usr/bin/env python
+
+# SOURCE:
+# https://github.com/ros-drivers/leap_motion
+# https://github.com/warp1337/rosleapmotion
+
 __author__ = 'flier'
 
 import argparse
 
 import rospy
+import Leap
 import leap_interface
-from leap_motion.msg import leap
-from leap_motion.msg import leapros
+# RobotArm/src/my_arm/msg
+from LeapMotion.msg import leap
+from LeapMotion.msg import leapros
 
 FREQUENCY_ROSTOPIC_DEFAULT = 0.01
 NODENAME = 'leap_pub'

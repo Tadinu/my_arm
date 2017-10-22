@@ -82,7 +82,7 @@ class RobotBot(object):
         if (not current_state in self.qvalues):
             if(self._robotId == RC.CYOUBOT):
                 self.latest_action = random.randrange(0,10,1)
-            elif (self._robotId == RC.CMANIPULATOR):
+            else:
                 self.latest_action = random.randrange(0,2,1)
             print('New State:', self.latest_action)
 

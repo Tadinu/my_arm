@@ -255,7 +255,7 @@ gb_LF_joint_group   = moveit_commander.MoveGroupCommander(MAIN_HAND_GROUP_LITTLE
 # ########################################################################################################
 # LEAP MOTION
 #
-import leap_interface
+import leap_interface # From /home/brhm/LeapSDK/lib/x64
 import Leap
 
 FREQUENCY_ROSTOPIC_DEFAULT = 0.01

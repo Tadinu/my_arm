@@ -41,4 +41,12 @@ DISTFILES += \
     ddpg/CriticNetwork.py \
     ddpg/OU.py \
     ddpg/replay_buffer.py \
-    ddpg/ReplayBuffer.py
+    ddpg/ReplayBuffer.py \
+    train_robot_operation_II.py \
+    ddpg2/ddpg.py \
+    ddpg2/replay_buffer.py \
+    actormodel.json \
+    criticmodel.json \
+    actormodel.h5 \
+    criticmodel.h5 \
+    eigen_grasp.py

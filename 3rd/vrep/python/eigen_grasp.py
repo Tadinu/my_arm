@@ -4,7 +4,7 @@ from numpy.linalg import LinAlgError
 class EigenGrasp(object):
 
     def __init__(self, size, eigenval = 0.0, min=0.0, max=0.0):
-        self._size = size
+        self._size = size # dSize
         self._eigenval = eigenval
         self._min = min
         self._max = max
@@ -32,8 +32,7 @@ class EigenGrasp(object):
         if (len(vals) != self._size):
             print("ERROR: EigenGrasp(vals), len(vals) != self._size", len(vals), self._size)
             return
-        for i in range(len(vals)):
-            self._vals[i] = vals[i]
+        self._vals = vals
 
 class EigenGraspInterface(object):
 
@@ -102,6 +101,7 @@ class EigenGraspInterface(object):
                 self._eg_origin.setAxisVal(d, dof_max)
 
     def computeProjectionMatrices(self):
+        #print('AAAAA', self._eSize, self._dSize, self._eigen_grasps)
         E = np.matlib.zeros((self._eSize, self._dSize))
         for e in range(self._eSize):
             for d in range(self._dSize):
@@ -151,3 +151,20 @@ class EigenGraspInterface(object):
             amps[e] = a[e,0]
 
         return amps
+
+#############################################################################################
+#############################################################################################
+# EIGENGRASP SERVICE CLIENT
+# Another solution as to request the eigengrasp info from the Graspit prorgam, which acts as
+# the eigengrasp service server
+    #import sys
+    #import rospy
+    #
+    #def srvToJointPoses(x, y):
+    #    rospy.wait_for_service('eigengrasp_amps_to_dof')
+    #    try:
+    #         add_two_ints = rospy.ServiceProxy('eigengrasp_amps_to_dof', EigengraspAmsToDof)
+    #         resp1 = add_two_ints(x, y)
+    #         return resp1.sum
+    #     except rospy.ServiceException, e:
+    #         print "Service call failed: %s"%e

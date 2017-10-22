@@ -54,11 +54,8 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-GB_TRACE = 1
-
 CSERVER_PORT = 19999
-CSERVER_ROBOT_NAME = 'LBR_iiwa_7_R800#' # 'youBot#' / 'LBR4p#'
-CSERVER_ROBOT_ID = RC.CMANIPULATOR #RC.CYOUBOT
+CSERVER_ROBOT_NAME = RC.CKUKA_ARM_NAME
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -79,6 +76,9 @@ def initialize_vrep():
     gbClientID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
     if gbClientID!=-1:
         print ('Connected to remote API server',gbClientID)
+
+        # Init Robot Common
+        RC.init(gbClientID)
 
         # Set Simulation in Synchronous mode
         vrep.simxSynchronous(gbClientID,True)
@@ -117,17 +117,22 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     LRA = 0.0001    #Learning rate for Actor
     LRC = 0.001     #Lerning rate for Critic
 
-    action_dim = 7  # Joint Movement
+    print('ACTION DIM: ', RC.GB_ACTION_DIM)
+    action_dim = RC.GB_ACTION_DIM
     # Each contacting scenario consists of hand and plate state (well enough to be used as Environment Observation)
-    state_dim  = 20  # Joint Ball Pos + Velocity
+    print('STATE DIM: ', RC.GB_STATE_DIM)
+    state_dim  = RC.GB_STATE_DIM
 
     np.random.seed(1337)
 
     vision = False
 
     EXPLORE = 100000.
-    episode_count = 2000
-    max_steps = 100000
+    # Double loops of episodes and step:
+    # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
+    # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
+    episode_count = 1000000
+    max_steps = 10000
     reward = 0
     done = False
     step = 0
@@ -146,7 +151,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
     print('START ENV', gbClientID, gbRobotHandle)
-    env = RobotOperationEnvironment(gbClientID, CSERVER_ROBOT_ID, gbRobotHandle)
+    env = RobotOperationEnvironment(gbClientID, RC.GB_CSERVER_ROBOT_ID, gbRobotHandle)
 
     ## ---------------------------------------------------------------
 
@@ -157,7 +162,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         critic.model.load_weights("criticmodel.h5")
         actor.target_model.load_weights("actormodel.h5")
         critic.target_model.load_weights("criticmodel.h5")
-        print("Weight load successfully!")
+        print("Weight loaded successfully!")
         print("######################################################")
         print("######################################################")
         print("######################################################")
@@ -167,17 +172,13 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     print("Falling obj catching Experiment Start.")
     for episode in range(episode_count):
 
-        if(GB_TRACE):
+        if(RC.GB_TRACE):
             print("Episode : " + str(episode) + " Replay Buffer " + str(buff.count()))
 
         ob = env.reset()
 
         #s_t = np.reshape(ob, (-1, action_dim))
-        s_t = np.hstack((ob[0], ob[1], ob[2], ob[3],  ob[4],  ob[5],  ob[6], # Joint i (pos & vel)
-                         ob[7], ob[8], ob[9], ob[10], ob[11], ob[12], ob[13],
-                         ob[14], ob[15], ob[16], # Ball pos X,Y,Z
-                         ob[17], ob[18], ob[19]  # Ball linear vel X,Y,Z
-                         ))
+        s_t = gb_observation_2_state(ob)
         #print('OB', s_t)
 
         total_reward = 0.
@@ -205,11 +206,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 a_t[0][i] = a_t_original[0][i] + noise_t[0][i]
             ob, r_t, done, info = env.step(a_t[0])
 
-            s_t1 = np.hstack((ob[0], ob[1], ob[2], ob[3],  ob[4],  ob[5],  ob[6], # Joint i (pos & vel)
-                              ob[7], ob[8], ob[9], ob[10], ob[11], ob[12], ob[13],
-                              ob[14], ob[15], ob[16], # Ball pos X,Y,Z
-                              ob[17], ob[18], ob[19]  # Ball linear vel X,Y,Z
-                             ))
+            s_t1 = gb_observation_2_state(ob)
             #print('OB reshape', s_t1)
 
             buff.add(s_t, a_t[0], r_t, s_t1, done)      #Add replay buffer
@@ -245,16 +242,17 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             total_reward += r_t
             s_t = s_t1
 
-            if(GB_TRACE):
+            if(RC.GB_TRACE):
                 print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
 
             step += 1
             if done:
                 break
 
+        # End for on steps
         if np.mod(episode, 3) == 0:
             if (train_indicator):
-                if(GB_TRACE):
+                if(RC.GB_TRACE):
                     print("Now we save model")
                 actor.model.save_weights("actormodel.h5", overwrite=True)
                 with open("actormodel.json", "w") as outfile:
@@ -264,7 +262,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 with open("criticmodel.json", "w") as outfile:
                     json.dump(critic.model.to_json(), outfile)
 
-        if(GB_TRACE):
+        if np.mod(episode, 1000) == 0:
             print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
             print("Total Step: " + str(step))
             print("")
@@ -304,7 +302,12 @@ def draw_data():
 
     plt.show()
 
+def gb_observation_2_state(ob):
+    return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
+                      ob[7], ob[8], ob[9], ob[10] # Endtip pos X,Y,Z
+                      ))
+
 if __name__ == "__main__":
     initialize_vrep()
-    startTraining(1)
+    startTraining(RC.GB_MODE_TRAINING)
     finalize_vrep()

@@ -92,9 +92,9 @@ class RobotOperationEnvironment(gym.Env):
         ## RESET ROBOT POS --
         self._robot.resetRobot()
 
-        time.sleep(2)
+        #time.sleep(2)
         ## LOAD FALLING OBJS --
-        self.reloadFallingObjects()
+        #self.reloadFallingObjects()
 
         ## STEP SIMULATION --
         self._envStepCounter = 0
@@ -197,12 +197,15 @@ class RobotOperationEnvironment(gym.Env):
 
         # Hit the object or object hit the ground
         #self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[0])
+        '''
         platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
         #print('Plate Pos:', platePos)
         if (platePos[2] < 1.2):
             return True
 
         return self.detectObjectsReachGround()
+        '''
+        return self.detectHandOnGround()
 
     def _reward(self):
         #print("reward")
@@ -222,7 +225,8 @@ class RobotOperationEnvironment(gym.Env):
             self.__reward -= distance
 
         elif(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND):
-            # Distance of plate away from hand palm center
+            '''
+            # Distance of plate away from hand palm center -----------------------------------------------
             platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
             endTipPos   = self._robot.getEndTipWorldPosition()
             #print('Plate Pos:', platePos)
@@ -232,7 +236,7 @@ class RobotOperationEnvironment(gym.Env):
             #print('DDDD:', d)
             self.__reward -= d
 
-            # Orientation of the plate
+            # Orientation of the plate -------------------------------------------------------------------
             plateOrient = RC.getObjectOrientation(RC.CPLATE_OBJ_NAME) # Must be the same name set in V-Rep
             alpha = plateOrient[0]
             beta  = plateOrient[1]
@@ -245,6 +249,15 @@ class RobotOperationEnvironment(gym.Env):
             #
             #endTipVelocity = self._robot.getEndTipVelocity()
             #print('Endtip Vel', endTipVelocity)
+            '''
+
+            handOrient = self._robot.getHandOrientation()
+            #print('Hand Orient', handOrient)
+            handVelocity = self._robot.getHandVelocity()
+            #print('Hand Vel', handVelocity)
+
+            self.__reward -= abs(handOrient[0])
+            self.__reward -= abs(handOrient[1])
 
         if(RC.GB_TRACE):
             print('self.__reward:', self.__reward)
@@ -380,3 +393,9 @@ class RobotOperationEnvironment(gym.Env):
 
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)
+
+
+    def detectHandOnGround(self):
+        handPos = RC.getObjectWorldPosition(RC.CBARRETT_HAND_NAME)
+        #print('HAND POS', handPos)
+        return handPos[2] < 0.1

@@ -9,7 +9,7 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-GB_TRACE = 1
+GB_TRACE = 0
 GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
 
@@ -20,7 +20,7 @@ CYOUBOT = 2
 CJACO_ARM_HAND = 3
 CKUKA_ARM_BARRETT_HAND = 4
 
-CKUKA_ARM_NAME = 'LBR_iiwa_7_R800#'
+CKUKA_ARM_NAME = 'LBR_iiwa_14_R820#' # 'LBR_iiwa_7_R800#'
 CYOUBOT_NAME = 'youBot#'# 'LBR4p#'
 CJACO_ARM_HAND_NAME = 'JacoHand#'
 CBARRETT_HAND_NAME = 'BarrettHand#'
@@ -38,7 +38,7 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM):
     GB_ACTION_DIM = 7
     GB_STATE_DIM  = 10
 elif(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
-    GB_ACTION_DIM = 3 # 9(7 Kuka arm joints & 2 Hand finger angle)
+    GB_ACTION_DIM = 9 # 9(7 Kuka arm joints & 2 Hand finger angle)
     GB_STATE_DIM  = 11
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
     GB_ACTION_DIM = 1
@@ -94,3 +94,43 @@ def getObjectVelocity(objectName):
     res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_buffer)
 
     return objectLinearVel
+
+def getJointForce(jointHandle):
+    #res, jointHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)
+
+    # Enabled streaming of the joint force:
+    res, jointForce = vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
+
+    # Wait until the first data has arrived (just any blocking funtion):
+    vrep.simxGetPingTime(GB_CLIENT_ID)
+
+    # Now you can read the data that is being continuously streamed:
+    res, jointForce = vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
+
+    return jointForce
+
+def getJointPosition(jointHandle):
+    #res, jointHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)
+
+    # Enabled streaming of the joint position:
+    res, jointPos = vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
+
+    # Wait until the first data has arrived (just any blocking funtion):
+    vrep.simxGetPingTime(GB_CLIENT_ID)
+
+    # Now you can read the data that is being continuously streamed:
+    res, jointPos = vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
+
+    return jointPos
+
+def getJointMatrix(jointHandle):
+    res, jointMatrix = vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
+
+    # Wait until the first data has arrived (just any blocking funtion):
+    vrep.simxGetPingTime(GB_CLIENT_ID)
+
+    # Now you can read the data that is being continuously streamed:
+    res, jointMatrix = vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
+
+    return jointMatrix
+

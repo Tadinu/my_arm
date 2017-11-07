@@ -49,4 +49,6 @@ DISTFILES += \
     criticmodel.json \
     actormodel.h5 \
     criticmodel.h5 \
-    eigen_grasp.py
+    eigen_grasp.py \
+    ur5.py \
+    ur5_ctrl.py

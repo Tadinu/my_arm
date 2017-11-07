@@ -13,36 +13,60 @@ GB_TRACE = 0
 GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
 
+# ================================================================
+# SERVER REMOTE API OBJECT NAME ----------------------------------
+#
 CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
 
+# ================================================================
+# ROBOT IDS ------------------------------------------------------
+#
 CKUKA_ARM = 1
 CYOUBOT = 2
 CJACO_ARM_HAND = 3
 CKUKA_ARM_BARRETT_HAND = 4
+CUR5_ARM_BARRETT_HAND = 5
 
-CKUKA_ARM_NAME = 'LBR_iiwa_14_R820#' # 'LBR_iiwa_7_R800#'
-CYOUBOT_NAME = 'youBot#'# 'LBR4p#'
-CJACO_ARM_HAND_NAME = 'JacoHand#'
-CBARRETT_HAND_NAME = 'BarrettHand#'
+# ================================================================
+# ROBOT NAMES ----------------------------------------------------
+#
+CUR5_ARM_NAME = 'UR5'
+CKUKA_ARM_NAME = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
+CYOUBOT_NAME = 'youBot'# 'LBR4p'
+CJACO_ARM_HAND_NAME = 'JacoHand'
+CBARRETT_HAND_NAME = 'BarrettHand'
 
+# ================================================================
+# OBJECT NAMES ---------------------------------------------------
+#
 CFALL_OBJS_NAMES = ['Obj1']
 CPLATE_OBJ_NAME = 'Plate'
 CTABLE_OBJ_NAME = 'Table'
 
-GB_CSERVER_ROBOT_ID = CKUKA_ARM_BARRETT_HAND
-
+# ================================================================
+# SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+GB_CSERVER_ROBOT_ID = CKUKA_ARM_BARRETT_HAND #CUR5_ARM_BARRETT_HAND
+GB_CSERVER_ROBOT_NAME = ''
 GB_ACTION_DIM = 1
 GB_STATE_DIM  = 10
 
 if(GB_CSERVER_ROBOT_ID == CKUKA_ARM):
     GB_ACTION_DIM = 7
     GB_STATE_DIM  = 10
+    GB_CSERVER_ROBOT_NAME = CKUKA_ARM_NAME
 elif(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
     GB_ACTION_DIM = 9 # 9(7 Kuka arm joints & 2 Hand finger angle)
-    GB_STATE_DIM  = 11
+    GB_STATE_DIM  = 7
+    GB_CSERVER_ROBOT_NAME = CKUKA_ARM_NAME
+elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
+    GB_ACTION_DIM = 8 # 8(6 Kuka arm joints & 2 Hand finger angle)
+    GB_STATE_DIM  = 12
+    GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
     GB_ACTION_DIM = 1
     GB_STATE_DIM  = 10
+    GB_CSERVER_ROBOT_NAME = CJACO_ARM_HAND_NAME
 
 def init(clientID):
     global GB_CLIENT_ID

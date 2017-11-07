@@ -54,7 +54,7 @@ except:
     print ('')
 
 CSERVER_PORT = 19999
-CSERVER_ROBOT_NAME = 'LBR_iiwa_14_R820#' # 'youBot#' / 'LBR4p#'
+RC.GB_CSERVER_ROBOT_NAME = 'LBR_iiwa_14_R820#' # 'youBot#' / 'LBR4p#'
 RC.GB_CSERVER_ROBOT_ID = RC.CKUKA_ARM #RC.CYOUBOT
 ##############################################################################################################################################################
 ##############################################################################################################################################################
@@ -104,7 +104,7 @@ def initialize_vrep():
 
         # Retrieve some handles:
         global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
+        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
 
 # ===========================
 #   Tensorflow Summary Ops

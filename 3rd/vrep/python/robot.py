@@ -31,21 +31,37 @@ CSERVER_REMOTE_FUNC_GET_OPERATION_STATE = 'getOperationState'
 
 # KUKA ROBOTS --------------------------------------------------------------------------
 #
-KUKA_ARM_JOINT_NAMES = [RC.CKUKA_ARM_NAME.append('_joint1'),
-                        RC.CKUKA_ARM_NAME.append('_joint2'),
-                        RC.CKUKA_ARM_NAME.append('_joint3'),
-                        RC.CKUKA_ARM_NAME.append('_joint4'),
-                        RC.CKUKA_ARM_NAME.append('_joint5'),
-                        RC.CKUKA_ARM_NAME.append('_joint6'),
-                        RC.CKUKA_ARM_NAME.append('_joint7')]
+KUKA_ARM_JOINT_NAMES = [RC.CKUKA_ARM_NAME + ('_joint1'),
+                        RC.CKUKA_ARM_NAME + ('_joint2'),
+                        RC.CKUKA_ARM_NAME + ('_joint3'),
+                        RC.CKUKA_ARM_NAME + ('_joint4'),
+                        RC.CKUKA_ARM_NAME + ('_joint5'),
+                        RC.CKUKA_ARM_NAME + ('_joint6'),
+                        RC.CKUKA_ARM_NAME + ('_joint7')]
 
-ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint1',
-                                  'armJoint2',
-                                  'armJoint3',
-                                  'armJoint4',
-                                  'armJoint5',
-                                  'armJoint6',
-                                  'armJoint7']
+KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint1',
+                                       'armJoint2',
+                                       'armJoint3',
+                                       'armJoint4',
+                                       'armJoint5',
+                                       'armJoint6',
+                                       'armJoint7']
+# UR5 ROBOTS --------------------------------------------------------------------------
+#
+UR5_ARM_JOINT_NAMES = [RC.CUR5_ARM_NAME + ('_joint0'),
+                       RC.CUR5_ARM_NAME + ('_joint1'),
+                       RC.CUR5_ARM_NAME + ('_joint2'),
+                       RC.CUR5_ARM_NAME + ('_joint3'),
+                       RC.CUR5_ARM_NAME + ('_joint4'),
+                       RC.CUR5_ARM_NAME + ('_joint5')]
+
+UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint0',
+                                      'armJoint1',
+                                      'armJoint2',
+                                      'armJoint3',
+                                      'armJoint4',
+                                      'armJoint5']
+
 # JACO ARM -----------------------------------------------------------------------------
 #
 
@@ -103,11 +119,15 @@ GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = []
 GB_CROBOT_HAND_JOINT_NAMES = BARRETT_HAND_JOINT_NAMES
 if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
     GB_CROBOT_JOINT_NAMES = KUKA_ARM_JOINT_NAMES
-    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = ARM_JOINT_SIGNAL_NAME_PREFIXES
+    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES
+
+elif(RC.GB_CSERVER_ROBOT_ID == RC.CUR5_ARM_BARRETT_HAND):
+    GB_CROBOT_JOINT_NAMES = UR5_ARM_JOINT_NAMES
+    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES
 #else ...
 
-GB_CBASE_JOINT_NAME = GB_CROBOT_JOINT_NAMES[0] # "LBR4p_joint1"
-GB_CEND_TIP_NAME = RC.CKUKA_ARM_NAME.append('_connection')
+GB_CBASE_JOINT_NAME = GB_CROBOT_JOINT_NAMES[0]
+GB_CEND_TIP_NAME = RC.CKUKA_ARM_NAME + ('_connection')
 
 
 class Robot:
@@ -120,18 +140,20 @@ class Robot:
         self._jointNames     = GB_CROBOT_JOINT_NAMES
         self._handJointNames = GB_CROBOT_HAND_JOINT_NAMES
 
+        print(self._jointNames)
         self._jointHandles = [vrep.simxGetObjectHandle(clientID,
                                                       jointName,
                                                       vrep.simx_opmode_blocking)[1]
                               for jointName in self._jointNames]
 
         self._handJointHandles = [vrep.simxGetObjectHandle(clientID,
-                                              handJointName,
-                                              vrep.simx_opmode_blocking)[1]
+                                                           handJointName,
+                                                           vrep.simx_opmode_blocking)[1]
                                   for handJointName in self._handJointNames]
         # ---------------------------------------------------------------------------------------------------
         # Initialize EigenGrasps Info (after initializing the hand specifics)
-        if(self._id == RC.CJACO_ARM_HAND or self._id == RC.CKUKA_ARM_BARRETT_HAND):
+        if(self._id == RC.CJACO_ARM_HAND or self._id == RC.CKUKA_ARM_BARRETT_HAND \
+                                         or self._id == RC.CUR5_ARM_BARRETT_HAND):
             self.eigen_grasp_initialize()
 
     # ########################################################################################################
@@ -211,30 +233,36 @@ class Robot:
 
         return dofs
 
-    def setJointVelocity(self, jointIndex, vel):
+    def setJointVelocity(self, jointIndex, vel, useSignalToJoint = 1):
         # http://www.coppeliarobotics.com/helpFiles/en/jointDescription.htm
         # Signal to the joint control callback script
-        jointSignalName = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES[jointIndex] + "TargetVel"
-        res = vrep.simxSetFloatSignal(self._clientID, jointSignalName, vel, \
-                                      vrep.simx_opmode_oneshot) # set the signal value
+        if(useSignalToJoint):
+            jointSignalName = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES[jointIndex] + "TargetVel"
+            res = vrep.simxSetFloatSignal(self._clientID, jointSignalName, vel,
+                                          vrep.simx_opmode_oneshot_wait) # set the signal value: !!simx_opmode_oneshot_wait
+        else:
+            res = vrep.simxSetJointTargetVelocity(self._clientID,
+                                                  self._jointHandles[jointIndex],
+                                                  vel, # target velocity
+                                                  vrep.simx_opmode_blocking)
+        if(res != 0):
+            print('Set Joint Velocity Error', res)
 
-        #res = vrep.simxSetJointTargetVelocity(self._clientID,
-        #                                      self._jointHandles[jointIndex],
-        #                                      vel,  # target velocity
-        #                                      vrep.simx_opmode_blocking)
         return res
 
-    def setJointForce(self, jointIndex, force):
+    def setJointForce(self, jointIndex, force, useSignalToJoint = 1):
         # Signal to the joint control callback script
         jointSignalName = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES[jointIndex] + "ForceTorque"
-        res = vrep.simxSetFloatSignal(self._clientID, jointSignalName, force, \
-                                      vrep.simx_opmode_oneshot) # set the signal value
-
-        # OR CALL DIRECTLY
-        #res = vrep.simxSetJointForce(self._clientID,
-        #                             self._jointHandles[jointIndex],
-        #                             force, # force to apply
-        #                             vrep.simx_opmode_blocking)
+        if(useSignalToJoint):
+            res = vrep.simxSetFloatSignal(self._clientID, jointSignalName, force,
+                                          vrep.simx_opmode_oneshot_wait) # set the signal value: !!simx_opmode_oneshot_wait
+        else:
+            res = vrep.simxSetJointForce(self._clientID,
+                                         self._jointHandles[jointIndex],
+                                         force, # force to apply
+                                         vrep.simx_opmode_blocking)
+        if(res != 0):
+            print('Set Joint Force Error', res)
         return res
 
     def getCurrentJointForces(self):
@@ -251,9 +279,9 @@ class Robot:
         else:
             remoteObjectName = RC.CSERVER_REMOTE_API_OBJECT_NAME
 
-        scale = 2
+        scale = 1
         if(self._id == RC.CKUKA_ARM or self._id == RC.CKUKA_ARM_BARRETT_HAND):
-            scale = 2
+            scale = 1
         elif(self._id == RC.CJACO_ARM_HAND):
             hand_eigengrasp_amps = action
             dofs = gb_hand_eigengrasp_interface.toDOF(hand_eigengrasp_amps)
@@ -284,7 +312,7 @@ class Robot:
         # !Note: len(self._jointNames) == len(self._jointHandles)
         joint_target_velocities = np.ones(len(self._jointNames)) * 10000.0
 
-        for i,jointHandle in enumerate(self._jointHandles):
+        for i, jointHandle in enumerate(self._jointHandles):
             # http://www.forum.coppeliarobotics.com/viewtopic.php?f=9&t=497
             # The way joints operate in V-REP is directly linked to the ODE or Bullet physics engines.
             # When in velocity control (i.e. motor is enabled, position control is disabled (Uncheck it in joint's dynamic properties dialog):
@@ -307,7 +335,10 @@ class Robot:
             res, torque = vrep.simxGetJointForce(self._clientID,
                                                  jointHandle,
                                                  vrep.simx_opmode_blocking)
-            if res !=0 : raise Exception()
+            if res !=0 :
+                print(res)
+                raise Exception()
+
             #print('TORQUE', i, torque)
             # if force has changed signs,
             # we need to change the target velocity sign
@@ -315,11 +346,11 @@ class Robot:
                 joint_target_velocities[i] = joint_target_velocities[i] * (-1)
 
             res = self.setJointVelocity(i, joint_target_velocities[i])
-            #if res!=0: raise Exception()
+            if res!=0: raise Exception()
 
             # and now modulate the force
-            res = self.setJointForce(i, abs(actionForces[i]*10))  # force to apply
-            #if res!=0 : raise Exception()
+            res = self.setJointForce(i, abs(actionForces[i]*100))  # force to apply
+            if res!=0 : raise Exception()
         # move simulation ahead one time step
         vrep.simxSynchronousTrigger(self._clientID)
 
@@ -374,7 +405,7 @@ class Robot:
             observation.append(np.array(endTipPos[1], dtype=np.float32))
             observation.append(np.array(endTipPos[2], dtype=np.float32))
 
-        elif(self._id == RC.CJACO_ARM_HAND or self._id == RC.CKUKA_ARM_BARRETT_HAND):
+        else:
             x = 1
 
             '''
@@ -456,6 +487,9 @@ class Robot:
         result += distToPos
         return result
 
+    def getHandWorldPosition(self):
+        return RC.getObjectWorldPosition(RC.CBARRETT_HAND_NAME)
+
     def getHandOrientation(self):
         eulerAngles = RC.getObjectOrientation(RC.CBARRETT_HAND_NAME)
         return eulerAngles
@@ -463,3 +497,202 @@ class Robot:
     def getHandVelocity(self):
         vel = RC.getObjectVelocity(RC.CBARRETT_HAND_NAME)
         return vel
+
+    def doInverseKinematicsCalculation(self):
+        count = 0
+        target_index = 0
+        change_target_time = dt*1000
+        vmax = 0.5
+        kp = 200.0
+        kv = np.sqrt(kp)
+
+        # define variables to share with nengo
+        q = np.zeros(len(joint_handles))
+        dq = np.zeros(len(joint_handles))
+
+        # NOTE: main loop starts here -----------------------------------------
+        target_xyz = RC.getObjectWorldPosition("obstacle")
+
+        track_target.append(np.copy(target_xyz))  # store for plotting
+        target_xyz = np.asarray(target_xyz)
+
+        for ii, joint_handle in enumerate(joint_handles):
+            old_q = np.copy(q)
+            # get the joint angles
+            _, q[ii] = vrep.simxGetJointPosition(
+                clientID,
+                joint_handle,
+                vrep.simx_opmode_blocking)
+            if _ != 0:
+                raise Exception()
+
+            # get the joint velocity
+            _, dq[ii] = vrep.simxGetObjectFloatParameter(
+                clientID,
+                joint_handle,
+                2012,  # parameter ID for angular velocity of the joint
+                vrep.simx_opmode_blocking)
+            if _ != 0:
+                raise Exception()
+
+        # calculate position of the end-effector
+        # derived in the ur5 calc_TnJ class
+        xyz = robot_config.Tx('EE', q)
+
+        # calculate the Jacobian for the end effector
+        JEE = robot_config.J('EE', q)
+
+        # calculate the inertia matrix in joint space
+        Mq = robot_config.Mq(q)
+
+        # calculate the effect of gravity in joint space
+        Mq_g = robot_config.Mq_g(q)
+
+        # convert the mass compensation into end effector space
+        Mx_inv = np.dot(JEE, np.dot(np.linalg.inv(Mq), JEE.T))
+        svd_u, svd_s, svd_v = np.linalg.svd(Mx_inv)
+        # cut off any singular values that could cause control problems
+        singularity_thresh = .00025
+        for i in range(len(svd_s)):
+            svd_s[i] = 0 if svd_s[i] < singularity_thresh else \
+                1./float(svd_s[i])
+        # numpy returns U,S,V.T, so have to transpose both here
+        Mx = np.dot(svd_v.T, np.dot(np.diag(svd_s), svd_u.T))
+
+        # calculate desired force in (x,y,z) space
+        dx = np.dot(JEE, dq)
+        # implement velocity limiting
+        lamb = kp / kv
+        x_tilde = xyz - target_xyz
+        sat = vmax / (lamb * np.abs(x_tilde))
+        scale = np.ones(3)
+        if np.any(sat < 1):
+            index = np.argmin(sat)
+            unclipped = kp * x_tilde[index]
+            clipped = kv * vmax * np.sign(x_tilde[index])
+            scale = np.ones(3) * clipped / unclipped
+            scale[index] = 1
+        u_xyz = -kv * (dx - np.clip(sat / scale, 0, 1) *
+                            -lamb * scale * x_tilde)
+        u_xyz = np.dot(Mx, u_xyz)
+
+        # transform into joint space, add vel and gravity compensation
+        u = np.dot(JEE.T, u_xyz) - Mq_g
+
+        # calculate the null space filter
+        Jdyn_inv = np.dot(Mx, np.dot(JEE, np.linalg.inv(Mq)))
+        null_filter = (np.eye(robot_config.num_joints) -
+                       np.dot(JEE.T, Jdyn_inv))
+        # calculate our secondary control signal
+        q_des = np.zeros(robot_config.num_joints)
+        dq_des = np.zeros(robot_config.num_joints)
+        # calculated desired joint angle acceleration using rest angles
+        for ii in range(1, robot_config.num_joints):
+            if robot_config.rest_angles[ii] is not None:
+                q_des[ii] = (
+                    ((robot_config.rest_angles[ii] - q[ii]) + np.pi) %
+                    (np.pi*2) - np.pi)
+                dq_des[ii] = dq[ii]
+        # only compensate for velocity for joints with a control signal
+        nkp = kp * .1
+        nkv = np.sqrt(nkp)
+        u_null = np.dot(Mq, (nkp * q_des - nkv * dq_des))
+
+        u += np.dot(null_filter, u_null)
+
+        # get the (x,y,z) position of the center of the obstacle
+        v = RC.getObjectWorldPosition('obstacle')
+        v = np.asarray(v)
+
+        # find the closest point of each link to the obstacle
+        for ii in range(robot_config.num_joints):
+            # get the start and end-points of the arm segment
+            p1 = robot_config.Tx('joint%i' % ii, q=q)
+            if ii == robot_config.num_joints - 1:
+                p2 = robot_config.Tx('EE', q=q)
+            else:
+                p2 = robot_config.Tx('joint%i' % (ii + 1), q=q)
+
+            # calculate minimum distance from arm segment to obstacle
+            # the vector of our line
+            vec_line = p2 - p1
+            # the vector from the obstacle to the first line point
+            vec_ob_line = v - p1
+            # calculate the projection normalized by length of arm segment
+            projection = np.dot(vec_ob_line, vec_line) / np.sum((vec_line)**2)
+            if projection < 0:
+                # then closest point is the start of the segment
+                closest = p1
+            elif projection > 1:
+                # then closest point is the end of the segment
+                closest = p2
+            else:
+                closest = p1 + projection * vec_line
+            # calculate distance from obstacle vertex to the closest point
+            dist = np.sqrt(np.sum((v - closest)**2))
+            # account for size of obstacle
+            rho = dist - obstacle_radius
+
+            if rho < threshold:
+
+                eta = .02  # feel like i saw 4 somewhere in the paper
+                drhodx = (v - closest) / rho
+                Fpsp = (eta * (1.0/rho - 1.0/threshold) *
+                        1.0/rho**2 * drhodx)
+
+                # get offset of closest point from link's reference frame
+                T_inv = robot_config.T_inv('link%i' % ii, q=q)
+                m = np.dot(T_inv, np.hstack([closest, [1]]))[:-1]
+                # calculate the Jacobian for this point
+                Jpsp = robot_config.J('link%i' % ii, x=m, q=q)[:3]
+
+                # calculate the inertia matrix for the
+                # point subjected to the potential space
+                Mxpsp_inv = np.dot(Jpsp,
+                                np.dot(np.linalg.pinv(Mq), Jpsp.T))
+                svd_u, svd_s, svd_v = np.linalg.svd(Mxpsp_inv)
+                # cut off singular values that could cause problems
+                singularity_thresh = .00025
+                for ii in range(len(svd_s)):
+                    svd_s[ii] = 0 if svd_s[ii] < singularity_thresh else \
+                        1./float(svd_s[ii])
+                # numpy returns U,S,V.T, so have to transpose both here
+                Mxpsp = np.dot(svd_v.T, np.dot(np.diag(svd_s), svd_u.T))
+
+                u_psp = -np.dot(Jpsp.T, np.dot(Mxpsp, Fpsp))
+                if rho < .01:
+                    u = u_psp
+                else:
+                    u += u_psp
+
+        # multiply by -1 because torque is opposite of expected
+        u *= -1
+        print('u: ', u)
+
+        for ii, joint_handle in enumerate(joint_handles):
+            # the way we're going to do force control is by setting
+            # the target velocities of each joint super high and then
+            # controlling the max torque allowed (yeah, i know)
+
+            # get the current joint torque
+            _, torque = \
+                vrep.simxGetJointForce(
+                    clientID,
+                    joint_handle,
+                    vrep.simx_opmode_blocking)
+            if _ != 0:
+                raise Exception()
+
+            # if force has changed signs,
+            # we need to change the target velocity sign
+            if np.sign(torque) * np.sign(u[ii]) <= 0:
+                joint_target_velocities[ii] = \
+                    joint_target_velocities[ii] * -1
+                _ = self.setJointVelocity(ii, joint_target_velocities[ii]) # target velocity
+            if _ != 0:
+                raise Exception()
+
+            # and now modulate the force
+            _ = self.setJointForce(ii, abs(u[ii]))  # force to apply
+            if _ != 0:
+                raise Exception()

@@ -55,7 +55,6 @@ except:
     print ('')
 
 CSERVER_PORT = 19999
-CSERVER_ROBOT_NAME = RC.CKUKA_ARM_NAME
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -107,7 +106,7 @@ def initialize_vrep():
 
         # Retrieve some handles:
         global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
+        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
 
 def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     BUFFER_SIZE = 100000
@@ -303,9 +302,16 @@ def draw_data():
     plt.show()
 
 def gb_observation_2_state(ob):
-    return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
-                      ob[7], ob[8], ob[9], ob[10] # Endtip pos X,Y,Z
-                      ))
+    if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
+        return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6]# Joint i (pos)
+                          #ob[7], ob[8], ob[9],  # Endtip pos X,Y,Z
+                          #ob[10], ob[11], ob[12] # Endtip orient X,Y,Z
+                          ))
+    else: #if(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
+        return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint i (pos)
+                          ob[6], ob[7], ob[8],  # Endtip pos X,Y,Z
+                          ob[9], ob[10], ob[11] # Endtip orient X,Y,Z
+                          ))
 
 if __name__ == "__main__":
     initialize_vrep()

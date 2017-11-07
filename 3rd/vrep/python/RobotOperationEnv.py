@@ -114,6 +114,7 @@ class RobotOperationEnvironment(gym.Env):
     def getObservation(self):
         self._observation = self._robot.getObservation()
 
+        '''
         robotId = self._robot.id()
 
         objectName   = RC.CFALL_OBJS_NAMES[0] if(robotId == RC.CKUKA_ARM) else RC.CPLATE_OBJ_NAME
@@ -124,7 +125,6 @@ class RobotOperationEnvironment(gym.Env):
             print('OBJECT OBSERVED:', objPos, objLinearVel, objOrient)
 
         if(robotId == RC.CKUKA_ARM):
-            x = 1
             #self._observation.append(np.array(pos[0], dtype=np.float32))
             #self._observation.append(np.array(pos[1], dtype=np.float32))
             #self._observation.append(np.array(pos[2], dtype=np.float32))
@@ -133,7 +133,7 @@ class RobotOperationEnvironment(gym.Env):
             #self._observation.append(np.array(linearVel[1], dtype=np.float32))
             #self._observation.append(np.array(linearVel[2], dtype=np.float32))
 
-        elif(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND):
+        else:
             self._observation.append(np.array(objPos[0], dtype=np.float32))
             self._observation.append(np.array(objPos[1], dtype=np.float32))
             self._observation.append(np.array(objPos[2], dtype=np.float32))
@@ -141,6 +141,7 @@ class RobotOperationEnvironment(gym.Env):
             self._observation.append(np.array(objOrient[0], dtype=np.float32)) # alpha
             self._observation.append(np.array(objOrient[1], dtype=np.float32)) # beta
             self._observation.append(np.array(objOrient[2], dtype=np.float32)) # gamma
+        '''
 
         return self._observation
 
@@ -224,7 +225,8 @@ class RobotOperationEnvironment(gym.Env):
 
             self.__reward -= distance
 
-        elif(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND):
+        elif(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND \
+                                          or robotId == RC.CUR5_ARM_BARRETT_HAND):
             '''
             # Distance of plate away from hand palm center -----------------------------------------------
             platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
@@ -250,6 +252,9 @@ class RobotOperationEnvironment(gym.Env):
             #endTipVelocity = self._robot.getEndTipVelocity()
             #print('Endtip Vel', endTipVelocity)
             '''
+
+            handPos = self._robot.getHandWorldPosition()
+            self.__reward += handPos[2]
 
             handOrient = self._robot.getHandOrientation()
             #print('Hand Orient', handOrient)
@@ -396,6 +401,6 @@ class RobotOperationEnvironment(gym.Env):
 
 
     def detectHandOnGround(self):
-        handPos = RC.getObjectWorldPosition(RC.CBARRETT_HAND_NAME)
+        handPos = self._robot.getHandWorldPosition()
         #print('HAND POS', handPos)
         return handPos[2] < 0.1

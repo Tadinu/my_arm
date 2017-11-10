@@ -79,18 +79,8 @@ def initialize_vrep():
         # Init Robot Common
         RC.init(gbClientID)
 
-        # Set Simulation in Synchronous mode
-        vrep.simxSynchronous(gbClientID,True)
-
-        # Set Simulation Step Time
-        dt = .001
-        vrep.simxSetFloatingParameter(gbClientID,
-                                      vrep.sim_floatparam_simulation_time_step,
-                                      dt, # specify a simulation time step
-                                      vrep.simx_opmode_oneshot)
-
         # Start the simulation:
-        vrep.simxStartSimulation(gbClientID,vrep.simx_opmode_oneshot_wait)
+        RC.startSimulation(gbClientID)
 
         # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
         #    robotHandle=retInts[0]
@@ -270,16 +260,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     #env.stop() # Stop Client Connection to V-REP Server
 
 def finalize_vrep():
-    # stop the simulation
-    vrep.simxStopSimulation(gbClientID, vrep.simx_opmode_blocking)
-
-    # Before closing the connection to V-REP,
-    #make sure that the last command sent out had time to arrive.
-    vrep.simxGetPingTime(gbClientID)
-
-    # Now close the connection to V-REP:
-    vrep.simxFinish(gbClientID)
-    print('V-REP Server Connection closed...')
+    RC.endSimulation(gbClientID)
 
 def draw_data():
     track_hand = np.array(track_hand)
@@ -303,10 +284,16 @@ def draw_data():
 
 def gb_observation_2_state(ob):
     if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
-        return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6]# Joint i (pos)
-                          #ob[7], ob[8], ob[9],  # Endtip pos X,Y,Z
-                          #ob[10], ob[11], ob[12] # Endtip orient X,Y,Z
-                          ))
+        if(RC.isTaskObjBalance()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
+                              ob[7], ob[8], ob[9],
+                              ob[10]
+                              ))
+        elif(RC.isTaskObjHold()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
+                              ob[7], ob[8], ob[9],
+                              ob[10], ob[11], ob[12]
+                              ))
     else: #if(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
         return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint i (pos)
                           ob[6], ob[7], ob[8],  # Endtip pos X,Y,Z

@@ -21,18 +21,23 @@ CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
 # ================================================================
 # ROBOT IDS ------------------------------------------------------
 #
-CKUKA_ARM = 1
-CYOUBOT = 2
-CJACO_ARM_HAND = 3
-CKUKA_ARM_BARRETT_HAND = 4
-CUR5_ARM_BARRETT_HAND = 5
+CYOUBOT = 1
+CJACO_ARM_HAND = 2
+CKUKA_ARM_BARRETT_HAND = 3
+CUR5_ARM_BARRETT_HAND = 4
+
+# ================================================================
+# SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+GB_CSERVER_ROBOT_ID = CKUKA_ARM_BARRETT_HAND #CUR5_ARM_BARRETT_HAND
+GB_CSERVER_ROBOT_NAME = ''
 
 # ================================================================
 # ROBOT NAMES ----------------------------------------------------
 #
-CUR5_ARM_NAME = 'UR5'
-CKUKA_ARM_NAME = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
-CYOUBOT_NAME = 'youBot'# 'LBR4p'
+CUR5_ARM_NAME  = 'UR5'
+CKUKA_ARM_NAME = 'LBR_iiwa_7_R800' # 'LBR_iiwa_14_R820' #
+CYOUBOT_NAME   = 'youBot'# 'LBR4p'
 CJACO_ARM_HAND_NAME = 'JacoHand'
 CBARRETT_HAND_NAME = 'BarrettHand'
 
@@ -42,27 +47,45 @@ CBARRETT_HAND_NAME = 'BarrettHand'
 CFALL_OBJS_NAMES = ['Obj1']
 CPLATE_OBJ_NAME = 'Plate'
 CTABLE_OBJ_NAME = 'Table'
+CTUBE_OBJ_NAME  = 'Tube'
 
 # ================================================================
-# SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# TRAINING TASK NAMES --------------------------------------------
 #
-GB_CSERVER_ROBOT_ID = CKUKA_ARM_BARRETT_HAND #CUR5_ARM_BARRETT_HAND
-GB_CSERVER_ROBOT_NAME = ''
+CTASK_ID_OBJ_BALANCE = 1
+CTASK_ID_OBJ_HOLD    = 2
+GB_TASK_ID = CTASK_ID_OBJ_HOLD
+
+def isTaskObjBalance():
+    return GB_TASK_ID == CTASK_ID_OBJ_BALANCE
+
+def isTaskObjHold():
+    return GB_TASK_ID == CTASK_ID_OBJ_HOLD
+
+# ================================================================
+# ACTION, STATE DIMENSIONS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
 GB_ACTION_DIM = 1
 GB_STATE_DIM  = 10
 
-if(GB_CSERVER_ROBOT_ID == CKUKA_ARM):
-    GB_ACTION_DIM = 7
-    GB_STATE_DIM  = 10
+if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
+    # 9 (7 Kuka arm joints & 2 Hand finger angle)
+    if(isTaskObjBalance()):
+        # 3 (1 Arm Wrist joint, 2 revolute hand finger base joints) OR
+        GB_ACTION_DIM = 3
+        GB_STATE_DIM  = 11
+    elif(isTaskObjHold()):
+        # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
+        GB_ACTION_DIM = 4
+        GB_STATE_DIM  = 13
+
     GB_CSERVER_ROBOT_NAME = CKUKA_ARM_NAME
-elif(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
-    GB_ACTION_DIM = 9 # 9(7 Kuka arm joints & 2 Hand finger angle)
-    GB_STATE_DIM  = 7
-    GB_CSERVER_ROBOT_NAME = CKUKA_ARM_NAME
+
 elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
     GB_ACTION_DIM = 8 # 8(6 Kuka arm joints & 2 Hand finger angle)
     GB_STATE_DIM  = 12
     GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
+
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
     GB_ACTION_DIM = 1
     GB_STATE_DIM  = 10
@@ -72,6 +95,35 @@ def init(clientID):
     global GB_CLIENT_ID
     GB_CLIENT_ID = clientID
     #print('CLIENTID', GB_CLIENT_ID)
+
+def startSimulation(clientID):
+    # Set Simulation in Synchronous mode
+    vrep.simxSynchronous(clientID,True)
+
+    # Set Simulation Step Time
+    dt = .005 # 5ms (Custom) as the same as physics engine, seen in Calculation module properties dialog(Dynamics)
+    vrep.simxSetFloatingParameter(clientID,
+                                  vrep.sim_floatparam_simulation_time_step,
+                                  dt, # specify a simulation time step
+                                  vrep.simx_opmode_oneshot)
+
+    vrep.simxStartSimulation(clientID,vrep.simx_opmode_oneshot_wait)
+
+def stopSimulation(clientID):
+    return
+    #vrep.simxStopSimulation(clientID, vrep.simx_opmode_blocking)
+
+def endSimulation(clientID):
+    # stop the simulation
+    RC.stopSimulation(clientID)
+
+    # Before closing the connection to V-REP,
+    #make sure that the last command sent out had time to arrive.
+    vrep.simxGetPingTime(clientID)
+
+    # Now close the connection to V-REP:
+    vrep.simxFinish(clientID)
+    print('V-REP Server Connection closed...')
 
 def getObjectWorldPosition(objectName):
     res, objectHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
@@ -118,6 +170,19 @@ def getObjectVelocity(objectName):
     res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_buffer)
 
     return objectLinearVel
+
+def getJointVelocity(jointHandle):
+    # http://www.coppeliarobotics.com/helpFiles/en/objectParameterIDs.htm
+    # 2012: vrep.sim_jointfloatparam_velocity
+    res, jointVel = vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_streaming)
+
+    # Wait until the first data has arrived (just any blocking funtion):
+    vrep.simxGetPingTime(GB_CLIENT_ID)
+
+    # Now you can read the data that is being continuously streamed:
+    res, jointVel = vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_buffer)
+
+    return jointVel
 
 def getJointForce(jointHandle):
     #res, jointHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)

@@ -1,3 +1,12 @@
+#add parent dir to find package. Only needed for source code build, pip install doesn't need it.
+import os, inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+print('CURRENT DIR:', currentdir)
+parentdir = os.path.dirname(currentdir)
+print('PARENT DIR:', parentdir)
+os.sys.path.insert(0, parentdir)
+
+
 '''
 Copyright (C) 2016 Travis DeWolf
 
@@ -286,7 +295,7 @@ try:
 
             # multiply by -1 because torque is opposite of expected
             u *= -1
-            print('u: ', u)
+            #print('u: ', u)
 
             for ii, joint_handle in enumerate(joint_handles):
                 # the way we're going to do force control is by setting
@@ -349,6 +358,7 @@ finally:
     # Now close the connection to V-REP:
     vrep.simxFinish(clientID)
     print('connection closed...')
+
 
     import matplotlib as mpl
     from mpl_toolkits.mplot3d import Axes3D

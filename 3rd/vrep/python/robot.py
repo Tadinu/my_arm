@@ -6,8 +6,12 @@ import numpy as np
 from numpy.linalg import norm
 import random
 import collections as col
+import threading
 from threading import Timer
+from time import sleep
+
 ## threading.Timer(1, self.timerTask).start()
+from repeated_timer import RepeatedTimer
 import robotCommon as RC
 
 # EigenGrasp
@@ -27,6 +31,7 @@ except:
 CSERVER_REMOTE_FUNC_ROBOT_ACT           = 'actRobot'
 CSERVER_REMOTE_FUNC_DETECT_COLLISION    = 'detectCollisionWith'
 CSERVER_REMOTE_FUNC_RESET_ROBOT         = 'resetRobot'
+CSERVER_REMOTE_FUNC_RANDOM_JOINTS       = 'randomJoints'
 CSERVER_REMOTE_FUNC_GET_OPERATION_STATE = 'getOperationState'
 
 # KUKA ROBOTS --------------------------------------------------------------------------
@@ -72,7 +77,10 @@ GB_JACO_HAND_EIGENGRASP_ORI = [-0.52275 ,-0.52275 ,-0.52275]
 
 # BARRETT HAND ---------------------------------------------------------------------------
 #
-BARRETT_HAND_JOINT_NAMES = ['BarrettHand_jointA_0', # V-Rep Joint Handles: j[1][1]
+BARRETT_HAND_JOINT_NAMES = ['Barrett_openCloseJoint',
+                            'Barrett_openCloseJoint0',
+
+                            'BarrettHand_jointA_0', # V-Rep Joint Handles: j[1][1]
                             'BarrettHand_jointB_0', # j[1][2]
                             'BarrettHand_jointC_0', # j[1][3]
 
@@ -83,21 +91,29 @@ BARRETT_HAND_JOINT_NAMES = ['BarrettHand_jointA_0', # V-Rep Joint Handles: j[1][
                             'BarrettHand_jointB_2', # j[3][2]
                             'BarrettHand_jointC_2'] # j[3][3]
 
-KUKA_ARM_BARRETT_HAND_JOINT_NAMES=[]
-for i in range(len(KUKA_ARM_JOINT_NAMES)):
-    KUKA_ARM_BARRETT_HAND_JOINT_NAMES.append(KUKA_ARM_JOINT_NAMES[i])
+BARRETT_HAND_JOINT_SIGNAL_NAME_PREFIXES = ['handOpenCloseJoint',
+                                           'handOpenCloseJoint0',
+                                           'handJointA0',
+                                           'handJointB0',
+                                           'handJointC0',
 
-for i in range(len(BARRETT_HAND_JOINT_NAMES)):
-    KUKA_ARM_BARRETT_HAND_JOINT_NAMES.append(BARRETT_HAND_JOINT_NAMES[i])
+                                           'handJointB1',
+                                           'handJointC1',
+
+                                           'handJointA2',
+                                           'handJointB2',
+                                           'handJointC2']
 
 BARRETT_HAND_JOINT_DOF_RATIOS = {BARRETT_HAND_JOINT_NAMES[0]: 1,
-                                 BARRETT_HAND_JOINT_NAMES[1]: 1.2,
+                                 BARRETT_HAND_JOINT_NAMES[1]: 1,
                                  BARRETT_HAND_JOINT_NAMES[2]: 1,
-                                 BARRETT_HAND_JOINT_NAMES[3]: -1.8,
-                                 BARRETT_HAND_JOINT_NAMES[4]: 1.2,
-                                 BARRETT_HAND_JOINT_NAMES[5]: 1,
-                                 BARRETT_HAND_JOINT_NAMES[6]:-1.8,
-                                 BARRETT_HAND_JOINT_NAMES[7]: 1.2}
+                                 BARRETT_HAND_JOINT_NAMES[3]: 1.2,
+                                 BARRETT_HAND_JOINT_NAMES[4]: 1,
+                                 BARRETT_HAND_JOINT_NAMES[5]: -1.8,
+                                 BARRETT_HAND_JOINT_NAMES[6]: 1.2,
+                                 BARRETT_HAND_JOINT_NAMES[7]: 1,
+                                 BARRETT_HAND_JOINT_NAMES[8]:-1.8,
+                                 BARRETT_HAND_JOINT_NAMES[9]: 1.2}
 
 # From GRASPIT/graspit/models/robots/HumanHand/eigen/human_eigen_cgdb_refined.xml
 GB_BARRETT_HAND_EIGENGRASP_VALUES = [[1.0, 0.0 ,0.0 ,0.0],
@@ -116,14 +132,17 @@ GB_HAND_EIGENGRASP_ORI = GB_BARRETT_HAND_EIGENGRASP_ORI
 #
 GB_CROBOT_JOINT_NAMES                = []
 GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = []
+GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES = []
 GB_CROBOT_HAND_JOINT_NAMES = BARRETT_HAND_JOINT_NAMES
 if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
-    GB_CROBOT_JOINT_NAMES = KUKA_ARM_JOINT_NAMES
-    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES
+    GB_CROBOT_JOINT_NAMES                     = KUKA_ARM_JOINT_NAMES
+    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES
+    GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES = BARRETT_HAND_JOINT_SIGNAL_NAME_PREFIXES
 
 elif(RC.GB_CSERVER_ROBOT_ID == RC.CUR5_ARM_BARRETT_HAND):
-    GB_CROBOT_JOINT_NAMES = UR5_ARM_JOINT_NAMES
-    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES
+    GB_CROBOT_JOINT_NAMES                     = UR5_ARM_JOINT_NAMES
+    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES
+    GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES = BARRETT_HAND_JOINT_SIGNAL_NAME_PREFIXES
 #else ...
 
 GB_CBASE_JOINT_NAME = GB_CROBOT_JOINT_NAMES[0]
@@ -139,6 +158,7 @@ class Robot:
         self._robotHandle = robotHandle
         self._jointNames     = GB_CROBOT_JOINT_NAMES
         self._handJointNames = GB_CROBOT_HAND_JOINT_NAMES
+        self._x = 1
 
         print(self._jointNames)
         self._jointHandles = [vrep.simxGetObjectHandle(clientID,
@@ -155,6 +175,27 @@ class Robot:
         if(self._id == RC.CJACO_ARM_HAND or self._id == RC.CKUKA_ARM_BARRETT_HAND \
                                          or self._id == RC.CUR5_ARM_BARRETT_HAND):
             self.eigen_grasp_initialize()
+
+
+        # ---------------------------------------------------------------------------------------------------
+        # Initialize Timer Task
+        #self.initializeTimerTask()
+
+    #def __del__(self):
+        #self.finalizeTimerTask()
+
+    # ########################################################################################################
+    # INIT TIMER TASK
+    #
+    def initializeTimerTask(self):
+        # 1 - Timer essential properties
+        self._timerInterval = 1
+
+        # 2 - Start Timer
+        self._rt = RepeatedTimer(self._timerInterval, self.doTimerTask) # it auto-starts, no need of rt.start()
+
+    def finalizeTimerTask(self):
+        self._rt.stop()
 
     # ########################################################################################################
     # INIT EIGEN GRASPS
@@ -233,11 +274,17 @@ class Robot:
 
         return dofs
 
-    def setJointVelocity(self, jointIndex, vel, useSignalToJoint = 1):
+    # !NOTE: useSignalToJoint means that the joint Control Loop is enabled & in Custom Control Mode (Signal to Joint Control Callback Script)
+    def setJointVelocity(self, jointIndex, vel, isHandJoint = False, useSignalToJoint = 0):
+        if(isHandJoint):
+            jointSignalPrefixes = GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES
+        else:
+            jointSignalPrefixes = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES
+
         # http://www.coppeliarobotics.com/helpFiles/en/jointDescription.htm
         # Signal to the joint control callback script
         if(useSignalToJoint):
-            jointSignalName = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES[jointIndex] + "TargetVel"
+            jointSignalName = jointSignalPrefixes[jointIndex] + "TargetVel"
             res = vrep.simxSetFloatSignal(self._clientID, jointSignalName, vel,
                                           vrep.simx_opmode_oneshot_wait) # set the signal value: !!simx_opmode_oneshot_wait
         else:
@@ -250,9 +297,15 @@ class Robot:
 
         return res
 
-    def setJointForce(self, jointIndex, force, useSignalToJoint = 1):
+    # !NOTE: useSignalToJoint means that the joint Control Loop is enabled & in Custom Control Mode (Signal to Joint Control Callback Script)
+    def setJointForce(self, jointIndex, force, isHandJoint = False, useSignalToJoint = 0):
+        if(isHandJoint):
+            jointSignalPrefixes = GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES
+        else:
+            jointSignalPrefixes = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES
+
         # Signal to the joint control callback script
-        jointSignalName = GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES[jointIndex] + "ForceTorque"
+        jointSignalName = jointSignalPrefixes[jointIndex] + "Force"
         if(useSignalToJoint):
             res = vrep.simxSetFloatSignal(self._clientID, jointSignalName, force,
                                           vrep.simx_opmode_oneshot_wait) # set the signal value: !!simx_opmode_oneshot_wait
@@ -273,89 +326,227 @@ class Robot:
         return forces
 
     # action containing eigen graps ams of KUKA_ARM_JOINT_NAMES respectively
-    def applyAction(self, action):
-        if(self._id == RC.CYOUBOT):
-            remoteObjectName = 'youBot'
-        else:
-            remoteObjectName = RC.CSERVER_REMOTE_API_OBJECT_NAME
+    # !NOTE: Current condition: Target is velocity command to the joint
 
-        scale = 1
-        if(self._id == RC.CKUKA_ARM or self._id == RC.CKUKA_ARM_BARRETT_HAND):
-            scale = 1
-        elif(self._id == RC.CJACO_ARM_HAND):
-            hand_eigengrasp_amps = action
-            dofs = gb_hand_eigengrasp_interface.toDOF(hand_eigengrasp_amps)
-            action = self.accumulateMove(dofs) # dofs -> jointPoses
-
-        action = [action[i]*scale for i in range(len(action))]
-
-        # -----------------------------------------------------------------------
+    # Oct 14: Since working with custom control is not yet cleared yet, set force/torque and velocity does not work!
+    # -> Tentative solution is disabling Control loop for joints targeted, then set the target velocity directly using
+    # simSetJointTargetVelocity, as specified in this link: http://www.coppeliarobotics.com/helpFiles/en/jointDescription.htm
+    #
+    # When the joint motor is enabled and the control loop is disabled, then the joint will try to reach the desired
+    # target velocity given the maximum torque/force it is capable to deliver. When that maximum torque/force is very high,
+    # the target velocity is instantaneously reached and the joint operates in velocity control, otherwise it operates at
+    # the specified torque/force until the desired target velocity is reached (torque/force control).
+    #
+    def applyAction(self, action, requestRemoteServer = True):
         #
-        inputInts    = []
-        inputFloats  = action
-        inputStrings = []
-        inputBuffer  = bytearray()
-        #print('ApplyAction:', action)
-        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
-                                                                                     vrep.sim_scripttype_childscript,                   \
-                                                                                     CSERVER_REMOTE_FUNC_ROBOT_ACT,                     \
-                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
-                                                                                     vrep.simx_opmode_oneshot_wait)
+        if(requestRemoteServer):
+            if(self._id == RC.CYOUBOT):
+                remoteObjectName = 'youBot'
+            else:
+                remoteObjectName = RC.CSERVER_REMOTE_API_OBJECT_NAME
+
+            scale = 1
+            if(self._id == RC.CKUKA_ARM_BARRETT_HAND):
+                scale = 1
+            elif(self._id == RC.CJACO_ARM_HAND):
+                hand_eigengrasp_amps = action
+                dofs = gb_hand_eigengrasp_interface.toDOF(hand_eigengrasp_amps)
+                action = self.accumulateMove(dofs) # dofs -> jointPoses
+
+            action = [action[i]*scale for i in range(len(action))]
+
+            # -----------------------------------------------------------------------
+            #
+            inputInts    = []
+            inputFloats  = action
+            inputStrings = []
+            inputBuffer  = bytearray()
+            #print('ApplyAction:', action)
+            res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
+                                                                                         vrep.sim_scripttype_childscript,                   \
+                                                                                         CSERVER_REMOTE_FUNC_ROBOT_ACT,                     \
+                                                                                         inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                         vrep.simx_opmode_oneshot_wait)
+        # ===================================================================================================================================
+        #
+        #if(RC.isTaskObjBalance()):
+        #    x = 1
+        #elif(RC.isTaskObjHold()):
+        #    x = 2
 
         # move simulation ahead one time step
         vrep.simxSynchronousTrigger(self._clientID)
-        return self.applyActionForces(action)
+        return 1
 
-    def applyActionForces(self, actionForces):
+    # ========================================================================================================================================
+    # JOIN CONTROL ---------------------------------------------------------------------------------------------------------------------------
+    #
+    #
+    # http://www.forum.coppeliarobotics.com/viewtopic.php?f=9&t=497
+    # The way joints operate in V-REP is directly linked to the ODE or Bullet physics engines.
+    #
+    # VELOCITY CONTROL:
+    # !NOTE: THIS REQUIRES CONTROL LOOP BE DISABLED (OF COURSE, MOTOR ENABLED)
+    #
+    # When in velocity control (i.e. motor is enabled, position control is disabled (Uncheck it in joint's dynamic properties dialog):
+    #
+    #     You specify a target velocity
+    #     You specify a max. torque
+    #     If current velocity is below the target velocity, the max. torque is applied
+    #     If current velocity is above the target velocity, a negative torque is applied
+    #
+    # http://www.coppeliarobotics.com/helpFiles/en/jointDescription.htm
+    # When the joint motor is enabled and the control loop is disabled, then the joint will try
+    # to reach the desired target velocity given the maximum torque/force it is capable to deliver.
+    #
+    # When that maximum torque/force is very high, the target velocity is instantaneously reached
+    # and the joint operates in velocity control,
 
-        # joint target velocities discussed below
-        # !Note: len(self._jointNames) == len(self._jointHandles)
-        joint_target_velocities = np.ones(len(self._jointNames)) * 10000.0
+    # FORCE/TORQUE CONTROL:
+    # Otherwise it operates at the specified torque/force until the desired target velocity is reached (torque/force control).
+    #
+    # This means that if you want to control your joint in force/torque,
+    # just specify a target velocity very high (e.g. that will never be reached).
+    # To modulate the torque/force, use the simSetJointForce function.
+    #
+    # 1) the engine will apply the specified torque/force to the joint
+    # 2) if the load on the joint is very small, the maximum velocity will be reached in one
+    #    simulation step. And the joint will stay at that maximum velocity
+    # 3) if the load on the joint is high, the joint will accelerate, until the maximum velocity is reached
 
-        for i, jointHandle in enumerate(self._jointHandles):
-            # http://www.forum.coppeliarobotics.com/viewtopic.php?f=9&t=497
-            # The way joints operate in V-REP is directly linked to the ODE or Bullet physics engines.
-            # When in velocity control (i.e. motor is enabled, position control is disabled (Uncheck it in joint's dynamic properties dialog):
-            #
-            #     You specify a target velocity
-            #     You specify a max. torque
-            #     If current velocity is below the target velocity, the max. torque is applied
-            #     If current velocity is above the target velocity, a negative torque is applied
+    # SIDE NOTES by Coppelia:
+    # http://www.forum.coppeliarobotics.com/viewtopic.php?f=9&t=497
+    # Well,
+    #
+    # when you measure the force/torque that is applied to a joint, it always depends what is acting upon the joint and how.
+    # Let's take an example with a revolute joint:
+    #
+    #     1) the motor of the joint is disabled
+    #     2) the joint has no free movement because its lower limit is 0, and its higher limit is 0 too
+    #     3) the rotation axis of the joint lies in the x/y plane
+    #
+    # If a mass is attached to the joint on one side, you will measure a torque of T=D*M*G (Distance*Mass*Gravity).
+    # If the mass is attached to the joint on the other side, you will measure a torque of -T (the opposite).
+    #
+    # In case your joint exerts a torque/force, you will also be able to measure a positive or negative torque/force, depending on the situation.
 
-            # This means that if you want to control your joint in force/torque,
-            # just specify a target velocity very high (e.g. that will never be reached).
-            # To modulate the torque/force, use the simSetJointForce function.
-            #
-            # 1) the engine will apply the specified torque/force to the joint
-            # 2) if the load on the joint is very small, the maximum velocity will be reached in one
-            # simulation step. And the joint will stay at that maximum velocity
-            # 3) if the load on the joint is high, the joint will accelerate, until the maximum velocity is reached
+    # ========================================================================================================================================
+    # JOINT FORCE CONTROL --------------------------------------------------------------------------------------------------------------------
+    #
+    def doJointForceControl(self, jointIndex, inputForce, handJoint = False):
+        # get the current joint force
+        if(handJoint):
+            jointHandle = self._handJointHandles[jointIndex]
+        else:
+            jointHandle = self._jointHandles[jointIndex]
 
-            # get the current joint torque
-            res, torque = vrep.simxGetJointForce(self._clientID,
-                                                 jointHandle,
-                                                 vrep.simx_opmode_blocking)
-            if res !=0 :
-                print(res)
-                raise Exception()
+        res, curForce = vrep.simxGetJointForce(self._clientID,
+                                               jointHandle,
+                                               vrep.simx_opmode_blocking)
+        if res !=0 : raise Exception()
 
-            #print('TORQUE', i, torque)
-            # if force has changed signs,
-            # we need to change the target velocity sign
-            if(np.sign(torque) * np.sign(actionForces[i]) < 0):
-                joint_target_velocities[i] = joint_target_velocities[i] * (-1)
+        curVel = RC.getJointVelocity(jointHandle)
 
-            res = self.setJointVelocity(i, joint_target_velocities[i])
-            if res!=0: raise Exception()
+        # To make the joint balance around the position
+        # if force has changed signs,
+        # we need to change the target velocity sign
+        joint_target_vel = 10000
+        if(np.sign(curForce) < 0):
+            joint_target_vel *= (-1)
+            #print('SWITCH FORCE', jointIndex, curForce, curVel)
 
-            # and now modulate the force
-            res = self.setJointForce(i, abs(actionForces[i]*100))  # force to apply
-            if res!=0 : raise Exception()
-        # move simulation ahead one time step
-        vrep.simxSynchronousTrigger(self._clientID)
+        res = self.setJointVelocity(jointIndex, joint_target_vel, handJoint)
+        if res!=0: raise Exception()
+
+        # and now modulate the force
+        res = self.setJointForce(jointIndex, inputForce, handJoint)  # force to apply
+        if res!=0 : raise Exception()
 
         return res
 
+    def applyAllJointActionForces(self, actionForces, handJoint = False):
+
+        # joint target velocities discussed below
+        # !Note: len(self._jointNames) == len(self._jointHandles)
+        jointCount = len(self._handJointNames) if handJoint else len(self._jointNames)
+        for i in range(jointCount):
+            self.applyJointSingleActionForce(i, actionForces[i], handJoint)
+
+        # move simulation ahead one time step
+        vrep.simxSynchronousTrigger(self._clientID)
+
+        return 1
+
+    def applyJointSpecificActionForces(self, actionForces, jointIds, handJoint = False):
+        for i in range(len(jointIds)):
+            self.doJointForceControl(jointIds[i], actionForces[i], handJoint)
+
+        # move simulation ahead one time step
+        vrep.simxSynchronousTrigger(self._clientID)
+
+        return 1
+
+    # ========================================================================================================================================
+    # JOINT VEL CONTROL ----------------------------------------------------------------------------------------------------------------------
+    #
+    # !NOTE: THIS REQUIRES CONTROL LOOP BE DISABLED (OF COURSE, MOTOR ENABLED)
+    def doJointVelocityControl(self, jointIndex, inputVel, handJoint = False):
+        # get the current joint force
+        if(handJoint):
+            jointHandle = self._handJointHandles[jointIndex]
+        else:
+            jointHandle = self._jointHandles[jointIndex]
+
+        # if force has changed signs,
+        # we need to change the target velocity sign
+        joint_max_torque = 10000
+        res = self.setJointForce(jointIndex, joint_max_torque, handJoint)
+        if res!=0: raise Exception()
+
+        # and now modulate the force
+        res, curForce = vrep.simxGetJointForce(self._clientID,
+                                               jointHandle,
+                                               vrep.simx_opmode_blocking)
+        if res !=0 : raise Exception()
+
+        if(np.sign(curForce) < 0):
+            inputVel *= (-1)
+
+        res = self.setJointVelocity(jointIndex, inputVel, handJoint)
+        if res!=0 : raise Exception()
+
+        return res
+
+    def applyAllJointActionVels(self, actionVels, handJoint = False):
+
+        # !Note: len(self._jointNames) == len(self._jointHandles)
+        jointCount = len(self._handJointNames) if handJoint else len(self._jointNames)
+        for i in range(jointCount):
+            self.doJointVelocityControl(i, actionVels[i], handJoint)
+
+        # move simulation ahead one time step
+        vrep.simxSynchronousTrigger(self._clientID)
+
+        return 1
+
+    def applyJointSpecificActionVels(self, actionVels, jointIds, handJoint = False):
+        for i in range(len(jointIds)):
+            self.doJointVelocityControl(jointIds[i], actionVels[i], handJoint)
+
+        # move simulation ahead one time step
+        vrep.simxSynchronousTrigger(self._clientID)
+
+        return 1
+
+    # ========================================================================================================================================
+    # JOINT VEL CONTROL ----------------------------------------------------------------------------------------------------------------------
+    #
+    def commandJointVibration(self, isStart):
+        res = vrep.simxSetFloatSignal(self._clientID, "commandVibration", isStart,
+                                      vrep.simx_opmode_oneshot_wait) # set the signal value: !!simx_opmode_oneshot_wait
+
+
+    # For working with robotBot only
     def actRobot(self, actionId):
         inputInts    = [actionId] #[objHandles[16]]
         inputFloats  = []
@@ -391,45 +582,40 @@ class Robot:
 
     def getObservation(self):
         observation = []
+        #endTipPos = self.getEndTipWorldPosition()
+        isTaskObjBalance = RC.isTaskObjBalance()
 
         for i in range(len(self._jointHandles)):
             pos   = RC.getJointPosition(self._jointHandles[i])
             #linearVel, angVel  = RC.getObjectVelocity(self._jointHandles[i])
             force = RC.getJointForce(self._jointHandles[i])
-            #observation.append(np.array(pos, dtype=np.float32)) # Pos
-            observation.append(np.array(force, dtype=np.float32)) # Force
+            #
+            if(isTaskObjBalance):
+                observation.append(np.array(pos, dtype=np.float32)) # Pos
+            else:
+                observation.append(np.array(force, dtype=np.float32)) # Force
 
-        if(self._id == RC.CKUKA_ARM):
-            endTipPos = self.getEndTipWorldPosition()
-            observation.append(np.array(endTipPos[0], dtype=np.float32))
-            observation.append(np.array(endTipPos[1], dtype=np.float32))
-            observation.append(np.array(endTipPos[2], dtype=np.float32))
-
-        else:
-            x = 1
-
-            '''
-            # HAND INFO
+        if(isTaskObjBalance):
+            # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should
+            # also be added into the environment)
+            #
             # Hand Joint Pos
             handJointPoses = self.getCurrentHandJointPoses()
-            observation.append(np.array(handJointPoses[0], dtype=np.float32))
-            observation.append(np.array(handJointPoses[5], dtype=np.float32))
+            observation.append(np.array(handJointPoses[2], dtype=np.float32))
+            observation.append(np.array(handJointPoses[7], dtype=np.float32))
 
-            ##############################################################################################
-            # PLATE INFO
+        else:
+            # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should
+            # also be added into the environment)
             #
-            # Plate Object
-            # Angle rotation away from horizontal plane
-            plateOrient = RC.getObjectOrientation(RC.CPLATE_OBJ_NAME) # Must be the same name set in V-Rep
-            observation.append(np.array(abs(plateOrient[0]), dtype=np.float32))
+            # Hand Joint Pos
+            handJointPoses = self.getCurrentHandJointPoses()
+            observation.append(np.array(handJointPoses[2], dtype=np.float32))
+            observation.append(np.array(handJointPoses[7], dtype=np.float32))
 
-            # Distance from plate to the center of end-tip
-            platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
-            endTipPos   = self.getEndTipWorldPosition()
-            d = math.sqrt((platePos[0] - endTipPos[0])**2 +
-                          (platePos[1] - endTipPos[1])**2)
-            observation.append(np.array(d, dtype=np.float32))
-            '''
+            handJointForces = [RC.getJointForce(self._handJointHandles[0]), RC.getJointForce(self._handJointHandles[1])]
+            observation.append(np.array(handJointForces[0], dtype=np.float32))
+            observation.append(np.array(handJointForces[1], dtype=np.float32))
 
         return observation
 
@@ -452,6 +638,22 @@ class Robot:
         res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
                                                                                      vrep.sim_scripttype_childscript,                   \
                                                                                      CSERVER_REMOTE_FUNC_RESET_ROBOT,                   \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+
+    def randomJoints(self):
+        inputInts    = []
+        inputFloats  = [1]
+        inputStrings = []
+        inputBuffer  = bytearray()
+        if(self._id == RC.CYOUBOT):
+            remoteObjectName = 'youBot'
+        else:
+            remoteObjectName = RC.CSERVER_REMOTE_API_OBJECT_NAME
+
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_RANDOM_JOINTS,                 \
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
 

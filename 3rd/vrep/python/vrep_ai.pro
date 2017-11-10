@@ -50,5 +50,6 @@ DISTFILES += \
     actormodel.h5 \
     criticmodel.h5 \
     eigen_grasp.py \
-    ur5.py \
-    ur5_ctrl.py
+    UR5/ur5.py \
+    UR5/ur5_ctrl.py \
+    repeated_timer.py

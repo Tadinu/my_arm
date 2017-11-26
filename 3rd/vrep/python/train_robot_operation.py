@@ -121,7 +121,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
     episode_count = 1000000
-    max_steps = 10000
+    max_steps = 10000  # As some certain value to avoid underfitting
     reward = 0
     done = False
     step = 0
@@ -172,6 +172,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
         total_reward = 0.
         for j in range(max_steps):
+            ## ------------------------------------------------------------------------
             loss = 0
             epsilon -= 1.0 / EXPLORE
             a_t = np.zeros([1,action_dim])
@@ -251,7 +252,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 with open("criticmodel.json", "w") as outfile:
                     json.dump(critic.model.to_json(), outfile)
 
-        if np.mod(episode, 1000) == 0:
+        if np.mod(episode, 10) == 0:
             print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
             print("Total Step: " + str(step))
             print("")
@@ -294,6 +295,8 @@ def gb_observation_2_state(ob):
                               ob[7], ob[8], ob[9],
                               ob[10], ob[11], ob[12]
                               ))
+        elif(RC.isTaskObjCatch()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3]))
     else: #if(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
         return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint i (pos)
                           ob[6], ob[7], ob[8],  # Endtip pos X,Y,Z

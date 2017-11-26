@@ -28,11 +28,28 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
+# http://www.coppeliarobotics.com/helpFiles/en/remoteApiModusOperandi.htm
+#
+# by default the remote API client and V-REP work asynchronously together. And as you mention it, if the client sends a same command more than once for a same simulation step, then only the last command will be retained for processing. This is most of the time not a problem, e.g. when you set an object position several times, then the server will simply set the last specified position for that object. It is important to mention that this command dropping or overwriting happens on a command ID base (and nor for special commands). Two command ids are the same if the command AND the main arguments are the same.
+#
+# To avoid dropping information you have several possibilities:
+#
+#     In asynchronous mode, you can use simxWriteStringStream/simxReadStringStream, or simxCallScriptFunction.
+#     In synchronous mode, since you trigger each simulation step manually, the client is fully in control when the server has to execute next simulation step. You can read here more about the synchronous mode.
+
+# When the real-time mode is not enabled, then your simulation will update and run as fast as possible.
+#
+# When the real-time mode is enabled, then your simulation will update and run in a way as to keep not running faster than real-time. If your simulation content is heavy, then it will not keep up with the real-time.
+#
+# So in your case, if you have not enabled the real-time mode, then each time you send one trigger, the simulation will advance by 50ms. 50ms in simulation time!
+
+
 CSERVER_REMOTE_FUNC_ROBOT_ACT           = 'actRobot'
 CSERVER_REMOTE_FUNC_DETECT_COLLISION    = 'detectCollisionWith'
 CSERVER_REMOTE_FUNC_RESET_ROBOT         = 'resetRobot'
-CSERVER_REMOTE_FUNC_RANDOM_JOINTS       = 'randomJoints'
-CSERVER_REMOTE_FUNC_GET_OPERATION_STATE = 'getOperationState'
+CSERVER_REMOTE_FUNC_GET_OPERATION_STATE = 'getRobotOperationStateFromClient'
+CSERVER_REMOTE_FUNC_ROBOT_CAUGHT_OBJ    = 'checkRobotCaughtObj'
+CSERVER_REMOTE_FUNC_GET_SUCTION_PAD_TIP = 'getSuctionPadTip'
 
 # KUKA ROBOTS --------------------------------------------------------------------------
 #
@@ -369,15 +386,21 @@ class Robot:
                                                                                          vrep.simx_opmode_oneshot_wait)
         # ===================================================================================================================================
         #
-        #if(RC.isTaskObjBalance()):
-        #    x = 1
-        #elif(RC.isTaskObjHold()):
-        #    x = 2
-
         # move simulation ahead one time step
         vrep.simxSynchronousTrigger(self._clientID)
         return 1
 
+    def getSuctionPadTip(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = [1]
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME, \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_GET_SUCTION_PAD_TIP,           \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        return retFloats
     # ========================================================================================================================================
     # JOIN CONTROL ---------------------------------------------------------------------------------------------------------------------------
     #
@@ -584,6 +607,8 @@ class Robot:
         observation = []
         #endTipPos = self.getEndTipWorldPosition()
         isTaskObjBalance = RC.isTaskObjBalance()
+        isTaskObjHold    = RC.isTaskObjHold()
+        isTaskObjCatch   = RC.isTaskObjCatch()
 
         for i in range(len(self._jointHandles)):
             pos   = RC.getJointPosition(self._jointHandles[i])
@@ -592,7 +617,7 @@ class Robot:
             #
             if(isTaskObjBalance):
                 observation.append(np.array(pos, dtype=np.float32)) # Pos
-            else:
+            elif(isTaskObjHold):
                 observation.append(np.array(force, dtype=np.float32)) # Force
 
         if(isTaskObjBalance):
@@ -604,7 +629,7 @@ class Robot:
             observation.append(np.array(handJointPoses[2], dtype=np.float32))
             observation.append(np.array(handJointPoses[7], dtype=np.float32))
 
-        else:
+        elif(isTaskObjHold):
             # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should
             # also be added into the environment)
             #
@@ -617,11 +642,23 @@ class Robot:
             observation.append(np.array(handJointForces[0], dtype=np.float32))
             observation.append(np.array(handJointForces[1], dtype=np.float32))
 
+        elif(isTaskObjCatch):
+            pos0 = RC.getJointPosition(self._jointHandles[0])
+            vel0 = RC.getJointVelocity(self._jointHandles[0])
+            observation.append(np.array(pos0, dtype=np.float32))
+            observation.append(np.array(vel0, dtype=np.float32))
+
         return observation
 
     def getCurrentBaseJointPos(self):
         res, jointHandle = vrep.simxGetObjectHandle(self._clientID, GB_CBASE_JOINT_NAME, vrep.simx_opmode_oneshot_wait)
         res, pos         = vrep.simxGetJointPosition(self._clientID, jointHandle, vrep.simx_opmode_streaming)
+
+        # Wait until the first data has arrived (just any blocking funtion):
+        vrep.simxGetPingTime(self._clientID)
+
+        # Now you can read the data that is being continuously streamed:
+        res, pos         = vrep.simxGetJointPosition(self._clientID, jointHandle, vrep.simx_opmode_buffer)
         return pos
 
     def resetRobot(self):
@@ -640,22 +677,12 @@ class Robot:
                                                                                      CSERVER_REMOTE_FUNC_RESET_ROBOT,                   \
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
-
-    def randomJoints(self):
-        inputInts    = []
-        inputFloats  = [1]
-        inputStrings = []
-        inputBuffer  = bytearray()
-        if(self._id == RC.CYOUBOT):
-            remoteObjectName = 'youBot'
-        else:
-            remoteObjectName = RC.CSERVER_REMOTE_API_OBJECT_NAME
-
-        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
-                                                                                     vrep.sim_scripttype_childscript,                   \
-                                                                                     CSERVER_REMOTE_FUNC_RANDOM_JOINTS,                 \
-                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
-                                                                                     vrep.simx_opmode_oneshot_wait)
+        # Wait here until the robot finish the reset
+        #time.sleep(3)
+        # ===================================================================================================================================
+        #
+        # move simulation ahead one time step (only meaningful in V-Rep server synchronous mode!
+        vrep.simxSynchronousTrigger(self._clientID)
 
     def detectCollisionWith(self, objectName):
         #res, objectCollisionHandle = vrep.simxGetCollisionHandle(self._clientID, objectName, vrep.simx_opmode_oneshot_wait)
@@ -670,6 +697,20 @@ class Robot:
                                                                                      vrep.simx_opmode_oneshot_wait)
         if(retInts[0]):
             print('COLLIDED WITH: ', objectName)
+        return retInts[0]
+
+    def checkObjectCaught(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = [1]
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME, \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_ROBOT_CAUGHT_OBJ,              \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        if(retInts[0]):
+            print('SOME OBJECT CAUGHT: ')
         return retInts[0]
 
     def distanceFromEndTipToPos(self, pos):

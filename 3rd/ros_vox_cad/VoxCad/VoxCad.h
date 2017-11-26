@@ -222,6 +222,12 @@ public slots: //global slot repository for updating things across all windows/vi
     void ExportDMU(void) {SaveDMU(&MainObj);};
 #endif
 
+#ifdef MY_ARM_VOXEL_TRAIN
+public slots:
+    void trainAction();
+#endif
+
+
 #ifdef MY_ARM_GAZEBO_TRANSPORT
 public slots:
     void onGazeboImageArrived();
@@ -236,6 +242,11 @@ private:
     Ui::VoxCadClass ui;
 
     void SetWindowName(QString Filename){setWindowTitle(Filename + " - VoxCAD");}
+
+    //ducta
+#ifdef MY_ARM_VOXEL_TRAIN
+    QTimer walkTrainTimer;
+#endif
 
 #ifdef MY_ARM_GAZEBO_TRANSPORT
     QTimer gazeboTimer;

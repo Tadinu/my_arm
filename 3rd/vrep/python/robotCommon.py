@@ -9,6 +9,9 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
+import numpy as np
+from numpy.linalg import norm
+
 GB_TRACE = 0
 GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
@@ -24,7 +27,16 @@ CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
 CYOUBOT = 1
 CJACO_ARM_HAND = 2
 CKUKA_ARM_BARRETT_HAND = 3
-CUR5_ARM_BARRETT_HAND = 4
+CUR5_ARM_BARRETT_HAND  = 4
+CKUKA_ARM_SUCTION_PAD  = CKUKA_ARM_BARRETT_HAND
+
+# ================================================================
+# ROBOT OPERATION STATE-------------------------------------------
+#
+CROBOT_STATE_READY  = 1 # After Reset is finished
+CROBOT_STATE_MOVING = 2 # Running an action
+CROBOT_STATE_RESETTING_ARM  = 3 # Running Arm Reset
+CROBOT_STATE_RESETTING_HAND = 4 # Running Hand Reset
 
 # ================================================================
 # SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -36,7 +48,7 @@ GB_CSERVER_ROBOT_NAME = ''
 # ROBOT NAMES ----------------------------------------------------
 #
 CUR5_ARM_NAME  = 'UR5'
-CKUKA_ARM_NAME = 'LBR_iiwa_7_R800' # 'LBR_iiwa_14_R820' #
+CKUKA_ARM_NAME = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
 CYOUBOT_NAME   = 'youBot'# 'LBR4p'
 CJACO_ARM_HAND_NAME = 'JacoHand'
 CBARRETT_HAND_NAME = 'BarrettHand'
@@ -48,19 +60,39 @@ CFALL_OBJS_NAMES = ['Obj1']
 CPLATE_OBJ_NAME = 'Plate'
 CTABLE_OBJ_NAME = 'Table'
 CTUBE_OBJ_NAME  = 'Tube'
+CBALL_OBJ_NAME  = 'Ball'
+CSUCTION_PAD_NAME = 'suctionPad'
 
 # ================================================================
 # TRAINING TASK NAMES --------------------------------------------
 #
-CTASK_ID_OBJ_BALANCE = 1
-CTASK_ID_OBJ_HOLD    = 2
-GB_TASK_ID = CTASK_ID_OBJ_HOLD
+CTASK_ID_OBJ_BALANCE    = 1
+CTASK_ID_OBJ_HOLD       = 2
+CTASK_ID_OBJ_CATCH      = 3
+CTASK_ID_OBJ_MOVE_CATCH = 4
+CTASK_ID_OBJ_AVOID      = 5
+GB_TASK_ID = CTASK_ID_OBJ_BALANCE
 
 def isTaskObjBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_BALANCE
 
 def isTaskObjHold():
     return GB_TASK_ID == CTASK_ID_OBJ_HOLD
+
+def isTaskObjCatch():
+    return GB_TASK_ID == CTASK_ID_OBJ_CATCH
+
+def isTaskObjMoveCatch():
+    return GB_TASK_ID == CTASK_ID_OBJ_MOVE_CATCH
+
+def doJointVibration():
+    return isTaskObjBalance() or isTaskObjHold()
+
+# ================================================================
+# ROBOT OPERATION STATE ------------------------------------------
+#
+CROBOT_STATE_MOVING = 1
+CROBOT_STATE_IDLE   = 2 # Stand still
 
 # ================================================================
 # ACTION, STATE DIMENSIONS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -71,13 +103,17 @@ GB_STATE_DIM  = 10
 if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
     # 9 (7 Kuka arm joints & 2 Hand finger angle)
     if(isTaskObjBalance()):
-        # 3 (1 Arm Wrist joint, 2 revolute hand finger base joints) OR
-        GB_ACTION_DIM = 3
+        # 3 (1 Arm Base joint, 1 Arm Wrist joint, 2 revolute hand finger base joints) OR
+        GB_ACTION_DIM = 4
         GB_STATE_DIM  = 11
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4
         GB_STATE_DIM  = 13
+    elif(isTaskObjCatch()):
+        # 1 Base Joint 1 Wrist Joint
+        GB_ACTION_DIM = 2
+        GB_STATE_DIM  = 4
 
     GB_CSERVER_ROBOT_NAME = CKUKA_ARM_NAME
 
@@ -97,8 +133,11 @@ def init(clientID):
     #print('CLIENTID', GB_CLIENT_ID)
 
 def startSimulation(clientID):
+    # http://www.coppeliarobotics.com/helpFiles/en/remoteApiModusOperandi.htm#synchronous
     # Set Simulation in Synchronous mode
-    vrep.simxSynchronous(clientID,True)
+    # Enables or disables the synchronous operation mode for the remote API server service that the client is connected to.
+    # The function is blocking. While in synchronous operation mode, the client application is in charge of triggering the next simulation step. Only pre-enabled remote API server services will successfully execute this function.
+    vrep.simxSynchronous(clientID,False)
 
     # Set Simulation Step Time
     dt = .005 # 5ms (Custom) as the same as physics engine, seen in Calculation module properties dialog(Dynamics)
@@ -142,6 +181,11 @@ def getObjectWorldPosition(objectName):
 
     # Now you can read the data that is being continuously streamed:
     res, objectPos    = vrep.simxGetObjectPosition(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_buffer)
+
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetObjectPosition(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_discontinue)
+
     return objectPos
 
 def getObjectOrientation(objectName):
@@ -155,6 +199,11 @@ def getObjectOrientation(objectName):
 
     # Now you can read the data that is being continuously streamed:
     res, eulerAngles  = vrep.simxGetObjectOrientation(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_buffer)
+
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetObjectOrientation(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_discontinue)
+
     return eulerAngles
 
 def getObjectVelocity(objectName):
@@ -169,6 +218,10 @@ def getObjectVelocity(objectName):
     # Now you can read the data that is being continuously streamed:
     res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_buffer)
 
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_discontinue)
+
     return objectLinearVel
 
 def getJointVelocity(jointHandle):
@@ -181,6 +234,10 @@ def getJointVelocity(jointHandle):
 
     # Now you can read the data that is being continuously streamed:
     res, jointVel = vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_buffer)
+
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_discontinue)
 
     return jointVel
 
@@ -196,6 +253,10 @@ def getJointForce(jointHandle):
     # Now you can read the data that is being continuously streamed:
     res, jointForce = vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
 
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
+
     return jointForce
 
 def getJointPosition(jointHandle):
@@ -210,6 +271,10 @@ def getJointPosition(jointHandle):
     # Now you can read the data that is being continuously streamed:
     res, jointPos = vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
 
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
+
     return jointPos
 
 def getJointMatrix(jointHandle):
@@ -221,5 +286,66 @@ def getJointMatrix(jointHandle):
     # Now you can read the data that is being continuously streamed:
     res, jointMatrix = vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
 
+    # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
+    # to stream unessesary data and eventually slow down.
+    vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
+
     return jointMatrix
+
+def getDistanceFromPointToLine(p, a, b):
+    p1 = np.array(p, dtype=np.float32)
+    a1 = np.array(a, dtype=np.float32)
+    b1 = np.array(b, dtype=np.float32)
+    return norm(np.cross(a1-p1, p1-b1))/norm(a1-p1)
+
+def getAngleFromTwoVectors(v1, v2, acute=1):
+    # v1 is your firsr vector
+    # v2 is your second vector
+    angle = np.arccos(np.dot(v1, v2) / (norm(v1) * norm(v2)))
+    if (acute):
+        return angle
+    else:
+        return 2 * np.pi - angle
+
+
+################################################################################################################
+# V-REP IMPORTANT KNOWLEDGE:
+#
+# 1 - CALL A CHILD SCRIPT FUNCTION -----------------------------------------------------------------------------
+#
+# http://www.forum.coppeliarobotics.com/viewtopic.php?f=7&t=5784
+# Hello Jay,
+#
+# actually you can call functions in a threaded child script, from a remote API client. The documentation wasn't updated for last release.
+# However:
+#
+# When you call a script function from outside (e.g. from a remote API client), then the function call will always be blocking, i.e.
+# V-REP will run the function, but simulation will halt until the function has finished.
+#
+# So keeping in mind that the function call will block, you should use rather following scenario:
+#
+#     From the remote API client call a script function. In that script function, execute additional function calls, memorize variables, etc.
+#     But don't spend too much time in here. since during the whole time, V-REP will block. Once you are done, you can set a variable or signal.
+#     Once the threaded child script resumes normally, you can check if that variable or signal is set. If yes, then you can execute a longer
+#     blocking operation, without having the simulation itself stop.
+#
+# This is actually illustrated in the scene that you can find here (in next release you will find that scene in scenes/motionPlanningServerDemo.ttt), and its remote API counterpart that you can find in programming/remoteApiBindings/python/python/pathPlanningTest.py
+
+
+# 2 - SYNCHRONOUS MODE BETWEEN CLIENT & V-REP SERVER ------------------------------------------------------------
+#
+# http://www.coppeliarobotics.com/helpFiles/en/remoteApiModusOperandi.htm
+#
+# by default the remote API client and V-REP work asynchronously together. And as you mention it, if the client sends a same command more than once for a same simulation step, then only the last command will be retained for processing. This is most of the time not a problem, e.g. when you set an object position several times, then the server will simply set the last specified position for that object. It is important to mention that this command dropping or overwriting happens on a command ID base (and nor for special commands). Two command ids are the same if the command AND the main arguments are the same.
+#
+# To avoid dropping information you have several possibilities:
+#
+#     In asynchronous mode, you can use simxWriteStringStream/simxReadStringStream, or simxCallScriptFunction.
+#     In synchronous mode, since you trigger each simulation step manually, the client is fully in control when the server has to execute next simulation step. You can read here more about the synchronous mode.
+
+# When the real-time mode is not enabled, then your simulation will update and run as fast as possible.
+#
+# When the real-time mode is enabled, then your simulation will update and run in a way as to keep not running faster than real-time. If your simulation content is heavy, then it will not keep up with the real-time.
+#
+# So in your case, if you have not enabled the real-time mode, then each time you send one trigger, the simulation will advance by 50ms. 50ms in simulation time!
 

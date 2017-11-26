@@ -41,6 +41,12 @@ VoxCad::VoxCad(QWidget *parent, Qt::WindowFlags flags)
         QCoreApplication::setApplicationName("VoxCAD");
     }
 
+#ifdef MY_ARM_VOXEL_TRAIN
+    walkTrainTimer.setInterval(2000);
+    QObject::connect(&walkTrainTimer, SIGNAL(timeout()), this, SLOT(trainAction()));
+    walkTrainTimer.start();
+#endif
+
 #ifdef MY_ARM_GAZEBO_TRANSPORT
     qImage = QImage(800, 600, QImage::Format_RGB888);
     gazeboTimer.setInterval(300);
@@ -696,6 +702,29 @@ void VoxCad::GetPlotRqdDataType(char* pRqdDataOut)
 
     }
 }
+
+#ifdef MY_ARM_VOXEL_TRAIN
+void VoxCad::trainAction()
+{
+    int numVox = MainSim.NumVox();
+    static bool test = false;
+    if(numVox) {
+        CVX_Voxel* vox0 = (CVX_Voxel*) &MainSim.VoxArray[9];
+        //CVX_Voxel* vox1 = MainSim.VoxArray[1];
+        //vox1->external()->setFixedAll(); //Fixes all 6 degrees of freedom with an external condition on Voxel 1
+        vox0->SetExternalDisp(Vec3D<>(0, 0, 0.05));
+        Vec3D<> vec = vox0->GetExternalForce();
+        double x = vec.x;
+        double y = vec.y;
+        double z = vec.z;
+        //Vec3D<> vec = vox0->GetExternalTorque();
+        //vox0->AddExternalForce(Vec3D<>(0, 0, 0.05)); //pulls Voxel 3 downward with 1 Newton of force.
+        test = true;
+        //for (int i=0; i<100; i++) MainSim.doTimeStep(); //simulate  100 timesteps.
+    }
+
+}
+#endif
 
 #ifdef MY_ARM_GAZEBO_TRANSPORT
 void VoxCad::initGazeboCamera(ir::CameraPtr camera)

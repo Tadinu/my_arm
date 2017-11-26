@@ -29,9 +29,10 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_REMOTE_FUNC_SHOW_MESSAGE          = 'displayMessage'
-CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS      = 'reloadFallingObjects'
-CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND     = 'detectObjectsOnGround'
+CSERVER_REMOTE_FUNC_SHOW_MESSAGE      = 'displayMessage'
+CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS  = 'reloadFallingObjectsFromClient'
+CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND = 'detectObjectOnGroundFromClient'
+CSERVER_REMOTE_FUNC_OPERATION_TIME    = 'getRobotOperationTimeToTheMomentFromClient'
 
 class RobotOperationEnvironment(gym.Env):
 
@@ -40,10 +41,11 @@ class RobotOperationEnvironment(gym.Env):
         self._robotId  = robotId
         self._robotHandle = robotHandle
 
-        self._timeStep = 1./240.
+        self._timeStep = 0.1 # This is self-defined time interval for each reset!
         self._observation = []
         self._envStepCounter = 0
         self._mutex = threading.Lock()
+        self._objGroundHit = False
 
         # INITIALIZE ENVIRONMENT
         self.loadEnvironmentObjects()
@@ -71,7 +73,7 @@ class RobotOperationEnvironment(gym.Env):
         #  return p.createMultiBody(1, shapeId, -1, pos, [0,0,0,1])
 
     def __del__(self):
-        self._rt.stop()
+        return
 
     def loadEnvironmentObjects(self):
         ## FALLING OBJECTS --
@@ -91,8 +93,8 @@ class RobotOperationEnvironment(gym.Env):
 
         # TIMER TASK
         self._timerInterval = 1
-        self._rt = RepeatedTimer(self._timerInterval, self.doTimerTask) # it auto-starts, no need of rt.start()
-        self._rt.start()
+        #self._rt = RepeatedTimer(self._timerInterval, self.doTimerTask) # it auto-starts, no need of rt.start()
+        #self._rt.start()
 
     def setTerminated(self, terminated):
         self._mutex.acquire()
@@ -106,26 +108,28 @@ class RobotOperationEnvironment(gym.Env):
         if(RC.GB_TRACE):
             print("_reset")
         self.setTerminated(0)
+        self._objGroundHit = False
         #print("Start back simulation")
         #RC.startSimulation(self._clientID)
 
         ## RESET ROBOT POS --
-        self._robot.resetRobot()
+        self._robot.resetRobot() # Time sleep inside
 
-        time.sleep(4)
-        ## LOAD FALLING OBJS --
-        self.reloadFallingObjects()
+        ## LOAD FALLING OBJS --  (HAD BETTER LET THIS JOB TO V-REP SERVER, SINCE IT KNOWS WHEN THE RESET PROCESS FINISHED!
+        ##self.reloadFallingObjects()
 
         ## STEP SIMULATION --
-        self._envStepCounter = 0
+        #self._envStepCounter = 0 # This count is set in train_robot_operation.py
 
         ## OBSERVATION --
         self._observation = self.getObservation()
 
-        self._robot.commandJointVibration(1)
+        if(not RC.doJointVibration()):
+            self._robot.commandJointVibration(1)
 
         ## ducta--
         #self._timer.start()
+        time.sleep(self._timeStep)
         return self._observation
 
     def _seed(self, seed=None):
@@ -133,8 +137,7 @@ class RobotOperationEnvironment(gym.Env):
         return [seed]
 
     def doTimerTask(self):
-        if(not self.isTerminated()):
-            self._robot.randomJoints()
+        return 0
 
     def getObservation(self):
         self._observation = self._robot.getObservation()
@@ -172,6 +175,19 @@ class RobotOperationEnvironment(gym.Env):
                           (tubePos[1] - palmPos[1])**2)
             self._observation.append(np.array(d, dtype=np.float32))
 
+        elif(RC.isTaskObjCatch()):
+            ##############################################################################################
+            # BALL INFO
+            #
+            # Ball Object
+            # Ball z position only
+            ballPos    = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
+            ballLinVel = RC.getObjectVelocity(RC.CBALL_OBJ_NAME)
+            ##self._observation.append(np.array(ballPos[0], dtype=np.float32))
+            ##self._observation.append(np.array(ballPos[1], dtype=np.float32))
+            self._observation.append(np.array(ballPos[2], dtype=np.float32))
+            self._observation.append(np.array(ballLinVel[2], dtype=np.float32))
+
         return self._observation
 
     def reloadFallingObjects(self):
@@ -179,8 +195,8 @@ class RobotOperationEnvironment(gym.Env):
         inputFloats  = [53.21,17.39]
         inputStrings = RC.CFALL_OBJS_NAMES
         inputBuffer  = bytearray()
-        inputBuffer.append(78)
-        inputBuffer.append(42)
+        ##inputBuffer.append(78)
+        ##inputBuffer.append(42)
         res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME,    \
                                                                                      vrep.sim_scripttype_childscript,                   \
                                                                                      CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS,              \
@@ -203,53 +219,79 @@ class RobotOperationEnvironment(gym.Env):
         ## ----------------------------------------------------------------------------------------
         if(RC.GB_TRACE):
             print('ACTION:', action)
-        self._robot.applyAction(action)
-        time.sleep(self._timeStep)
+        ## ----------------------------------------------------------------------------------------
+        ## APPLY ACTION START
+        ##
+        ## WAIT FOR V-REP SERVER SIMULATION STATE TO BE READY
+        ##
+        if(self._robot.getOperationState() == RC.CROBOT_STATE_READY):
+            self._robot.applyAction(action)
+        #time.sleep(self._timeStep)
+        ##time.sleep(2000)
+
+        self._objGroundHit = False
+
         self._observation = self.getObservation()
-        self._envStepCounter += 1
-        #print("self._envStepCounter")
-        #print(self._envStepCounter)
-
-        done = self._termination()
         reward = self._reward()
+        done   = self._termination()
+        if(self._objGroundHit):
+            #print('GROUND HIT TERMINATED!')
+            reward -= 100
         #print("len=%r" % len(self._observation))
-
-        if(done):
-            self._observation = self.getObservation()
 
         return self._observation, reward, done, {}
 
     def _termination(self):
-        #print("self._envStepCounter")
-        #print(self._envStepCounter)
-        if (self._terminated or self._envStepCounter>1000): # Reset as step counter exceeds certain value to avoid underfitting
-            RC.stopSimulation(self._clientID)
-            self._robot.commandJointVibration(0)
+        if (self._terminated):
+            ##RC.stopSimulation(self._clientID)
+            ##self._robot.commandJointVibration(0)
             return True
 
         # Hit the object or object hit the ground
         #self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[0])
 
+        objName = ''
         if(RC.isTaskObjBalance()):
-            pos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
+            objName = RC.CPLATE_OBJ_NAME
         elif(RC.isTaskObjHold()):
-            pos    = RC.getObjectWorldPosition(RC.CTUBE_OBJ_NAME)
-        #print('Plate Pos:', platePos)
-        if (pos[2] < 1.4):
-            RC.stopSimulation(self._clientID)
-            self._robot.commandJointVibration(0)
+            objName = RC.CTUBE_OBJ_NAME
+        elif(RC.isTaskObjCatch()):
+            objName = RC.CBALL_OBJ_NAME
+
+        pos = RC.getObjectWorldPosition(objName)
+        ##print('Obj Pos:', pos)
+
+        if(RC.isTaskObjCatch()):
+            if (self._robot.checkObjectCaught()):
+                return True
+
+        # Simple Ground Hit Check
+        if (pos[2] < 0.5):
+            self._objGroundHit = True
+            #print('Plate distance to floor:',pos[2])
+            ##RC.stopSimulation(self._clientID)
+            ##self._robot.commandJointVibration(0)
             return True
 
+        # V-REP API Ground Hit Check
         res = self.detectObjectsReachGround()
         if(res):
-            RC.stopSimulation(self._clientID)
-            self._robot.commandJointVibration(0)
+            ##self._objGroundHit = True
+            ##RC.stopSimulation(self._clientID)
+            ##self._robot.commandJointVibration(0)
             return res
 
-        res = self.detectHandOnGround()
-        if(res):
-            RC.stopSimulation(self._clientID)
-            self._robot.commandJointVibration(0)
+        if(not RC.isTaskObjCatch()):
+            res = self.detectHandOnGround()
+            ##if(res):
+                ##RC.stopSimulation(self._clientID)
+                ##self._robot.commandJointVibration(0)
+
+        robotOperTime = self.getRobotOperationTime()
+        #print('Operation Time:', robotOperTime)
+        if(robotOperTime > 20000):
+            return True
+
         return res
 
     def _reward(self):
@@ -260,7 +302,11 @@ class RobotOperationEnvironment(gym.Env):
         robotId = self._robot.id()
         #
         if(robotId == RC.CJACO_ARM_HAND or robotId == RC.CKUKA_ARM_BARRETT_HAND \
+                                        or robotId == RC.CKUKA_ARM_SUCTION_PAD \
                                         or robotId == RC.CUR5_ARM_BARRETT_HAND):
+            # ------------------------------------------------------------------------------------------------
+            # BALANCE TASK -----------------------------------------------------------------------------------
+            #
             if(RC.isTaskObjBalance()):
                 # Distance of plate away from hand palm center -----------------------------------------------
                 platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
@@ -286,11 +332,38 @@ class RobotOperationEnvironment(gym.Env):
                 #endTipVelocity = self._robot.getEndTipVelocity()
                 #print('Endtip Vel', endTipVelocity)
 
-            #handPos = self._robot.getHandWorldPosition()
-            #handOrient = self._robot.getHandOrientation()
-            ##print('Hand Orient', handOrient)
-            #handVelocity = self._robot.getHandVelocity()
-            ##print('Hand Vel', handVelocity)
+                #handPos = self._robot.getHandWorldPosition()
+                #handOrient = self._robot.getHandOrientation()
+                ##print('Hand Orient', handOrient)
+                #handVelocity = self._robot.getHandVelocity()
+                ##print('Hand Vel', handVelocity)
+
+            # ------------------------------------------------------------------------------------------------
+            # CATCH TASK -------------------------------------------------------------------------------------
+            #
+            elif(RC.isTaskObjCatch()):
+                # Distance of base joint pos to the ball
+                ballPos = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
+                basePos = self._robot.getCurrentBaseJointPos()
+                angle   = math.atan2(ballPos[1], ballPos[0])
+                self.__reward -= abs(angle - basePos)
+
+                # Z Distance from ball to the suction pad
+                suctionPadPosZ = 9.5846e-01 + 1.0000e-01
+                dist = ballPos[2] - suctionPadPosZ
+                if(dist > 0):
+                    self.__reward -= dist
+                else:
+                    self.__reward -= 1000
+
+                # Wrist joint orientation directed to the ball
+                #suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
+                #print('Suction Pad Orient', suctionPadOrient)
+
+                padTip = self._robot.getSuctionPadTip()
+                endTip = RC.getObjectWorldPosition('RobotTip')
+                self.__reward -= RC.getDistanceFromPointToLine(ballPos, padTip, endTip)
+                ##suctionPadLine = padTip - endTip
 
         if(RC.GB_TRACE):
             print('self.__reward:', self.__reward)
@@ -422,6 +495,18 @@ class RobotOperationEnvironment(gym.Env):
         res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME,    \
                                                                                      vrep.sim_scripttype_childscript,                   \
                                                                                      CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND,             \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        return retInts[0]
+
+    def getRobotOperationTime(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME,    \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_OPERATION_TIME,             \
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retInts[0]

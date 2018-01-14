@@ -285,10 +285,13 @@ def draw_data():
 
 def gb_observation_2_state(ob):
     if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
-        if(RC.isTaskObjBalance()):
-            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
-                              ob[7], ob[8], ob[9],
-                              ob[10]
+        if(RC.isTaskObjHandBalance()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
+                              ob[6], ob[7], ob[8], ob[9]
+                              ))
+        elif(RC.isTaskObjSuctionBalance()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
+                              ob[6], ob[7]
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)

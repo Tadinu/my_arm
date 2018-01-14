@@ -606,21 +606,24 @@ class Robot:
     def getObservation(self):
         observation = []
         #endTipPos = self.getEndTipWorldPosition()
-        isTaskObjBalance = RC.isTaskObjBalance()
-        isTaskObjHold    = RC.isTaskObjHold()
-        isTaskObjCatch   = RC.isTaskObjCatch()
+        isTaskObjHandBalance    = RC.isTaskObjHandBalance()
+        isTaskObjSuctionBalance = RC.isTaskObjSuctionBalance()
+        isTaskObjHold           = RC.isTaskObjHold()
+        isTaskObjCatch          = RC.isTaskObjCatch()
 
         for i in range(len(self._jointHandles)):
-            pos   = RC.getJointPosition(self._jointHandles[i])
-            #linearVel, angVel  = RC.getObjectVelocity(self._jointHandles[i])
-            force = RC.getJointForce(self._jointHandles[i])
-            #
-            if(isTaskObjBalance):
-                observation.append(np.array(pos, dtype=np.float32)) # Pos
-            elif(isTaskObjHold):
-                observation.append(np.array(force, dtype=np.float32)) # Force
+            if(i == 0 or i == 4 or i == 5):
+                pos = RC.getJointPosition(self._jointHandles[i])
+                vel = RC.getJointVelocity(self._jointHandles[i])
+                #
+                if(isTaskObjHandBalance or isTaskObjSuctionBalance):
+                    observation.append(np.array(pos, dtype=np.float32)) # Pos
+                    observation.append(np.array(vel, dtype=np.float32)) # Vel
+                elif(isTaskObjHold):
+                    force = RC.getJointForce(self._jointHandles[i])
+                    observation.append(np.array(force, dtype=np.float32)) # Force
 
-        if(isTaskObjBalance):
+        if(isTaskObjHandBalance):
             # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should
             # also be added into the environment)
             #

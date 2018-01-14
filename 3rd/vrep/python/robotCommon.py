@@ -66,15 +66,20 @@ CSUCTION_PAD_NAME = 'suctionPad'
 # ================================================================
 # TRAINING TASK NAMES --------------------------------------------
 #
-CTASK_ID_OBJ_BALANCE    = 1
-CTASK_ID_OBJ_HOLD       = 2
-CTASK_ID_OBJ_CATCH      = 3
-CTASK_ID_OBJ_MOVE_CATCH = 4
-CTASK_ID_OBJ_AVOID      = 5
-GB_TASK_ID = CTASK_ID_OBJ_BALANCE
+CTASK_ID_OBJ_HAND_BALANCE    = 1
+CTASK_ID_OBJ_SUCTION_BALANCE = 2
+CTASK_ID_OBJ_HOLD            = 3
+CTASK_ID_OBJ_CATCH           = 4
+CTASK_ID_OBJ_MOVE_CATCH      = 5
+CTASK_ID_OBJ_AVOID           = 6
 
-def isTaskObjBalance():
-    return GB_TASK_ID == CTASK_ID_OBJ_BALANCE
+GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE
+
+def isTaskObjHandBalance():
+    return GB_TASK_ID == CTASK_ID_OBJ_HAND_BALANCE
+
+def isTaskObjSuctionBalance():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE
 
 def isTaskObjHold():
     return GB_TASK_ID == CTASK_ID_OBJ_HOLD
@@ -86,13 +91,7 @@ def isTaskObjMoveCatch():
     return GB_TASK_ID == CTASK_ID_OBJ_MOVE_CATCH
 
 def doJointVibration():
-    return isTaskObjBalance() or isTaskObjHold()
-
-# ================================================================
-# ROBOT OPERATION STATE ------------------------------------------
-#
-CROBOT_STATE_MOVING = 1
-CROBOT_STATE_IDLE   = 2 # Stand still
+    return isTaskObjHandBalance() or isTaskObjHold()
 
 # ================================================================
 # ACTION, STATE DIMENSIONS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -102,10 +101,14 @@ GB_STATE_DIM  = 10
 
 if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
     # 9 (7 Kuka arm joints & 2 Hand finger angle)
-    if(isTaskObjBalance()):
-        # 3 (1 Arm Base joint, 1 Arm Wrist joint, 2 revolute hand finger base joints) OR
+    if(isTaskObjHandBalance()):
+        # 4 (1 Arm Twist joint, 1 Arm Wrist joint, 2 revolute hand finger base joints)
         GB_ACTION_DIM = 4
-        GB_STATE_DIM  = 11
+        GB_STATE_DIM  = 10
+    if(isTaskObjSuctionBalance()):
+        # 2 (1 Arm Twist joint, 1 Arm Wrist joint), Base joint as fixed movement (environment role)
+        GB_ACTION_DIM = 2
+        GB_STATE_DIM  = 8
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4

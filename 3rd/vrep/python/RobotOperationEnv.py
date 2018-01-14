@@ -143,7 +143,7 @@ class RobotOperationEnvironment(gym.Env):
         self._observation = self._robot.getObservation()
 
         #robotId = self._robot.id()
-        if(RC.isTaskObjBalance()):
+        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance()):
             ##############################################################################################
             # PLATE INFO
             #
@@ -251,7 +251,7 @@ class RobotOperationEnvironment(gym.Env):
         #self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[0])
 
         objName = ''
-        if(RC.isTaskObjBalance()):
+        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance()):
             objName = RC.CPLATE_OBJ_NAME
         elif(RC.isTaskObjHold()):
             objName = RC.CTUBE_OBJ_NAME
@@ -289,7 +289,7 @@ class RobotOperationEnvironment(gym.Env):
 
         robotOperTime = self.getRobotOperationTime()
         #print('Operation Time:', robotOperTime)
-        if(robotOperTime > 20000):
+        if(robotOperTime > 10000):
             return True
 
         return res
@@ -307,7 +307,7 @@ class RobotOperationEnvironment(gym.Env):
             # ------------------------------------------------------------------------------------------------
             # BALANCE TASK -----------------------------------------------------------------------------------
             #
-            if(RC.isTaskObjBalance()):
+            if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance()):
                 # Distance of plate away from hand palm center -----------------------------------------------
                 platePos    = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
                 endTipPos   = self._robot.getEndTipWorldPosition()

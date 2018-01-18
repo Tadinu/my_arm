@@ -49,7 +49,7 @@ CSERVER_REMOTE_FUNC_DETECT_COLLISION    = 'detectCollisionWith'
 CSERVER_REMOTE_FUNC_RESET_ROBOT         = 'resetRobot'
 CSERVER_REMOTE_FUNC_GET_OPERATION_STATE = 'getRobotOperationStateFromClient'
 CSERVER_REMOTE_FUNC_ROBOT_CAUGHT_OBJ    = 'checkRobotCaughtObj'
-CSERVER_REMOTE_FUNC_GET_SUCTION_PAD_TIP = 'getSuctionPadTip'
+CSERVER_REMOTE_FUNC_GET_SUCTION_PAD_TIP_INFO = 'getSuctionPadTipInfo'
 
 # KUKA ROBOTS --------------------------------------------------------------------------
 #
@@ -145,12 +145,65 @@ GB_CEIGENGRASP_NO         = len(GB_HAND_EIGENGRASP_VALUES)
 
 GB_HAND_EIGENGRASP_ORI = GB_BARRETT_HAND_EIGENGRASP_ORI
 
-# ROBOT COMMON INFO
+# HEXAPOD ROBOT -------------------------------------------------------------------
+#
+HEXAPOD_JOINT_NAMES = ['hexa_joint1_0',
+                       'hexa_joint2_0',
+                       'hexa_joint3_0',
+
+                       'hexa_joint1_1',
+                       'hexa_joint2_1',
+                       'hexa_joint3_1',
+
+                       'hexa_joint1_2',
+                       'hexa_joint2_2',
+                       'hexa_joint3_2',
+
+                       'hexa_joint1_3',
+                       'hexa_joint2_3',
+                       'hexa_joint3_3',
+
+                       'hexa_joint1_4',
+                       'hexa_joint2_4',
+                       'hexa_joint3_4',
+
+                       'hexa_joint1_5',
+                       'hexa_joint2_5',
+                       'hexa_joint3_5'
+                       ]
+
+HEXAPOD_JOINT_SIGNAL_NAME_PREFIXES = ['hexaJoint10',
+                                      'hexaJoint20',
+                                      'hexaJoint30',
+
+                                      'hexaJoint11',
+                                      'hexaJoint21',
+                                      'hexaJoint31',
+
+                                      'hexaJoint12',
+                                      'hexaJoint22',
+                                      'hexaJoint32',
+
+                                      'hexaJoint13',
+                                      'hexaJoint23',
+                                      'hexaJoint33',
+
+                                      'hexaJoint14',
+                                      'hexaJoint24',
+                                      'hexaJoint34',
+
+                                      'hexaJoint15',
+                                      'hexaJoint25',
+                                      'hexaJoint35'
+                                      ]
+
+# ROBOT COMMON INFO ---------------------------------------------------------------
 #
 GB_CROBOT_JOINT_NAMES                = []
 GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES = []
 GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES = []
 GB_CROBOT_HAND_JOINT_NAMES = BARRETT_HAND_JOINT_NAMES
+
 if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
     GB_CROBOT_JOINT_NAMES                     = KUKA_ARM_JOINT_NAMES
     GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES
@@ -160,6 +213,10 @@ elif(RC.GB_CSERVER_ROBOT_ID == RC.CUR5_ARM_BARRETT_HAND):
     GB_CROBOT_JOINT_NAMES                     = UR5_ARM_JOINT_NAMES
     GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES
     GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES = BARRETT_HAND_JOINT_SIGNAL_NAME_PREFIXES
+
+elif(RC.GB_CSERVER_ROBOT_ID == RC.CHEXAPOD):
+    GB_CROBOT_JOINT_NAMES                     = HEXAPOD_JOINT_NAMES
+    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = HEXAPOD_JOINT_SIGNAL_NAME_PREFIXES
 #else ...
 
 GB_CBASE_JOINT_NAME = GB_CROBOT_JOINT_NAMES[0]
@@ -378,7 +435,7 @@ class Robot:
             inputFloats  = action
             inputStrings = []
             inputBuffer  = bytearray()
-            #print('ApplyAction:', action)
+            print('ApplyAction:', action)
             res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, remoteObjectName,                  \
                                                                                          vrep.sim_scripttype_childscript,                   \
                                                                                          CSERVER_REMOTE_FUNC_ROBOT_ACT,                     \
@@ -390,14 +447,14 @@ class Robot:
         vrep.simxSynchronousTrigger(self._clientID)
         return 1
 
-    def getSuctionPadTip(self):
+    def getSuctionPadTipInfo(self):
         inputInts    = [self._robotHandle] #[objHandles[16]]
         inputFloats  = [1]
         inputStrings = []
         inputBuffer  = bytearray()
         res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME, \
                                                                                      vrep.sim_scripttype_childscript,                   \
-                                                                                     CSERVER_REMOTE_FUNC_GET_SUCTION_PAD_TIP,           \
+                                                                                     CSERVER_REMOTE_FUNC_GET_SUCTION_PAD_TIP_INFO,      \
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retFloats
@@ -608,20 +665,27 @@ class Robot:
         #endTipPos = self.getEndTipWorldPosition()
         isTaskObjHandBalance    = RC.isTaskObjHandBalance()
         isTaskObjSuctionBalance = RC.isTaskObjSuctionBalance()
+        isTaskObjHexapodBalance = RC.isTaskObjHexapodBalance()
         isTaskObjHold           = RC.isTaskObjHold()
         isTaskObjCatch          = RC.isTaskObjCatch()
+        isTaskObjTimelyPick     = RC.isTaskObjTimelyPick()
 
         for i in range(len(self._jointHandles)):
-            if(i == 0 or i == 4 or i == 5):
-                pos = RC.getJointPosition(self._jointHandles[i])
-                vel = RC.getJointVelocity(self._jointHandles[i])
+            if(isTaskObjHexapodBalance or isTaskObjTimelyPick):
+                pos = RC.getJointPosition(self._jointHandles[i]) # Pos
                 #
-                if(isTaskObjHandBalance or isTaskObjSuctionBalance):
-                    observation.append(np.array(pos, dtype=np.float32)) # Pos
-                    observation.append(np.array(vel, dtype=np.float32)) # Vel
-                elif(isTaskObjHold):
-                    force = RC.getJointForce(self._jointHandles[i])
-                    observation.append(np.array(force, dtype=np.float32)) # Force
+                observation.append(np.array(pos, dtype=np.float32))
+            else:
+                if(i == 0 or i == 3 or i == 4 or i == 5):
+                    pos = RC.getJointPosition(self._jointHandles[i])
+                    vel = RC.getJointVelocity(self._jointHandles[i])
+                    #
+                    if(isTaskObjHandBalance or isTaskObjSuctionBalance):
+                        observation.append(np.array(pos, dtype=np.float32)) # Pos
+                        observation.append(np.array(vel, dtype=np.float32)) # Vel
+                    elif(isTaskObjHold):
+                        force = RC.getJointForce(self._jointHandles[i])
+                        observation.append(np.array(force, dtype=np.float32)) # Force
 
         if(isTaskObjHandBalance):
             # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should

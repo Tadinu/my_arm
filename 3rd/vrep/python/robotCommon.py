@@ -29,6 +29,7 @@ CJACO_ARM_HAND = 2
 CKUKA_ARM_BARRETT_HAND = 3
 CUR5_ARM_BARRETT_HAND  = 4
 CKUKA_ARM_SUCTION_PAD  = CKUKA_ARM_BARRETT_HAND
+CHEXAPOD = 5
 
 # ================================================================
 # ROBOT OPERATION STATE-------------------------------------------
@@ -52,6 +53,7 @@ CKUKA_ARM_NAME = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
 CYOUBOT_NAME   = 'youBot'# 'LBR4p'
 CJACO_ARM_HAND_NAME = 'JacoHand'
 CBARRETT_HAND_NAME = 'BarrettHand'
+CHEXAPOD_NAME = 'hexapod'
 
 # ================================================================
 # OBJECT NAMES ---------------------------------------------------
@@ -68,10 +70,13 @@ CSUCTION_PAD_NAME = 'suctionPad'
 #
 CTASK_ID_OBJ_HAND_BALANCE    = 1
 CTASK_ID_OBJ_SUCTION_BALANCE = 2
-CTASK_ID_OBJ_HOLD            = 3
-CTASK_ID_OBJ_CATCH           = 4
-CTASK_ID_OBJ_MOVE_CATCH      = 5
-CTASK_ID_OBJ_AVOID           = 6
+CTASK_ID_OBJ_HEXAPOD_BALANCE = 3
+CTASK_ID_OBJ_HOLD            = 4
+CTASK_ID_OBJ_CATCH           = 5
+CTASK_ID_OBJ_BALANCE         = 6
+CTASK_ID_OBJ_MOVE_CATCH      = 7
+CTASK_ID_OBJ_AVOID           = 8
+CTASK_ID_OBJ_TIMELY_PICK     = 9 # On conveyor belt
 
 GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE
 
@@ -81,6 +86,9 @@ def isTaskObjHandBalance():
 def isTaskObjSuctionBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE
 
+def isTaskObjHexapodBalance():
+    return GB_TASK_ID == CTASK_ID_OBJ_HEXAPOD_BALANCE
+
 def isTaskObjHold():
     return GB_TASK_ID == CTASK_ID_OBJ_HOLD
 
@@ -89,6 +97,9 @@ def isTaskObjCatch():
 
 def isTaskObjMoveCatch():
     return GB_TASK_ID == CTASK_ID_OBJ_MOVE_CATCH
+
+def isTaskObjTimelyPick():
+    return GB_TASK_ID == CTASK_ID_OBJ_TIMELY_PICK
 
 def doJointVibration():
     return isTaskObjHandBalance() or isTaskObjHold()
@@ -106,9 +117,9 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         GB_ACTION_DIM = 4
         GB_STATE_DIM  = 10
     if(isTaskObjSuctionBalance()):
-        # 2 (1 Arm Twist joint, 1 Arm Wrist joint), Base joint as fixed movement (environment role)
-        GB_ACTION_DIM = 2
-        GB_STATE_DIM  = 8
+        # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
+        GB_ACTION_DIM = 3
+        GB_STATE_DIM  = 10
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4
@@ -129,6 +140,11 @@ elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
     GB_ACTION_DIM = 1
     GB_STATE_DIM  = 10
     GB_CSERVER_ROBOT_NAME = CJACO_ARM_HAND_NAME
+
+elif(GB_CSERVER_ROBOT_ID == CHEXAPOD):
+    GB_ACTION_DIM = 3
+    GB_STATE_DIM  = 20
+    GB_CSERVER_ROBOT_NAME = CHEXAPOD_NAME
 
 def init(clientID):
     global GB_CLIENT_ID

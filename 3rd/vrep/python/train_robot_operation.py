@@ -158,7 +158,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     except:
         print("Cannot find the weight")
 
-    print("Falling obj catching Experiment Start.")
+    print("Manipulator DDPG Training Experiment Start.")
     for episode in range(episode_count):
 
         if(RC.GB_TRACE):
@@ -178,8 +178,14 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             a_t = np.zeros([1,action_dim])
             noise_t = np.zeros([1,action_dim])
 
-            #print("ST RESHAPE", s_t.reshape(1, s_t.shape[0]), s_t.shape[0])
+            print("ST RESHAPE", np.reshape(s_t, (1, s_t.shape[0])))
+            #if(j!=0):
+            print('Episode ', episode, 'Step ',j,'--------------')
+            print('Start waiting for the next action', env._robot.getOperationState())
+            while(env._robot.getOperationState() != RC.CROBOT_STATE_READY):
+                time.sleep(0.01)
             a_t_original = actor.model.predict(np.reshape(s_t, (1, s_t.shape[0])))
+            print('Generated action:', a_t_original)
 
             #print("a_t", a_t)
             #print("noise_t", noise_t)
@@ -291,7 +297,7 @@ def gb_observation_2_state(ob):
                               ))
         elif(RC.isTaskObjSuctionBalance()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
-                              ob[6], ob[7]
+                              ob[6], ob[7], ob[8], ob[9]
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
@@ -300,6 +306,13 @@ def gb_observation_2_state(ob):
                               ))
         elif(RC.isTaskObjCatch()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3]))
+
+    elif(RC.GB_CSERVER_ROBOT_ID == RC.CHEXAPOD):
+        if(RC.isTaskObjHexapodBalance()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
+                              ob[6], ob[7]
+                              ))
+
     else: #if(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
         return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint i (pos)
                           ob[6], ob[7], ob[8],  # Endtip pos X,Y,Z

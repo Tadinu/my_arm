@@ -70,19 +70,20 @@ KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint1',
                                        'armJoint7']
 # UR5 ROBOTS --------------------------------------------------------------------------
 #
-UR5_ARM_JOINT_NAMES = [RC.CUR5_ARM_NAME + ('_joint0'),
-                       RC.CUR5_ARM_NAME + ('_joint1'),
+gbUR5OriginalRobotPos = [0,0,0,0,0,0]
+UR5_ARM_JOINT_NAMES = [RC.CUR5_ARM_NAME + ('_joint1'),
                        RC.CUR5_ARM_NAME + ('_joint2'),
                        RC.CUR5_ARM_NAME + ('_joint3'),
                        RC.CUR5_ARM_NAME + ('_joint4'),
-                       RC.CUR5_ARM_NAME + ('_joint5')]
+                       RC.CUR5_ARM_NAME + ('_joint5'),
+                       RC.CUR5_ARM_NAME + ('_joint6')]
 
-UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint0',
-                                      'armJoint1',
+UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint1',
                                       'armJoint2',
                                       'armJoint3',
                                       'armJoint4',
-                                      'armJoint5']
+                                      'armJoint5',
+                                      'armJoint6']
 
 # JACO ARM -----------------------------------------------------------------------------
 #
@@ -213,6 +214,10 @@ elif(RC.GB_CSERVER_ROBOT_ID == RC.CUR5_ARM_BARRETT_HAND):
     GB_CROBOT_JOINT_NAMES                     = UR5_ARM_JOINT_NAMES
     GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES
     GB_CROBOT_HAND_JOINT_SIGNAL_NAME_PREFIXES = BARRETT_HAND_JOINT_SIGNAL_NAME_PREFIXES
+
+elif(RC.GB_CSERVER_ROBOT_ID == RC.CUR5_ARM_GRIPPER):
+    GB_CROBOT_JOINT_NAMES                     = UR5_ARM_JOINT_NAMES
+    GB_CROBOT_JOINT_SIGNAL_NAME_PREFIXES      = UR5_ARM_JOINT_SIGNAL_NAME_PREFIXES
 
 elif(RC.GB_CSERVER_ROBOT_ID == RC.CHEXAPOD):
     GB_CROBOT_JOINT_NAMES                     = HEXAPOD_JOINT_NAMES
@@ -670,19 +675,25 @@ class Robot:
         isTaskObjCatch          = RC.isTaskObjCatch()
         isTaskObjTimelyPick     = RC.isTaskObjTimelyPick()
 
+        if(isTaskObjTimelyPick):
+            jointPoses = gbUR5OriginalRobotPos
+            for i in range(len(self._jointHandles)):
+                #
+                observation.append(np.array(jointPoses[i], dtype=np.float32))
+
         for i in range(len(self._jointHandles)):
-            if(isTaskObjHexapodBalance or isTaskObjTimelyPick):
+            if(isTaskObjHexapodBalance):
                 pos = RC.getJointPosition(self._jointHandles[i]) # Pos
                 #
                 observation.append(np.array(pos, dtype=np.float32))
             else:
                 if(i == 0 or i == 3 or i == 4 or i == 5):
                     pos = RC.getJointPosition(self._jointHandles[i])
-                    vel = RC.getJointVelocity(self._jointHandles[i])
+                    #vel = RC.getJointVelocity(self._jointHandles[i])
                     #
                     if(isTaskObjHandBalance or isTaskObjSuctionBalance):
                         observation.append(np.array(pos, dtype=np.float32)) # Pos
-                        observation.append(np.array(vel, dtype=np.float32)) # Vel
+                        #observation.append(np.array(vel, dtype=np.float32)) # Vel
                     elif(isTaskObjHold):
                         force = RC.getJointForce(self._jointHandles[i])
                         observation.append(np.array(force, dtype=np.float32)) # Force
@@ -730,8 +741,14 @@ class Robot:
 
     def resetRobot(self):
         # !NOTE: V-REP NOT ALLOW ALL-VOID PARAMETERS, SO WE HAVE TO ADD A DUMMY VALUE INTO inputFloats[]
+
         inputInts    = []
-        inputFloats  = [1]
+        if(RC.isTaskObjTimelyPick()):
+            ##gbUR5OriginalRobotPos =
+            inputFloats  = gbUR5OriginalRobotPos
+        else:
+            inputFloats  = [1]
+
         inputStrings = []
         inputBuffer  = bytearray()
         if(self._id == RC.CYOUBOT):

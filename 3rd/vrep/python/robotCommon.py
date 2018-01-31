@@ -13,7 +13,7 @@ import numpy as np
 from numpy.linalg import norm
 
 GB_TRACE = 0
-GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
+GB_MODE_TRAINING = 0 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
 
 # ================================================================
@@ -29,15 +29,17 @@ CJACO_ARM_HAND = 2
 CKUKA_ARM_BARRETT_HAND = 3
 CUR5_ARM_BARRETT_HAND  = 4
 CKUKA_ARM_SUCTION_PAD  = CKUKA_ARM_BARRETT_HAND
-CHEXAPOD = 5
+CUR5_ARM_GRIPPER = 5
+CHEXAPOD = 6
 
 # ================================================================
 # ROBOT OPERATION STATE-------------------------------------------
 #
 CROBOT_STATE_READY  = 1 # After Reset is finished
 CROBOT_STATE_MOVING = 2 # Running an action
-CROBOT_STATE_RESETTING_ARM  = 3 # Running Arm Reset
-CROBOT_STATE_RESETTING_HAND = 4 # Running Hand Reset
+CROBOT_STATE_MOVING_ENDED = 3 # Running an action
+CROBOT_STATE_RESETTING_ARM_ENDED  = 4 # Running Arm Reset
+CROBOT_STATE_RESETTING_HAND = 5 # Running Hand Reset
 
 # ================================================================
 # SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -48,26 +50,30 @@ GB_CSERVER_ROBOT_NAME = ''
 # ================================================================
 # ROBOT NAMES ----------------------------------------------------
 #
-CUR5_ARM_NAME  = 'UR5'
-CKUKA_ARM_NAME = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
-CYOUBOT_NAME   = 'youBot'# 'LBR4p'
+CUR5_ARM_NAME       = 'UR5'
+CKUKA_ARM_NAME      = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
+CYOUBOT_NAME        = 'youBot'# 'LBR4p'
 CJACO_ARM_HAND_NAME = 'JacoHand'
-CBARRETT_HAND_NAME = 'BarrettHand'
-CHEXAPOD_NAME = 'hexapod'
+CBARRETT_HAND_NAME  = 'BarrettHand'
+CHEXAPOD_NAME       = 'hexapod'
 
 # ================================================================
 # OBJECT NAMES ---------------------------------------------------
 #
-CFALL_OBJS_NAMES = ['Obj1']
-CPLATE_OBJ_NAME = 'Plate'
-CTABLE_OBJ_NAME = 'Table'
-CTUBE_OBJ_NAME  = 'Tube'
-CBALL_OBJ_NAME  = 'Ball'
-CSUCTION_PAD_NAME = 'suctionPad'
+CFALL_OBJS_NAMES      = ['Obj1']
+CPLATE_OBJ_NAME       = 'Plate'
+CBASEPLATE_OBJ_NAME   = 'BasePlate'
+CTABLE_OBJ_NAME       = 'Table'
+CTUBE_OBJ_NAME        = 'Tube'
+CBALL_OBJ_NAME        = 'Ball'
+CCUBOID_OBJ_NAME      = 'Cuboid'
+CCONVEYOR_BELT_SENSOR = 'conveyorBelt_sensor'
+CSUCTION_PAD_NAME     = 'suctionPad'
 
 # ================================================================
 # TRAINING TASK NAMES --------------------------------------------
 #
+CTASK_ID_UNKNOWN             = -1
 CTASK_ID_OBJ_HAND_BALANCE    = 1
 CTASK_ID_OBJ_SUCTION_BALANCE = 2
 CTASK_ID_OBJ_HEXAPOD_BALANCE = 3
@@ -79,6 +85,9 @@ CTASK_ID_OBJ_AVOID           = 8
 CTASK_ID_OBJ_TIMELY_PICK     = 9 # On conveyor belt
 
 GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE
+
+def isUnknownTask():
+    return GB_TASK_ID == CTASK_ID_UNKNOWN
 
 def isTaskObjHandBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HAND_BALANCE
@@ -119,7 +128,7 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
     if(isTaskObjSuctionBalance()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
-        GB_STATE_DIM  = 10
+        GB_STATE_DIM  = 6
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4
@@ -134,6 +143,12 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
 elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
     GB_ACTION_DIM = 8 # 8(6 Kuka arm joints & 2 Hand finger angle)
     GB_STATE_DIM  = 12
+    GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
+
+elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_GRIPPER): ## if(isTaskObjTimelyPick()):
+    # Target Reaching Vel & Obj Gripping Vel
+    GB_ACTION_DIM = 2
+    GB_STATE_DIM  = 6
     GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
 
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):

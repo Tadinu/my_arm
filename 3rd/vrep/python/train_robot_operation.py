@@ -164,23 +164,26 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         if(RC.GB_TRACE):
             print("Episode : " + str(episode) + " Replay Buffer " + str(buff.count()))
 
-        ob = env.reset()
-
-        #s_t = np.reshape(ob, (-1, action_dim))
-        s_t = gb_observation_2_state(ob)
-        #print('OB', s_t)
-
         total_reward = 0.
         for j in range(max_steps):
+
+            if(RC.isUnknownTask() or episode == 0):
+                ob = env.reset()
+            else: #We take the ob from the previous step, since the reset returns meaningless value
+                env.reset()
+            #s_t = np.reshape(ob, (-1, action_dim))
+            s_t = gb_observation_2_state(ob)
+            #print('OB', s_t)
+
             ## ------------------------------------------------------------------------
             loss = 0
             epsilon -= 1.0 / EXPLORE
             a_t = np.zeros([1,action_dim])
             noise_t = np.zeros([1,action_dim])
 
-            print("ST RESHAPE", np.reshape(s_t, (1, s_t.shape[0])))
+            #print("ST RESHAPE", np.reshape(s_t, (1, s_t.shape[0])))
             #if(j!=0):
-            print('Episode ', episode, 'Step ',j,'--------------')
+            print('Episode ', episode, 'Step ', j,'--------------')
             print('Start waiting for the next action', env._robot.getOperationState())
             while(env._robot.getOperationState() != RC.CROBOT_STATE_READY):
                 time.sleep(0.01)
@@ -241,27 +244,27 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             if(RC.GB_TRACE):
                 print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
 
+            # End for on steps
+            if np.mod(j, 3) == 0:
+                if (train_indicator):
+                    if(RC.GB_TRACE):
+                        print("Now we save model")
+                    actor.model.save_weights("actormodel.h5", overwrite=True)
+                    with open("actormodel.json", "w") as outfile:
+                        json.dump(actor.model.to_json(), outfile)
+
+                    critic.model.save_weights("criticmodel.h5", overwrite=True)
+                    with open("criticmodel.json", "w") as outfile:
+                        json.dump(critic.model.to_json(), outfile)
+
+            if np.mod(j, 10) == 0:
+                print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
+                print("Total Step: " + str(step))
+                print("")
+
             step += 1
             if done:
                 break
-
-        # End for on steps
-        if np.mod(episode, 3) == 0:
-            if (train_indicator):
-                if(RC.GB_TRACE):
-                    print("Now we save model")
-                actor.model.save_weights("actormodel.h5", overwrite=True)
-                with open("actormodel.json", "w") as outfile:
-                    json.dump(actor.model.to_json(), outfile)
-
-                critic.model.save_weights("criticmodel.h5", overwrite=True)
-                with open("criticmodel.json", "w") as outfile:
-                    json.dump(critic.model.to_json(), outfile)
-
-        if np.mod(episode, 10) == 0:
-            print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
-            print("Total Step: " + str(step))
-            print("")
 
     print("Finish.")
     #env.stop() # Stop Client Connection to V-REP Server
@@ -296,8 +299,10 @@ def gb_observation_2_state(ob):
                               ob[6], ob[7], ob[8], ob[9]
                               ))
         elif(RC.isTaskObjSuctionBalance()):
-            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
-                              ob[6], ob[7], ob[8], ob[9]
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
+                              #ob[4],                     # Vel-Trained joint vel
+                              ob[4],                      # Plate tilting gamma(x), beta(y)
+                              ob[5]                       # Plate distance to base plate
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
@@ -306,6 +311,11 @@ def gb_observation_2_state(ob):
                               ))
         elif(RC.isTaskObjCatch()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3]))
+
+    elif(RC.GB_CSERVER_ROBOT_ID == RC.CUR5_ARM_GRIPPER):
+        if(RC.isTaskObjTimelyPick()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5] # Joint i (pos)
+                            ))
 
     elif(RC.GB_CSERVER_ROBOT_ID == RC.CHEXAPOD):
         if(RC.isTaskObjHexapodBalance()):

@@ -13,7 +13,7 @@ import numpy as np
 from numpy.linalg import norm
 
 GB_TRACE = 0
-GB_MODE_TRAINING = 0 # 1: Training, 0: Enjoying/Running/Testing
+GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
 
 # ================================================================
@@ -62,7 +62,7 @@ CHEXAPOD_NAME       = 'hexapod'
 #
 CFALL_OBJS_NAMES      = ['Obj1']
 CPLATE_OBJ_NAME       = 'Plate'
-CBASEPLATE_OBJ_NAME   = 'BasePlate'
+CBASE_PLATE_OBJ_NAME  = 'BasePlate'
 CTABLE_OBJ_NAME       = 'Table'
 CTUBE_OBJ_NAME        = 'Tube'
 CBALL_OBJ_NAME        = 'Ball'
@@ -75,16 +75,17 @@ CSUCTION_PAD_NAME     = 'suctionPad'
 #
 CTASK_ID_UNKNOWN             = -1
 CTASK_ID_OBJ_HAND_BALANCE    = 1
-CTASK_ID_OBJ_SUCTION_BALANCE = 2
-CTASK_ID_OBJ_HEXAPOD_BALANCE = 3
-CTASK_ID_OBJ_HOLD            = 4
-CTASK_ID_OBJ_CATCH           = 5
-CTASK_ID_OBJ_BALANCE         = 6
-CTASK_ID_OBJ_MOVE_CATCH      = 7
-CTASK_ID_OBJ_AVOID           = 8
-CTASK_ID_OBJ_TIMELY_PICK     = 9 # On conveyor belt
+CTASK_ID_OBJ_SUCTION_BALANCE_PLATE = 2
+CTASK_ID_OBJ_SUCTION_BALANCE_BALL  = 3
+CTASK_ID_OBJ_HEXAPOD_BALANCE = 4
+CTASK_ID_OBJ_HOLD            = 5
+CTASK_ID_OBJ_CATCH           = 6
+CTASK_ID_OBJ_BALANCE         = 7
+CTASK_ID_OBJ_MOVE_CATCH      = 8
+CTASK_ID_OBJ_AVOID           = 9
+CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 
-GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE
+GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE_PLATE
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -92,8 +93,11 @@ def isUnknownTask():
 def isTaskObjHandBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HAND_BALANCE
 
-def isTaskObjSuctionBalance():
-    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE
+def isTaskObjSuctionBalancePlate():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_PLATE
+
+def isTaskObjSuctionBalanceBall():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_BALL
 
 def isTaskObjHexapodBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HEXAPOD_BALANCE
@@ -125,10 +129,14 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         # 4 (1 Arm Twist joint, 1 Arm Wrist joint, 2 revolute hand finger base joints)
         GB_ACTION_DIM = 4
         GB_STATE_DIM  = 10
-    if(isTaskObjSuctionBalance()):
+    if(isTaskObjSuctionBalancePlate()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
         GB_STATE_DIM  = 6
+    elif(isTaskObjSuctionBalanceBall()):
+        # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
+        GB_ACTION_DIM = 3
+        GB_STATE_DIM  = 5
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4

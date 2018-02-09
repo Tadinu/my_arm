@@ -298,11 +298,15 @@ def gb_observation_2_state(ob):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
                               ob[6], ob[7], ob[8], ob[9]
                               ))
-        elif(RC.isTaskObjSuctionBalance()):
+        elif(RC.isTaskObjSuctionBalancePlate()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
                               #ob[4],                     # Vel-Trained joint vel
                               ob[4],                      # Plate tilting gamma(x), beta(y)
                               ob[5]                       # Plate distance to base plate
+                              ))
+        elif(RC.isTaskObjSuctionBalanceBall()):
+            return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
+                              ob[4]                       # Ball distance to base plate
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)

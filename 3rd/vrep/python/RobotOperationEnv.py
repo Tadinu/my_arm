@@ -142,12 +142,12 @@ class RobotOperationEnvironment(gym.Env):
 
     def getObservation(self, action):
         self._observation = self._robot.getObservation()
-        #if(RC.isTaskObjSuctionBalance()):
+        #if(RC.isTaskObjSuctionBalancePlate()):
             # Vel-trained joint vel, action[1] --> Refer to the V-Rep Server Robot script to confirm this!
             #self._observation.append(np.array(action[1], dtype=np.float32))
 
         #robotId = self._robot.id()
-        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance() or RC.isTaskObjHexapodBalance()):
+        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHexapodBalance()):
             ##############################################################################################
             # PLATE INFO
             #
@@ -160,9 +160,17 @@ class RobotOperationEnvironment(gym.Env):
             # Distance from plate to the center of end-tip
             platePos  = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
             endTipPos = self._robot.getEndTipWorldPosition()
-            #basePlatePos = RC.getObjectWorldPosition(RC.CBASEPLATE_OBJ_NAME)
+            #basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
             d = math.sqrt((platePos[0] - endTipPos[0])**2 +
                           (platePos[1] - endTipPos[1])**2)
+            self._observation.append(np.array(d, dtype=np.float32))
+
+        elif(RC.isTaskObjSuctionBalanceBall()):
+            ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
+            basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
+            d = math.sqrt((ballPos[0] - basePlatePos[0])**2 +
+                          (ballPos[1] - basePlatePos[1])**2 +
+                          (ballPos[2] - basePlatePos[2])**2)
             self._observation.append(np.array(d, dtype=np.float32))
 
         elif(RC.isTaskObjHold()):
@@ -231,11 +239,11 @@ class RobotOperationEnvironment(gym.Env):
 
     def isObjGroundHit(self):
         objName = ''
-        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance() or RC.isTaskObjHexapodBalance()):
+        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHexapodBalance()):
             objName = RC.CPLATE_OBJ_NAME
         elif(RC.isTaskObjHold()):
             objName = RC.CTUBE_OBJ_NAME
-        elif(RC.isTaskObjCatch()):
+        elif(RC.isTaskObjCatch() or RC.isTaskObjSuctionBalanceBall()):
             objName = RC.CBALL_OBJ_NAME
         elif(RC.isTaskObjTimelyPick()):
             objName = RC.CCUBOID_OBJ_NAME
@@ -334,7 +342,7 @@ class RobotOperationEnvironment(gym.Env):
         if(res):
             return True
         else:
-            if(RC.isTaskObjSuctionBalance() or RC.isTaskObjHandBalance() or RC.isTaskObjCatch()):
+            if(RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHandBalance() or RC.isTaskObjCatch()):
                 while(self._robotOperationTime <= 7000):
                     self._robotOperationTime = self.getRobotOperationTime()
                     #print('Operation Time:', robotOperTime)
@@ -356,7 +364,7 @@ class RobotOperationEnvironment(gym.Env):
             # ------------------------------------------------------------------------------------------------
             # BALANCE TASK -----------------------------------------------------------------------------------
             #
-            if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance() or RC.isTaskObjHexapodBalance()):
+            if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHexapodBalance()):
                 # Distance of plate away from hand palm center -----------------------------------------------
                 platePos  = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
                 endTipPos = self._robot.getEndTipWorldPosition()
@@ -379,19 +387,32 @@ class RobotOperationEnvironment(gym.Env):
                 #
                 #endTipVelocity = self._robot.getEndTipVelocity()
                 #print('Endtip Vel', endTipVelocity)
-                if(RC.isTaskObjSuctionBalance()):
-                    suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
-                    alpha2 = suctionPadOrient[0] # Around x
-                    beta2  = suctionPadOrient[1] # Around y
-                    gamma2 = suctionPadOrient[2] # Around z
-                    self.__reward -= (abs(alpha2+3.14) + abs(beta2))
-                    #print('SuctionPad Orient', suctionPadOrient)
+                if(RC.isTaskObjSuctionBalancePlate()):
+                    joint4Pos = RC.getJointPosition(self._robot._jointHandles[3])
+                    joint6Pos = RC.getJointPosition(self._robot._jointHandles[5])
+                    #print(joint4Pos, '==', joint6Pos)
+                    self.__reward -= ((-1.17 - joint4Pos) - joint6Pos)
 
                 #handPos = self._robot.getHandWorldPosition()
                 #handOrient = self._robot.getHandOrientation()
                 ##print('Hand Orient', handOrient)
                 #handVelocity = self._robot.getHandVelocity()
                 ##print('Hand Vel', handVelocity)
+
+            elif(RC.isTaskObjSuctionBalanceBall()):
+                ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
+                basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
+                d = math.sqrt((ballPos[0] - basePlatePos[0])**2 +
+                              (ballPos[1] - basePlatePos[1])**2 +
+                              (ballPos[2] - basePlatePos[2])**2)
+                #print('DDDD:', d)
+                self.__reward -= d
+
+                # Joint 4 & 6 Compensation
+                joint4Pos = RC.getJointPosition(self._robot._jointHandles[3])
+                joint6Pos = RC.getJointPosition(self._robot._jointHandles[5])
+                print(joint4Pos, '==', joint6Pos)
+                self.__reward -= ((-1.17 - joint4Pos) - joint6Pos)
 
             # ------------------------------------------------------------------------------------------------
             # CATCH TASK -------------------------------------------------------------------------------------

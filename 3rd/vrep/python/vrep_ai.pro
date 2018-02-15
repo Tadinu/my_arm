@@ -52,4 +52,7 @@ DISTFILES += \
     eigen_grasp.py \
     UR5/ur5.py \
     UR5/ur5_ctrl.py \
-    repeated_timer.py
+    repeated_timer.py \
+    RobotOperationBallBalanceEnv.py \
+    train_robot_ball_balance.py \
+    ddpg/ActorNetworkBallBalance.py

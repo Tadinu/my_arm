@@ -85,7 +85,7 @@ CTASK_ID_OBJ_MOVE_CATCH      = 8
 CTASK_ID_OBJ_AVOID           = 9
 CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 
-GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE_PLATE
+GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE_BALL #CTASK_ID_OBJ_SUCTION_BALANCE_BALL
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -136,7 +136,7 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
     elif(isTaskObjSuctionBalanceBall()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
-        GB_STATE_DIM  = 5
+        GB_STATE_DIM  = 8
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4

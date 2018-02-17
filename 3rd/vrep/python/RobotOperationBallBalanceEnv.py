@@ -148,7 +148,7 @@ class RobotOperationEnvironment(gym.Env):
             #self._observation.append(np.array(action[1], dtype=np.float32))
 
         #robotId = self._robot.id()
-        if(RC.isTaskObjSuctionBalanceBall()):
+        if(RC.isTaskObjSuctionObjectSupport()):
             ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
             self._observation.append(np.array(ballPos[0], dtype=np.float32))
             self._observation.append(np.array(ballPos[1], dtype=np.float32))
@@ -158,7 +158,6 @@ class RobotOperationEnvironment(gym.Env):
                           (ballPos[1] - basePlatePos[1])**2 +
                           (ballPos[2] - basePlatePos[2])**2)
             self._observation.append(np.array(d, dtype=np.float32))
-
 
         return self._observation
 

@@ -305,7 +305,7 @@ def gb_observation_2_state(ob):
                               ob[4],                      # Plate tilting gamma(x), beta(y)
                               ob[5]                       # Plate distance to base plate
                               ))
-        elif(RC.isTaskObjSuctionBalanceBall()):
+        elif(RC.isTaskObjSuctionObjectSupport()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
                               ob[4]                       # Ball distance to base plate
                               ))

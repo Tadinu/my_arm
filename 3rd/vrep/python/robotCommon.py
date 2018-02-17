@@ -10,10 +10,11 @@ except:
     print ('')
 
 import numpy as np
+import numpy.linalg as la
 from numpy.linalg import norm
 
 GB_TRACE = 0
-GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
+GB_MODE_TRAINING = 0 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
 
 # ================================================================
@@ -75,8 +76,8 @@ CSUCTION_PAD_NAME     = 'suctionPad'
 #
 CTASK_ID_UNKNOWN             = -1
 CTASK_ID_OBJ_HAND_BALANCE    = 1
-CTASK_ID_OBJ_SUCTION_BALANCE_PLATE = 2
-CTASK_ID_OBJ_SUCTION_BALANCE_BALL  = 3
+CTASK_ID_OBJ_SUCTION_BALANCE_PLATE  = 2
+CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT = 3
 CTASK_ID_OBJ_HEXAPOD_BALANCE = 4
 CTASK_ID_OBJ_HOLD            = 5
 CTASK_ID_OBJ_CATCH           = 6
@@ -85,7 +86,7 @@ CTASK_ID_OBJ_MOVE_CATCH      = 8
 CTASK_ID_OBJ_AVOID           = 9
 CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 
-GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE_BALL #CTASK_ID_OBJ_SUCTION_BALANCE_BALL
+GB_TASK_ID = CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT #CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -96,8 +97,8 @@ def isTaskObjHandBalance():
 def isTaskObjSuctionBalancePlate():
     return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_PLATE
 
-def isTaskObjSuctionBalanceBall():
-    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_BALL
+def isTaskObjSuctionObjectSupport():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
 
 def isTaskObjHexapodBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HEXAPOD_BALANCE
@@ -133,10 +134,10 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
         GB_STATE_DIM  = 6
-    elif(isTaskObjSuctionBalanceBall()):
+    elif(isTaskObjSuctionObjectSupport()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
-        GB_STATE_DIM  = 8
+        GB_STATE_DIM  = 5
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4
@@ -216,7 +217,7 @@ def getObjectWorldPosition(objectName):
     # Retrieves the time needed for a command to be sent to the server,
     # executed, and sent back.
     # That time depends on various factors like the client settings,
-    # the network load, whether a simulation is running, whether the
+    # the network load, whether a simulation idef unit_vector(vector):
     # simulation is real-time, the simulation time step, etc.
     # The function is blocking.
     vrep.simxGetPingTime(GB_CLIENT_ID)
@@ -349,6 +350,29 @@ def getAngleFromTwoVectors(v1, v2, acute=1):
     else:
         return 2 * np.pi - angle
 
+    """ Returns the angle in radians between vectors 'v1' and 'v2'    """
+    # cosang = np.dot(v1, v2)
+    # sinang = la.norm(np.cross(v1, v2))
+    # return np.arctan2(sinang, cosang)
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
 
 ################################################################################################################
 # V-REP IMPORTANT KNOWLEDGE:
@@ -371,7 +395,7 @@ def getAngleFromTwoVectors(v1, v2, acute=1):
 #     Once the threaded child script resumes normally, you can check if that variable or signal is set. If yes, then you can execute a longer
 #     blocking operation, without having the simulation itself stop.
 #
-# This is actually illustrated in the scene that you can find here (in next release you will find that scene in scenes/motionPlanningServerDemo.ttt), and its remote API counterpart that you can find in programming/remoteApiBindings/python/python/pathPlanningTest.py
+# This is actually illustrated in the scene that you can find here (in next releisTaskObjSuctionObjectSupportase you will find that scene in scenes/motionPlanningServerDemo.ttt), and its remote API counterpart that you can find in programming/remoteApiBindings/python/python/pathPlanningTest.py
 
 
 # 2 - SYNCHRONOUS MODE BETWEEN CLIENT & V-REP SERVER ------------------------------------------------------------

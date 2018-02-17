@@ -29,10 +29,12 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_REMOTE_FUNC_SHOW_MESSAGE      = 'displayMessage'
-CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS  = 'reloadFallingObjectsFromClient'
-CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND = 'detectObjectOnGroundFromClient'
-CSERVER_REMOTE_FUNC_OPERATION_TIME    = 'getRobotOperationTimeToTheMomentFromClient'
+CSERVER_REMOTE_FUNC_SHOW_MESSAGE                 = 'displayMessage'
+CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS             = 'reloadFallingObjectsFromClient'
+CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND            = 'detectObjectOnGroundFromClient'
+CSERVER_REMOTE_FUNC_OPERATION_TIME               = 'getRobotOperationTimeToTheMomentFromClient'
+CSERVER_REMOTE_FUNC_OBJ_AWAY_BASE_PLATE          = 'isObjAwayFromBasePlate'
+CSERVER_REMOTE_FUNC_GET_BASE_PLATE_NORMAL_VECTOR = 'getBasePlateNormalVectorFromClient'
 
 class RobotOperationEnvironment(gym.Env):
 
@@ -45,7 +47,7 @@ class RobotOperationEnvironment(gym.Env):
         self._observation = []
         self._envStepCounter = 0
         self._mutex = threading.Lock()
-        self._objGroundHit = False
+        self._objAwayFromBasePlate = False
         self._robotOperationTime = 0
 
         # INITIALIZE ENVIRONMENT
@@ -105,19 +107,19 @@ class RobotOperationEnvironment(gym.Env):
     def isTerminated(self):
         return self._terminated
 
-    def _reset(self):
+    def reset(self):
         if(RC.GB_TRACE):
             print("_reset")
         self.setTerminated(0)
-        self._objGroundHit = False
+        self._objAwayFromBasePlate = False
         #print("Start back simulation")
         #RC.startSimulation(self._clientID)
 
-        ##1- OBSERVATION --
-        self._observation = self.getObservation([0]*RC.GB_ACTION_DIM)
-
-        ##2- RESET ROBOT POS --
+        ##1- RESET ROBOT POS --
         self._robot.resetRobot() # Time sleep inside
+
+        ##2- OBSERVATION -- (The observation after robot reset)
+        self._observation = self.getObservation([0]*RC.GB_ACTION_DIM)
 
         ## LOAD FALLING OBJS --  (HAD BETTER LET THIS JOB TO V-REP SERVER, SINCE IT KNOWS WHEN THE RESET PROCESS FINISHED!
         ##self.reloadFallingObjects()
@@ -147,68 +149,32 @@ class RobotOperationEnvironment(gym.Env):
             #self._observation.append(np.array(action[1], dtype=np.float32))
 
         #robotId = self._robot.id()
-        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHexapodBalance()):
-            ##############################################################################################
-            # PLATE INFO
-            #
-            # Plate Object
-            # Angle rotation away from horizontal plane
-            plateOrient = RC.getObjectOrientation(RC.CPLATE_OBJ_NAME) # Must be the same name set in V-Rep
-            self._observation.append(np.array(abs(plateOrient[0]), dtype=np.float32)) # Either alpha(X) or beta(Y) is enough!
-            #self._observation.append(np.array(abs(plateOrient[1]), dtype=np.float32))
+        if(RC.isTaskObjSuctionObjectSupport()):
+            # Cuboid Pos ------------------------------------------------------------------------------------------
+            cuboidPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+            #self._observation.append(np.array(cuboidPos[0], dtype=np.float32))
+            #self._observation.append(np.array(cuboidPos[1], dtype=np.float32))
+            #self._observation.append(np.array(cuboidPos[2], dtype=np.float32))
 
-            # Distance from plate to the center of end-tip
-            platePos  = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
-            endTipPos = self._robot.getEndTipWorldPosition()
-            #basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
-            d = math.sqrt((platePos[0] - endTipPos[0])**2 +
-                          (platePos[1] - endTipPos[1])**2)
-            self._observation.append(np.array(d, dtype=np.float32))
-
-        elif(RC.isTaskObjSuctionObjectSupport()):
-            ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
+            # Distance from base plate pos and cuboid center ------------------------------------------------------
             basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
-            d = math.sqrt((ballPos[0] - basePlatePos[0])**2 +
-                          (ballPos[1] - basePlatePos[1])**2 +
-                          (ballPos[2] - basePlatePos[2])**2)
-            self._observation.append(np.array(d, dtype=np.float32))
+            d = math.sqrt((cuboidPos[0] - basePlatePos[0])**2 +
+                          (cuboidPos[1] - basePlatePos[1])**2)
 
-        elif(RC.isTaskObjHold()):
-            ##############################################################################################
-            # TUBE INFO
-            #
-            # Tube Object
-            # Angle rotation away from horizontal plane
-            tubeOrient = RC.getObjectOrientation(RC.CTUBE_OBJ_NAME) # Must be the same name set in V-Rep
-            self._observation.append(np.array(abs(tubeOrient[1]), dtype=np.float32))
+            # Orientation of the base plate -----------------------------------------------------------------------
+            #basePlateOrient = RC.getObjectOrientation(RC.CBASE_PLATE_OBJ_NAME) # Must be the same name set in V-Rep
+            #alpha1 = basePlateOrient[0] # Around x
+            #beta1  = basePlateOrient[1] # Around y
+            #gamma1 = basePlateOrient[2] # Around z
+            ##print('Plate Orient', plateOrient)
+            #self._observation.append(np.array(alpha1, dtype=np.float32))
+            #self._observation.append(np.array(beta1, dtype=np.float32))
 
-            # Distance from plate to the center of end-tip
-            tubePos = RC.getObjectWorldPosition(RC.CTUBE_OBJ_NAME)
-            palmPos = self._robot.getEndTipWorldPosition()
-            d = math.sqrt((tubePos[0] - palmPos[0])**2 +
-                          (tubePos[1] - palmPos[1])**2)
-            self._observation.append(np.array(d, dtype=np.float32))
+            # Base Plate Normal Vector -----------------------------------------------------------------------------
+            slantingDegree = abs(RC.angle_between(np.array([0,0,1]), np.array(self.getBasePlateNormalVector())))
 
-        elif(RC.isTaskObjCatch()):
-            ##############################################################################################
-            # BALL INFO
-            #
-            # Ball Object
-            # Ball z position only
-            ballPos    = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
-            ballLinVel = RC.getObjectVelocity(RC.CBALL_OBJ_NAME)
-            ##self._observation.append(np.array(ballPos[0], dtype=np.float32))
-            ##self._observation.append(np.array(ballPos[1], dtype=np.float32))
-            self._observation.append(np.array(ballPos[2], dtype=np.float32))
-            self._observation.append(np.array(ballLinVel[2], dtype=np.float32))
-
-        elif(RC.isTaskObjTimelyPick()):
-            ##############################################################################################
-            # OBJ INFO
-            #
-            # Object position on conveyor belt
-            objPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            self._observation.append(np.array(objPos[1], dtype=np.float32))
+            self._observation.append(np.array(d*math.cos(slantingDegree), dtype=np.float32))
+            self._observation.append(np.array(slantingDegree, dtype=np.float32))
 
         return self._observation
 
@@ -237,79 +203,65 @@ class RobotOperationEnvironment(gym.Env):
 
     #def __del__(self):
 
-    def isObjGroundHit(self):
-        objName = ''
-        if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHexapodBalance()):
-            objName = RC.CPLATE_OBJ_NAME
-        elif(RC.isTaskObjHold()):
-            objName = RC.CTUBE_OBJ_NAME
-        elif(RC.isTaskObjCatch() or RC.isTaskObjSuctionObjectSupport()):
-            objName = RC.CBALL_OBJ_NAME
-        elif(RC.isTaskObjTimelyPick()):
-            objName = RC.CCUBOID_OBJ_NAME
+    def isObjAwayFromBasePlate(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME, \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_OBJ_AWAY_BASE_PLATE,           \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        return (retInts[0] == 0)
 
-        pos = RC.getObjectWorldPosition(objName)
-
-        # V-REP API Ground Hit Check
-        #res = self.detectObjectsReachGround()
-        #if(res):
-            #self._objGroundHit = True
-            ##RC.stopSimulation(self._clientID)
-            ##self._robot.commandJointVibration(0)
-            #return True
-
-        res = (pos[2] < 0.5)
-        return res
-
-    def _step(self, action):
+    def step(self, action):
         ## ----------------------------------------------------------------------------------------
         if(RC.GB_TRACE):
             print('ACTION:', action)
         ## ----------------------------------------------------------------------------------------
         ## APPLY ACTION START
         ##
-        self._objGroundHit = False
+        self._objAwayFromBasePlate = False
         self._robotOperationTime = 0
 
-        ## WAIT FOR V-REP SERVER SIMULATION STATE TO BE READY
+        ## WAIT FOR V-REP SERVER SIMULATION STATE TO BE READY (ACTUALLY, THIS IS ALREADY DONE IN THE OUTER LOOP CALLING _step())
         ##
-        if(self._robot.getOperationState() == RC.CROBOT_STATE_READY):
-            self._robot.applyAction(action)
+        ##while(self._robot.getOperationState() != RC.CROBOT_STATE_READY):
+            ##time.sleep(0.01)
+        self._robot.applyAction(action)
 
-        if(RC.isTaskObjTimelyPick()):
-            objName = RC.CCUBOID_OBJ_NAME
-            pos = RC.getObjectWorldPosition(objName)
-            while(pos[1] <= 0.28):
-                time.sleep(2)
-            ##print('Obj Pos:', pos)
+        #time.sleep(self._timeStep)
+        #!!!Wait for some time since starting the action then observe:
+        reward = 0
+        overlong = False
+        while(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING):
+            #time.sleep(0.05)
+            self._objAwayFromBasePlate = self.isObjAwayFromBasePlate()
+            if(self._objAwayFromBasePlate):
+                #print('GROUND HIT',i+1)
+                reward -= 100
 
-            self._observation = self.getObservation(action)
-            reward = self._reward()
-            done   = self._termination()
-        else:
-            #time.sleep(self._timeStep)
-            #!!!Wait for some time since starting the action then observe:
-            reward = 0
-            i = 0
-            while(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING):
-                time.sleep(1)
-                self._objGroundHit = self.isObjGroundHit()
-                if(self._objGroundHit):
-                    #print('GROUND HIT',i+1)
-                    reward -= 100
-                if(i==2): # 3s has passed!
-                    reward += self._reward()
-                i=i+1
-                #print('Still moving',i)
+            operationTime = self.getRobotOperationTime()
+            #print('Still moving', operationTime)
+            if(operationTime > 4000):
+                overlong = True
+                print('STEP: OVER LONG', operationTime)
+                break
 
-            self._observation = self.getObservation(action)
-            reward += self._reward() # Reward Addition after observation 2nd!
-            done    = self._termination()
-            print('Env observed 2nd!', reward) # self._robot.getOperationState()
-            #print("len=%r" % len(self._observation))
+        # Wait for some time to check again the on-base-plate state of the object:
+        if(not self._objAwayFromBasePlate):
+            time.sleep(2)
+        self._observation = self.getObservation(action)
+        reward += self.reward() # Reward Addition after observation 2nd!
+        done    = self._termination() or overlong
+        if(self._objAwayFromBasePlate):
+            reward -= 100
+        print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
+        #print("len=%r" % len(self._observation))
 
-        return self._observation, reward, False, {}
-        #return self._observation, reward, done, {}  ######## ducta
+        ##return self._observation, reward, False, {}
+        return self._observation, reward, done, {}
 
     def _termination(self):
         if (self._terminated):
@@ -317,43 +269,12 @@ class RobotOperationEnvironment(gym.Env):
             ##self._robot.commandJointVibration(0)
             return True
 
-        # Hit the object or object hit the ground
-        #self._robot.detectCollisionWith(RC.CFALL_OBJS_NAMES[0])
+        #time.sleep(3) # Wait for a while to make sure the object state as still on of already off the base!
+        self._objAwayFromBasePlate = self.isObjAwayFromBasePlate()
 
-        if(RC.isTaskObjCatch()):
-            if (self._robot.checkObjectCaught()):
-                return True
+        return (self._objAwayFromBasePlate)
 
-        if(RC.isTaskObjTimelyPick()):
-            pos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            if (pos[1] >= 0.27):
-                #self._objGroundHit = True
-                return True
-        # Simple Ground Hit Check
-        else:
-            self._objGroundHit = self.isObjGroundHit()
-            if(self._objGroundHit):
-                return True
-
-        if(not RC.isTaskObjCatch()):
-            res = self.detectHandOnGround()
-            ##if(res):
-                ##RC.stopSimulation(self._clientID)
-                ##self._robot.commandJointVibration(0)
-
-        if(res):
-            return True
-        else:
-            if(RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHandBalance() or RC.isTaskObjCatch()):
-                while(self._robotOperationTime <= 7000):
-                    self._robotOperationTime = self.getRobotOperationTime()
-                    #print('Operation Time:', robotOperTime)
-                    time.sleep(1)
-
-        return True
-
-    def _reward(self):
-        #print("reward")
+    def reward(self):
         #print(__reward)
         self.__reward = 1000
 
@@ -363,98 +284,40 @@ class RobotOperationEnvironment(gym.Env):
                                         or robotId == RC.CKUKA_ARM_SUCTION_PAD
                                         or robotId == RC.CUR5_ARM_BARRETT_HAND
                                         or robotId == RC.CHEXAPOD):
-            # ------------------------------------------------------------------------------------------------
-            # BALANCE TASK -----------------------------------------------------------------------------------
+            # -----------------------------------------------------------------------------------------------------
+            # BALANCE TASK ----------------------------------------------------------------------------------------
             #
-            if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalancePlate() or RC.isTaskObjHexapodBalance()):
-                if(not self.isObjGroundHit()):
-                    # Distance of plate away from hand palm center -----------------------------------------------
-                    platePos  = RC.getObjectWorldPosition(RC.CPLATE_OBJ_NAME)
-                    endTipPos = self._robot.getEndTipWorldPosition()
-                    #print('Plate Pos:', platePos)
-                    #print('Endtip Pos:', endTipPos)
-                    d = math.sqrt((platePos[0] - endTipPos[0])**2 +
-                                  (platePos[1] - endTipPos[1])**2)
-                    #print('DDDD:', d)
-                    self.__reward -= d
+            #if(not self.isObjAwayFromBasePlate()):
+            cuboidPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+            basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
+            d = math.sqrt((cuboidPos[0] - basePlatePos[0])**2 +
+                          (cuboidPos[1] - basePlatePos[1])**2)
+            #print('DDDD:', d)
 
-                    # Orientation of the plate -------------------------------------------------------------------
-                    #plateOrient = RC.getObjectOrientation(RC.CPLATE_OBJ_NAME) # Must be the same name set in V-Rep
-                    #alpha1 = plateOrient[0] # Around x
-                    #beta1  = plateOrient[1] # Around y
-                    #gamma1 = plateOrient[2] # Around z
-                    #print('Plate Orient', plateOrient)
-                    #self.__reward -= (abs(alpha1) + abs(beta1))
-
-                    #endTipOrient = self._robot.getEndTipOrientation()
-                    #endTipVelocity = self._robot.getEndTipVelocity()
-                    #print('Endtip Vel', endTipVelocity)
-                else:
-                    self.__reward -= 100
-
-                if(RC.isTaskObjSuctionBalancePlate()):
-                    # Suction Pad
-                    suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
-                    alpha2 = suctionPadOrient[0] # Around x
-                    beta2  = suctionPadOrient[1] # Around y
-                    gamma2 = suctionPadOrient[2] # Around z
-                    delta_alpha2 = abs(math.pi - abs(alpha2))
-                    self.__reward -= (delta_alpha2 + abs(beta2))
-
-                    # Joint Poses
-                    #joint4Pos = RC.getJointPosition(self._robot._jointHandles[3])
-                    #joint6Pos = RC.getJointPosition(self._robot._jointHandles[5])
-                    #print(joint4Pos, '==', joint6Pos)
-                    #self.__reward -= abs((-math.pi/2 - joint4Pos) - joint6Pos) #!!! <---
-
-                #handPos = self._robot.getHandWorldPosition()
-                #handOrient = self._robot.getHandOrientation()
-                ##print('Hand Orient', handOrient)
-                #handVelocity = self._robot.getHandVelocity()
-                ##print('Hand Vel', handVelocity)
-
-            elif(RC.isTaskObjSuctionObjectSupport()):
-                ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
-                basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
-                d = math.sqrt((ballPos[0] - basePlatePos[0])**2 +
-                              (ballPos[1] - basePlatePos[1])**2 +
-                              (ballPos[2] - basePlatePos[2])**2)
-                #print('DDDD:', d)
+            # Orientation of the base plate -----------------------------------------------------------------------
+            suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
+            slantingDegree = abs(RC.angle_between(np.array([0,0,1]), np.array(self.getBasePlateNormalVector())))
+            #print('SUC', slantingDegree)
+            if(slantingDegree < math.pi/2):
+                self.__reward -= d*math.cos(slantingDegree)
+            else:
                 self.__reward -= d
+            self.__reward -= slantingDegree
 
-            # ------------------------------------------------------------------------------------------------
-            # CATCH TASK -------------------------------------------------------------------------------------
-            #
-            elif(RC.isTaskObjCatch()):
-                # Distance of base joint pos to the ball
-                ballPos = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
-                basePos = self._robot.getCurrentBaseJointPos()
-                angle   = math.atan2(ballPos[1], ballPos[0])
-                self.__reward -= abs(angle - basePos)
+            #alpha2 = suctionPadOrient[0] # Around x
+            #beta2  = suctionPadOrient[1] # Around y
+            #gamma2 = suctionPadOrient[2] # Around z
+            #delta_alpha2 = abs(math.pi - abs(alpha2))
+            #self.__reward -= (delta_alpha2 + abs(beta2))
 
-                # Z Distance from ball to the suction pad tip
-                suctionPadPosZ = 9.5846e-01 + 1.0000e-01
-                dist = ballPos[2] - suctionPadPosZ
-                if(dist > 0):
-                    self.__reward -= dist
-                else:
-                    self.__reward -= 100
-
-                # Wrist joint orientation directed to the ball
-                #suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
-                #print('Suction Pad Orient', suctionPadOrient)
-
-                # 3D Distance from ball to the suction pad tip
-                padTip = self._robot.getSuctionPadTipInfo()
-                endTip = RC.getObjectWorldPosition('RobotTip')
-                self.__reward -= RC.getDistanceFromPointToLine(ballPos, padTip, endTip)
-                ##suctionPadLine = padTip - endTip
-
-        #
-        if(robotId == RC.CUR5_ARM_GRIPPER):
-            cuboidPos   = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            grippingPos = [-0.3766 + 0.105, -0.0001, 1.0013]
-            self.__reward -= abs(cuboidPos[1]-grippingPos[1])
+            #basePlateOrient = RC.getObjectOrientation(RC.CBASE_PLATE_OBJ_NAME) # Must be the same name set in V-Rep
+            #alpha1 = basePlateOrient[0] # Around x
+            #beta1  = basePlateOrient[1] # Around y
+            #gamma1 = basePlateOrient[2] # Around z
+            #print('Plate Orient', basePlateOrient)
+            #self.__reward -= 10*(abs(alpha1) + abs(beta1))
+            #else:
+                #self.__reward -= 100
 
         if(RC.GB_TRACE):
             print('self.__reward:', self.__reward)
@@ -542,7 +405,7 @@ class RobotOperationEnvironment(gym.Env):
         #robotBaseJointLimit = self._kuka.getJointLimit(0)
 
         ## DEBUG ++
-        #self.drawDebugShape(self._cubeUId, [1,1,1])
+        #self.drawDebugShape(self._cugetBasePlateNormalVectorbeUId, [1,1,1])
         #self.drawDebugShape(self._cubeUId, [0,0,0])
         ## DEBUG --
 
@@ -601,6 +464,18 @@ class RobotOperationEnvironment(gym.Env):
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retInts[0]
+
+    def getBasePlateNormalVector(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME, \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_GET_BASE_PLATE_NORMAL_VECTOR,  \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        return retFloats
 
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)

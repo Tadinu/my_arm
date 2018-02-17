@@ -7,7 +7,7 @@ print('PARENT DIR:', parentdir)
 os.sys.path.insert(0, parentdir)
 
 import gym
-from RobotOperationEnv import RobotOperationEnvironment
+from RobotOperationObjSupportEnv import RobotOperationEnvironment
 import robotCommon as RC
 
 from gym import utils, spaces
@@ -26,14 +26,12 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten
 from keras.optimizers import Adam
 import tensorflow as tf
+import tflearn
 #from keras.engine.training import collect_trainable_weights
 import json
 
 # DDPG
-from ddpg2.replay_buffer import ReplayBuffer
-from ddpg2.ddpg import ActorNetwork
-from ddpg2.ddpg import CriticNetwork
-from ddpg2.ddpg import OrnsteinUhlenbeckActionNoise
+from replay_buffer import ReplayBuffer
 import timeit
 import pprint as pp
 
@@ -54,8 +52,7 @@ except:
     print ('')
 
 CSERVER_PORT = 19999
-RC.GB_CSERVER_ROBOT_NAME = 'LBR_iiwa_14_R820#' # 'youBot#' / 'LBR4p#'
-RC.GB_CSERVER_ROBOT_ID = RC.CKUKA_ARM #RC.CYOUBOT
+
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -77,18 +74,11 @@ def initialize_vrep():
     if gbClientID!=-1:
         print ('Connected to remote API server',gbClientID)
 
-        # Set Simulation in Synchronous mode
-        vrep.simxSynchronous(gbClientID,True)
-
-        # Set Simulation Step Time
-        dt = .001
-        vrep.simxSetFloatingParameter(gbClientID,
-                                      vrep.sim_floatparam_simulation_time_step,
-                                      dt, # specify a simulation time step
-                                      vrep.simx_opmode_oneshot)
+        # Init Robot Common
+        RC.init(gbClientID)
 
         # Start the simulation:
-        vrep.simxStartSimulation(gbClientID,vrep.simx_opmode_oneshot_wait)
+        RC.startSimulation(gbClientID)
 
         # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
         #    robotHandle=retInts[0]
@@ -105,8 +95,6 @@ def initialize_vrep():
         # Retrieve some handles:
         global gbRobotHandle
         res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
-
-from replay_buffer import ReplayBuffer
 
 # ===========================
 #   Actor and Critic DNNs
@@ -352,10 +340,14 @@ def train(sess, env, args, actor, critic, actor_noise):
     # Initialize replay memory
     replay_buffer = ReplayBuffer(int(args['buffer_size']), int(args['random_seed']))
 
-
+    print("Manipulator DDPG Training Experiment Start.")
+    terminal = False
     for i in range(int(args['max_episodes'])):
 
-        s = env.reset()
+        if(RC.isUnknownTask() or i == 0):
+            s = env.reset()
+        elif terminal: #We take the ob from the previous step, since the reset returns meaningless value
+            env.reset()
 
         ep_reward = 0
         ep_ave_max_q = 0
@@ -367,7 +359,12 @@ def train(sess, env, args, actor, critic, actor_noise):
 
             # Added exploration noise
             #a = actor.predict(np.reshape(s, (1, 3))) + (1. / (1. + i))
-            a = actor.predict(np.reshape(s, (1, actor.s_dim))) + actor_noise()
+            a_orig  = actor.predict(np.reshape(s, (1, actor.s_dim)))
+            a_noise = actor_noise()
+            a = a_orig #+ a_noise
+
+            #if (np.mod(j, 100) == 0):
+            print('Episode  ', i, ' Step ', j, '-', 'Generated actions:', a_orig)
 
             s2, r, terminal, info = env.step(a[0])
 
@@ -409,7 +406,7 @@ def train(sess, env, args, actor, critic, actor_noise):
             s = s2
             ep_reward += r
 
-            if terminal:
+            if terminal and j > 0:
 
                 summary_str = sess.run(summary_ops, feed_dict={
                     summary_vars[0]: ep_reward,
@@ -437,8 +434,10 @@ def main(args):
         env.seed(int(args['random_seed']))
 
         print('SPACES:', env.action_space)
-        state_dim = env.observation_space.shape[0]
-        action_dim = 7# env.action_space.shape[0]
+        print('STATE DIM: ', RC.GB_STATE_DIM)
+        state_dim = RC.GB_STATE_DIM #env.observation_space.shape[0]
+        print('ACTION DIM: ', RC.GB_ACTION_DIM)
+        action_dim = RC.GB_ACTION_DIM # env.action_space.shape[0]
         action_bound = 1 #env.action_space.high
         # Ensure action bound is symmetric
         #assert (env.action_space.high == -env.action_space.low)
@@ -462,8 +461,8 @@ def main(args):
 
         train(sess, env, args, actor, critic, actor_noise)
 
-        if args['use_gym_monitor']:
-            env.monitor.close()
+        #if args['use_gym_monitor']:
+            #env.monitor.close()
 
 def finalize_vrep():
     # stop the simulation
@@ -483,7 +482,7 @@ def draw_data():
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    # plot start point of hand
+    # plot start point of handuse_gym_monitor
     ax.plot([track_hand[0,0]], [track_hand[0,1]], [track_hand[0,2]], 'bx', mew=10)
     # plot trajectory of hand
     ax.plot(track_hand[:,0], track_hand[:,1], track_hand[:,2])
@@ -512,7 +511,7 @@ if __name__ == '__main__':
     # run parameters
     parser.add_argument('--env', help='choose the gym env- tested on {Pendulum-v0}', default='Pendulum-v0')
     parser.add_argument('--random-seed', help='random seed for repeatability', default=1234)
-    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=50000)
+    parser.add_argument('--max-episodes', help='max num of episodes to do while training', default=500)
     parser.add_argument('--max-episode-len', help='max length of 1 episode', default=1000)
     parser.add_argument('--render-env', help='render the gym env', action='store_true')
     parser.add_argument('--use-gym-monitor', help='record gym results', action='store_true')

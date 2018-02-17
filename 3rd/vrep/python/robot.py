@@ -670,7 +670,7 @@ class Robot:
         #endTipPos = self.getEndTipWorldPosition()
         isTaskObjHandBalance    = RC.isTaskObjHandBalance()
         isTaskObjSuctionBalancePlate = RC.isTaskObjSuctionBalancePlate()
-        isTaskObjSuctionBalanceBall  = RC.isTaskObjSuctionBalanceBall()
+        isTaskObjSuctionObjectSupport  = RC.isTaskObjSuctionObjectSupport()
         isTaskObjHexapodBalance = RC.isTaskObjHexapodBalance()
         isTaskObjHold           = RC.isTaskObjHold()
         isTaskObjCatch          = RC.isTaskObjCatch()
@@ -687,12 +687,19 @@ class Robot:
                 pos = RC.getJointPosition(self._jointHandles[i]) # Pos
                 #
                 observation.append(np.array(pos, dtype=np.float32))
+            elif(isTaskObjSuctionObjectSupport):
+                if(i == 1 or i == 3 or i == 5):
+                    pos = RC.getJointPosition(self._jointHandles[i])
+                    #vel = RC.getJointVelocity(self._jointHandles[i])
+                    #
+                    observation.append(np.array(pos, dtype=np.float32)) # Pos
+                    #observation.append(np.array(vel, dtype=np.float32)) # Vel
             else:
                 if(i == 0 or i == 3 or i == 4 or i == 5):
                     pos = RC.getJointPosition(self._jointHandles[i])
                     #vel = RC.getJointVelocity(self._jointHandles[i])
                     #
-                    if(isTaskObjHandBalance or isTaskObjSuctionBalancePlate or isTaskObjSuctionBalanceBall):
+                    if(isTaskObjHandBalance or isTaskObjSuctionBalancePlate or isTaskObjSuctionObjectSupport):
                         observation.append(np.array(pos, dtype=np.float32)) # Pos
                         #observation.append(np.array(vel, dtype=np.float32)) # Vel
                     elif(isTaskObjHold):

@@ -7,7 +7,7 @@ print('PARENT DIR:', parentdir)
 os.sys.path.insert(0, parentdir)
 
 import gym
-from RobotOperationBallBalanceEnv import RobotOperationEnvironment
+from RobotOperationObjSupportEnv import RobotOperationEnvironment
 import robotCommon as RC
 
 from gym import utils, spaces
@@ -31,7 +31,7 @@ import json
 
 # DDPG
 from ddpg.ReplayBuffer import ReplayBuffer
-from ddpg.ActorNetworkBallBalance import ActorNetwork
+from ddpg.ActorNetworkObjSupport import ActorNetwork
 from ddpg.CriticNetwork import CriticNetwork
 from ddpg.OU import OU
 import timeit
@@ -116,7 +116,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     vision = False
 
-    EXPLORE = 200. #100000.
+    EXPLORE = 300. #100000.
     # Double loops of episodes and step:
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
@@ -164,13 +164,18 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         if(RC.GB_TRACE):
             print("Episode : " + str(episode) + " Replay Buffer " + str(buff.count()))
 
-        ob = env.reset()
-
-        s_t = gb_observation_2_state(ob)
-        #print('OB', s_t)
-
         total_reward = 0.
         for j in range(max_steps):
+
+            if(RC.isUnknownTask() or episode == 0):
+                ob = env.reset()
+            else: #We take the ob from the previous step, since the reset returns meaningless value
+                env.reset()
+            #s_t = np.reshape(ob, (-1, action_dim))
+            s_t = gb_observation_2_state(ob)
+            #print('OB', s_t)
+
+            ## -------------------------------------------------------------------------------------------------------
             loss = 0
             epsilon -= 1.0 / EXPLORE
             a_t = np.zeros([1,action_dim])
@@ -180,8 +185,8 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #if(j!=0):
             print('Episode ', episode, 'Step ', j,'--------------')
             print('Start waiting for the next action', env._robot.getOperationState())
-            #while(env._robot.getOperationState() != RC.CROBOT_STATE_READY):
-            #    time.sleep(0.01)
+            while(env._robot.getOperationState() != RC.CROBOT_STATE_READY):
+                time.sleep(0.01)
 
             # --------------------------------------------------------------------------------------------------------
             a_t_original = actor.model.predict(np.reshape(s_t, (1, s_t.shape[0])))
@@ -241,28 +246,28 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             if(RC.GB_TRACE):
                 print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
 
+            # End for on steps
+            if np.mod(j, 3) == 0:
+                if (train_indicator):
+                    if(RC.GB_TRACE):
+                        print("Now we save model")
+                    actor.model.save_weights("actormodel.h5", overwrite=True)
+                    with open("actormodel.json", "w") as outfile:
+                        json.dump(actor.model.to_json(), outfile)
+
+                    critic.model.save_weights("criticmodel.h5", overwrite=True)
+                    with open("criticmodel.json", "w") as outfile:
+                        json.dump(critic.model.to_json(), outfile)
+
+            if np.mod(j, 10) == 0:
+                print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
+                print("Total Step: " + str(step))
+                print("")
+
             step += 1
-            # ducta
-            #if done:
-            #    break
 
-        # End for on steps
-        if np.mod(episode, 3) == 0:
-            if (train_indicator):
-                if(RC.GB_TRACE):
-                    print("Now we save model")
-                actor.model.save_weights("actormodel.h5", overwrite=True)
-                with open("actormodel.json", "w") as outfile:
-                    json.dump(actor.model.to_json(), outfile)
-
-                critic.model.save_weights("criticmodel.h5", overwrite=True)
-                with open("criticmodel.json", "w") as outfile:
-                    json.dump(critic.model.to_json(), outfile)
-
-        if np.mod(episode, 10) == 0:
-            print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
-            print("Total Step: " + str(step))
-            print("")
+            if done:
+                break
 
     print("Finish.")
     #env.stop() # Stop Client Connection to V-REP Server
@@ -293,9 +298,10 @@ def draw_data():
 def gb_observation_2_state(ob):
     if(RC.GB_CSERVER_ROBOT_ID == RC.CKUKA_ARM_BARRETT_HAND):
         if(RC.isTaskObjSuctionObjectSupport()):
-            return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
-                              ob[4], ob[5], ob[6],        # Ball pos
-                              ob[7]                       # Ball distance to base plate
+            return np.hstack((ob[0], ob[1], ob[2],  # Joint pos
+                              ob[3], ob[4], ob[5],  # Cuboid pos
+                              ob[6],                # Cuboid distance to base plate
+                              ob[7], ob[8]          # Base plate orientation
                               ))
 
 if __name__ == "__main__":

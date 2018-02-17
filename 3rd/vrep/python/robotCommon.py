@@ -75,8 +75,8 @@ CSUCTION_PAD_NAME     = 'suctionPad'
 #
 CTASK_ID_UNKNOWN             = -1
 CTASK_ID_OBJ_HAND_BALANCE    = 1
-CTASK_ID_OBJ_SUCTION_BALANCE_PLATE = 2
-CTASK_ID_OBJ_SUCTION_BALANCE_BALL  = 3
+CTASK_ID_OBJ_SUCTION_BALANCE_PLATE  = 2
+CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT = 3
 CTASK_ID_OBJ_HEXAPOD_BALANCE = 4
 CTASK_ID_OBJ_HOLD            = 5
 CTASK_ID_OBJ_CATCH           = 6
@@ -85,7 +85,7 @@ CTASK_ID_OBJ_MOVE_CATCH      = 8
 CTASK_ID_OBJ_AVOID           = 9
 CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 
-GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE_BALL #CTASK_ID_OBJ_SUCTION_BALANCE_BALL
+GB_TASK_ID = CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT #CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -96,8 +96,8 @@ def isTaskObjHandBalance():
 def isTaskObjSuctionBalancePlate():
     return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_PLATE
 
-def isTaskObjSuctionBalanceBall():
-    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_BALL
+def isTaskObjSuctionObjectSupport():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
 
 def isTaskObjHexapodBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HEXAPOD_BALANCE
@@ -133,10 +133,10 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
         GB_STATE_DIM  = 6
-    elif(isTaskObjSuctionBalanceBall()):
+    elif(isTaskObjSuctionObjectSupport()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
-        GB_STATE_DIM  = 8
+        GB_STATE_DIM  = 9
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4

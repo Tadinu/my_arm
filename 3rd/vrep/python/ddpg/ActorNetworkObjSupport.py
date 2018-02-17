@@ -51,6 +51,7 @@ class ActorNetwork(object):
 
         action_list = []
         for i in range(action_dim):
+            #action = Dense(1,activation='sigmoid',init=lambda shape: VarianceScaling(scale=1e-4)(shape))(h1)
             action = Dense(1,activation='tanh',init=lambda shape: VarianceScaling(scale=1e-4)(shape))(h1)
             action_list.append(action)
 

@@ -55,4 +55,7 @@ DISTFILES += \
     repeated_timer.py \
     RobotOperationBallBalanceEnv.py \
     train_robot_ball_balance.py \
-    ddpg/ActorNetworkBallBalance.py
+    ddpg/ActorNetworkBallBalance.py \
+    RobotOperationObjSupportEnv.py \
+    train_robot_obj_support.py \
+    ddpg/ActorNetworkObjSupport.py

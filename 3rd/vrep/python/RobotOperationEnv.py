@@ -115,6 +115,8 @@ class RobotOperationEnvironment(gym.Env):
 
         ##1- OBSERVATION --
         self._observation = self.getObservation([0]*RC.GB_ACTION_DIM)
+        self._observation.append(np.array(0, dtype=np.float32))
+        self._observation.append(np.array(0, dtype=np.float32))
 
         ##2- RESET ROBOT POS --
         self._robot.resetRobot() # Time sleep inside
@@ -207,8 +209,15 @@ class RobotOperationEnvironment(gym.Env):
             # OBJ INFO
             #
             # Object position on conveyor belt
-            objPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            self._observation.append(np.array(objPos[1], dtype=np.float32))
+            #objPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+            #endTipPos = RC.getObjectWorldPosition('RG2')
+            #d = math.sqrt((objPos[0] - endTipPos[0])**2 +
+            #              (objPos[1] - endTipPos[1])**2 +
+            #              (objPos[1] - endTipPos[1])**2)
+            #self._observation.append(np.array(d, dtype=np.float32))
+            d = self.getTimelyPickObjectDistance()
+            self._observation.append(np.array(d, dtype=np.float32))
+            #print('OBJECT TO PICK: ', d)
 
         return self._observation
 
@@ -276,20 +285,76 @@ class RobotOperationEnvironment(gym.Env):
         if(self._robot.getOperationState() == RC.CROBOT_STATE_READY):
             self._robot.applyAction(action)
 
+        ## OBSERVE & REWARD
+        reward = 0
         if(RC.isTaskObjTimelyPick()):
             objName = RC.CCUBOID_OBJ_NAME
             pos = RC.getObjectWorldPosition(objName)
-            while(pos[1] <= 0.28):
-                time.sleep(2)
-            ##print('Obj Pos:', pos)
 
+            self._robotOperationTime = self.getRobotOperationTime()
+            while(pos[1] >= RC.CTASK_OBJ_TIMELY_PICK_POSITION and self._robot.getOperationState() != RC.CROBOT_STATE_MOVING_ENDED):
+                #print('Obj Pos:', pos)
+                pos = RC.getObjectWorldPosition(objName)
+
+            #print('END-Obj Pos:', pos)
+
+            # EITHER MOVING_ENDED or not, get the operation time
+            self._robotOperationTime = self.getRobotOperationTime()
+            #print('OPER TIME:', self._robotOperationTime)
+
+            # PUNISHMENT POLICY
+            #
+            # P1 --
+            if(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING_ENDED and pos[1] >= RC.CTASK_OBJ_TIMELY_PICK_POSITION):
+                d = self.getTimelyPickObjectDistance() # pos[1] - RC.CTASK_OBJ_TIMELY_PICK_POSITION
+                t = 5000*d + 400
+                print('TOO SOON', d)
+                reward -= t
+
+            # P2 --
+            elif(pos[1] < RC.CTASK_OBJ_TIMELY_PICK_POSITION):
+                d = self.getCurrentRobotPosDistanceToPrePickPose()
+                d = d *100
+                #print('DISTANCE: ', d)
+                # !NOTE:
+                # d value will decide not yet reaching pre-pick pose --
+                # Reached pre-pick pose --
+
+                while(self._robot.getOperationState() != RC.CROBOT_STATE_MOVING_ENDED):
+                    time = self.getRobotOperationTime() - self._robotOperationTime
+                    #print('RUN TIME:', time)
+                    if(time > 4000):
+                        self._observation = self.getObservation(action)
+                        self._observation.append(np.array(0, dtype=np.float32))
+                        self._observation.append(np.array(0, dtype=np.float32))
+                        reward = -time
+                        return self._observation, reward, True, {}  ######## ducta
+
+                ti = (self.getRobotOperationTime() - self._robotOperationTime)/100
+                d  += ti
+                print('Late:', ti)
+                reward -= d
+
+            # P3 --
+            approachingTime = self.getTimelyPickApproachingTime()
+            pickingTime     = self.getTimelyPickGrippingTime()
+            print('OPER TIME', approachingTime, ' --- ', pickingTime)
+
+            # OBSERVATION
+            #
             self._observation = self.getObservation(action)
-            reward = self._reward()
-            done   = self._termination()
+            self._observation.append(np.array(approachingTime, dtype=np.float32))
+            self._observation.append(np.array(pickingTime, dtype=np.float32))
+
+            reward += self._reward()
+            done = (approachingTime > 5000 or pickingTime > 1000 or action[0] < 0.1 or action[1] < 0.1)
+
+            print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
+
+            return self._observation, reward, done, {}  ######## ducta
         else:
             #time.sleep(self._timeStep)
             #!!!Wait for some time since starting the action then observe:
-            reward = 0
             i = 0
             while(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING):
                 time.sleep(1)
@@ -308,8 +373,8 @@ class RobotOperationEnvironment(gym.Env):
             print('Env observed 2nd!', reward) # self._robot.getOperationState()
             #print("len=%r" % len(self._observation))
 
-        return self._observation, reward, False, {}
-        #return self._observation, reward, done, {}  ######## ducta
+            return self._observation, reward, False, {}
+            #return self._observation, reward, done, {}  ######## ducta
 
     def _termination(self):
         if (self._terminated):
@@ -325,10 +390,7 @@ class RobotOperationEnvironment(gym.Env):
                 return True
 
         if(RC.isTaskObjTimelyPick()):
-            pos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            if (pos[1] >= 0.27):
-                #self._objGroundHit = True
-                return True
+            return False
         # Simple Ground Hit Check
         else:
             self._objGroundHit = self.isObjGroundHit()
@@ -413,15 +475,6 @@ class RobotOperationEnvironment(gym.Env):
                 #handVelocity = self._robot.getHandVelocity()
                 ##print('Hand Vel', handVelocity)
 
-            elif(RC.isTaskObjSuctionObjectSupport()):
-                ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
-                basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
-                d = math.sqrt((ballPos[0] - basePlatePos[0])**2 +
-                              (ballPos[1] - basePlatePos[1])**2 +
-                              (ballPos[2] - basePlatePos[2])**2)
-                #print('DDDD:', d)
-                self.__reward -= d
-
             # ------------------------------------------------------------------------------------------------
             # CATCH TASK -------------------------------------------------------------------------------------
             #
@@ -451,10 +504,7 @@ class RobotOperationEnvironment(gym.Env):
                 ##suctionPadLine = padTip - endTip
 
         #
-        if(robotId == RC.CUR5_ARM_GRIPPER):
-            cuboidPos   = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            grippingPos = [-0.3766 + 0.105, -0.0001, 1.0013]
-            self.__reward -= abs(cuboidPos[1]-grippingPos[1])
+        #if(robotId == RC.CUR5_ARM_GRIPPER):
 
         if(RC.GB_TRACE):
             print('self.__reward:', self.__reward)
@@ -601,6 +651,63 @@ class RobotOperationEnvironment(gym.Env):
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retInts[0]
+
+    def getCurrentRobotPosDistanceToPrePickPose(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = ''
+        inputBuffer  = bytearray()
+        ##inputBuffer.append(78)
+        ##inputBuffer.append(42)
+        res, retInts, distance, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME,     \
+                                                                                    vrep.sim_scripttype_childscript,      \
+                                                                                    'gbGetDistanceToPrePickPoseFromClient', \
+                                                                                    inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                    vrep.simx_opmode_oneshot_wait)
+        return distance[0]
+
+    def getTimelyPickApproachingTime(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = ''
+        inputBuffer  = bytearray()
+        ##inputBuffer.append(78)
+        ##inputBuffer.append(42)
+        res, retInts, approachingTime, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME, \
+                                                                                           vrep.sim_scripttype_childscript,  \
+                                                                                           'getApproachingTimeFromClient',   \
+                                                                                           inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                           vrep.simx_opmode_oneshot_wait)
+        return approachingTime[0]
+
+    def getTimelyPickGrippingTime(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = ''
+        inputBuffer  = bytearray()
+        ##inputBuffer.append(78)
+        ##inputBuffer.append(42)
+        res, retInts, grippingTime, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME, \
+                                                                                        vrep.sim_scripttype_childscript,  \
+                                                                                        'getGrippingTimeFromClient',      \
+                                                                                        inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                        vrep.simx_opmode_oneshot_wait)
+        return grippingTime[0]
+
+    def getTimelyPickObjectDistance(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = ''
+        inputBuffer  = bytearray()
+        ##inputBuffer.append(78)
+        ##inputBuffer.append(42)
+        res, retInts, objectDistance, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME, \
+                                                                                        vrep.sim_scripttype_childscript,    \
+                                                                                        'getObjectDistanceFromClient',      \
+                                                                                        inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                        vrep.simx_opmode_oneshot_wait)
+        return objectDistance[0]
+
 
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)

@@ -44,7 +44,7 @@ CROBOT_STATE_RESETTING_HAND = 5 # Running Hand Reset
 # ================================================================
 # SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
-GB_CSERVER_ROBOT_ID = CKUKA_ARM_BARRETT_HAND #CUR5_ARM_BARRETT_HAND
+GB_CSERVER_ROBOT_ID = CUR5_ARM_GRIPPER #CKUKA_ARM_BARRETT_HAND
 GB_CSERVER_ROBOT_NAME = ''
 
 # ================================================================
@@ -85,7 +85,9 @@ CTASK_ID_OBJ_MOVE_CATCH      = 8
 CTASK_ID_OBJ_AVOID           = 9
 CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 
-GB_TASK_ID = CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT #CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
+CTASK_OBJ_TIMELY_PICK_POSITION = 0.29
+
+GB_TASK_ID = CTASK_ID_OBJ_TIMELY_PICK #CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -156,7 +158,7 @@ elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
 elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_GRIPPER): ## if(isTaskObjTimelyPick()):
     # Target Reaching Vel & Obj Gripping Vel
     GB_ACTION_DIM = 2
-    GB_STATE_DIM  = 6
+    GB_STATE_DIM  = 3 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
     GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
 
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):

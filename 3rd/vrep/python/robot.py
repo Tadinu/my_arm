@@ -70,7 +70,6 @@ KUKA_ARM_JOINT_SIGNAL_NAME_PREFIXES = ['armJoint1',
                                        'armJoint7']
 # UR5 ROBOTS --------------------------------------------------------------------------
 #
-gbUR5OriginalRobotPos = [0,0,0,0,0,0]
 UR5_ARM_JOINT_NAMES = [RC.CUR5_ARM_NAME + ('_joint1'),
                        RC.CUR5_ARM_NAME + ('_joint2'),
                        RC.CUR5_ARM_NAME + ('_joint3'),
@@ -669,18 +668,30 @@ class Robot:
         observation = []
         #endTipPos = self.getEndTipWorldPosition()
         isTaskObjHandBalance    = RC.isTaskObjHandBalance()
-        isTaskObjSuctionBalancePlate = RC.isTaskObjSuctionBalancePlate()
-        isTaskObjSuctionObjectSupport  = RC.isTaskObjSuctionObjectSupport()
+        isTaskObjSuctionBalancePlate  = RC.isTaskObjSuctionBalancePlate()
+        isTaskObjSuctionObjectSupport = RC.isTaskObjSuctionObjectSupport()
         isTaskObjHexapodBalance = RC.isTaskObjHexapodBalance()
         isTaskObjHold           = RC.isTaskObjHold()
         isTaskObjCatch          = RC.isTaskObjCatch()
         isTaskObjTimelyPick     = RC.isTaskObjTimelyPick()
 
-        if(isTaskObjTimelyPick):
-            jointPoses = gbUR5OriginalRobotPos
-            for i in range(len(self._jointHandles)):
-                #
-                observation.append(np.array(jointPoses[i], dtype=np.float32))
+        if(False): #isTaskObjTimelyPick
+            inputInts    = [self._robotHandle] #[objHandles[16]]
+            inputFloats  = []
+            inputStrings = ''
+            inputBuffer  = bytearray()
+            ##inputBuffer.append(78)
+            ##inputBuffer.append(42)
+            res, retInts, randomInitJointPose, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME,     \
+                                                                                                   vrep.sim_scripttype_childscript,      \
+                                                                                                   'gbGetRandomInitJointPoseFromClient', \
+                                                                                                   inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                                   vrep.simx_opmode_oneshot_wait)
+
+            observation.append(np.array(randomInitJointPose[0], dtype=np.float32))
+            #self._jointHandles
+            #for i in range(len(randomInitJointPose)):
+                #observation.append(np.array(randomInitJointPose[i], dtype=np.float32))
 
         for i in range(len(self._jointHandles)):
             if(isTaskObjHexapodBalance):
@@ -751,12 +762,7 @@ class Robot:
         # !NOTE: V-REP NOT ALLOW ALL-VOID PARAMETERS, SO WE HAVE TO ADD A DUMMY VALUE INTO inputFloats[]
 
         inputInts    = []
-        if(RC.isTaskObjTimelyPick()):
-            ##gbUR5OriginalRobotPos =
-            inputFloats  = gbUR5OriginalRobotPos
-        else:
-            inputFloats  = [1]
-
+        inputFloats  = [1]
         inputStrings = []
         inputBuffer  = bytearray()
         if(self._id == RC.CYOUBOT):

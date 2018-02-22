@@ -116,7 +116,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     vision = False
 
-    EXPLORE = 100000.
+    EXPLORE = 300 #100000.
     # Double loops of episodes and step:
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.

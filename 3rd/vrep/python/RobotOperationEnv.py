@@ -298,8 +298,7 @@ class RobotOperationEnvironment(gym.Env):
             print('Env observed 2nd!', reward) # self._robot.getOperationState()
             #print("len=%r" % len(self._observation))
 
-        return self._observation, reward, False, {}
-        #return self._observation, reward, done, {}  ######## ducta
+        return self._observation, reward, done, {}
 
     def _termination(self):
         if (self._terminated):

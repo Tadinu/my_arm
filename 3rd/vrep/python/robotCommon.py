@@ -10,10 +10,11 @@ except:
     print ('')
 
 import numpy as np
+import numpy.linalg as la
 from numpy.linalg import norm
 
 GB_TRACE = 0
-GB_MODE_TRAINING = 0 # 1: Training, 0: Enjoying/Running/Testing
+GB_MODE_TRAINING = 1 # 1: Training, 0: Enjoying/Running/Testing
 GB_MODE_ENJOYING = 0
 
 # ================================================================
@@ -62,7 +63,7 @@ CHEXAPOD_NAME       = 'hexapod'
 #
 CFALL_OBJS_NAMES      = ['Obj1']
 CPLATE_OBJ_NAME       = 'Plate'
-CBASEPLATE_OBJ_NAME   = 'BasePlate'
+CBASE_PLATE_OBJ_NAME  = 'BasePlate'
 CTABLE_OBJ_NAME       = 'Table'
 CTUBE_OBJ_NAME        = 'Tube'
 CBALL_OBJ_NAME        = 'Ball'
@@ -340,6 +341,29 @@ def getAngleFromTwoVectors(v1, v2, acute=1):
         return angle
     else:
         return 2 * np.pi - angle
+
+    """ Returns the angle in radians between vectors 'v1' and 'v2'    """
+    # cosang = np.dot(v1, v2)
+    # sinang = la.norm(np.cross(v1, v2))
+    # return np.arctan2(sinang, cosang)
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 
 ################################################################################################################

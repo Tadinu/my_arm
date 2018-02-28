@@ -116,7 +116,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     vision = False
 
-    EXPLORE = 300 #100000.
+    EXPLORE = 200 #100000.
     # Double loops of episodes and step:
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
@@ -175,6 +175,8 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             s_t = gb_observation_2_state(ob)
             #print('OB', s_t)
 
+            #slantingDegree   = abs(RC.angle_between(np.array([0,0,1]), np.array(env.getBasePlateNormalVector())))
+            #print('AAA: ', slantingDegree)
             ## ------------------------------------------------------------------------
             loss = 0
             epsilon -= 1.0 / EXPLORE
@@ -193,8 +195,9 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #print("a_t", a_t)
             #print("noise_t", noise_t)
             #print("a_t_original", a_t_original)
-            for i in range(action_dim):
-                noise_t[0][i] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][i], 0.0 , 0.60, 0.30)
+            noise_t[0][0] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][0], 0.0 , 0.60, 0.30)
+            noise_t[0][1] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][1], 0.5 , 1.00, 0.10)
+            noise_t[0][2] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][2], 0.0 , 0.60, 0.30)
 
             #The following code do the stochastic brake
             #if random.random() <= 0.1:
@@ -225,7 +228,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #print('target_q_values:', target_q_values)
             #print('batch:', len(batch))
             for k in range(len(batch)):
-                if dones[k]:
+                if not dones[k]:
                     y_t[k] = rewards[k]
                 else:
                     y_t[k] = rewards[k] + GAMMA*target_q_values[k]
@@ -301,7 +304,7 @@ def gb_observation_2_state(ob):
         elif(RC.isTaskObjSuctionBalance()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
                               #ob[4],                     # Vel-Trained joint vel
-                              ob[4],                      # Plate tilting gamma(x), beta(y)
+                              ob[4],                      # Plate slanting degree
                               ob[5]                       # Plate distance to base plate
                               ))
         elif(RC.isTaskObjHold()):

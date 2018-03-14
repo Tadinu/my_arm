@@ -1,3 +1,5 @@
+import os
+import copy
 import math
 import numpy as np
 import random
@@ -9,7 +11,7 @@ from threading import Timer
 ## threading.Timer(1, self.timerTask).start()
 
 import gym
-from gym import spaces
+from gym import error, spaces
 from gym.utils import seeding
 
 from robot import Robot
@@ -36,8 +38,9 @@ CSERVER_REMOTE_FUNC_OPERATION_TIME               = 'getRobotOperationTimeToTheMo
 CSERVER_REMOTE_FUNC_OBJ_AWAY_BASE_PLATE          = 'isObjAwayFromBasePlate'
 CSERVER_REMOTE_FUNC_GET_BASE_PLATE_NORMAL_VECTOR = 'getBasePlateNormalVectorFromClient'
 CSERVER_REMOTE_FUNC_GET_PLATE_NORMAL_VECTOR      = 'getPlateNormalVectorFromClient'
+CSERVER_REMOTE_FUNC_GET_MAX_PLATE_SLANTING_ANGLE = 'getMaxBasePlateSlantingAngleFromClient'
 
-class RobotOperationEnvironment(gym.Env):
+class RobotOperationEnvironment(gym.GoalEnv):
 
     def __init__(self, clientID, robotId, robotHandle):
         self._clientID = clientID
@@ -107,7 +110,7 @@ class RobotOperationEnvironment(gym.Env):
     def isTerminated(self):
         return self._terminated
 
-    def _reset(self):
+    def reset(self):
         if(RC.GB_TRACE):
             print("_reset")
         self.setTerminated(0)
@@ -135,7 +138,7 @@ class RobotOperationEnvironment(gym.Env):
         time.sleep(self._timeStep)
         return self._observation
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
@@ -146,7 +149,7 @@ class RobotOperationEnvironment(gym.Env):
         self._observation = self._robot.getObservation()
         #if(RC.isTaskObjSuctionBalance()):
             # Vel-trained joint vel, action[1] --> Refer to the V-Rep Server Robot script to confirm this!
-            #self._observation.append(np.array(action[1], dtype=np.float32))
+            #self._observation.append(np.array([action[1]], dtype=np.float32))
 
         #robotId = self._robot.id()
         if(RC.isTaskObjHandBalance() or RC.isTaskObjSuctionBalance() or RC.isTaskObjHexapodBalance()):
@@ -168,8 +171,8 @@ class RobotOperationEnvironment(gym.Env):
             else:
                 slantingDegree = 0
             #print('SLANT', slantingDegree)
-            self._observation.append(np.array(d, dtype=np.float32))
-            self._observation.append(np.array(slantingDegree, dtype=np.float32))
+            #self._observation.append(np.array([d], dtype=np.float32))
+            self._observation.append(np.array([slantingDegree], dtype=np.float32))
         elif(RC.isTaskObjHold()):
             ##############################################################################################
             # TUBE INFO
@@ -177,14 +180,14 @@ class RobotOperationEnvironment(gym.Env):
             # Tube Object
             # Angle rotation away from horizontal plane
             tubeOrient = RC.getObjectOrientation(RC.CTUBE_OBJ_NAME) # Must be the same name set in V-Rep
-            self._observation.append(np.array(abs(tubeOrient[1]), dtype=np.float32))
+            self._observation.append(np.array([abs(tubeOrient[1])], dtype=np.float32))
 
             # Distance from plate to the center of end-tip
             tubePos = RC.getObjectWorldPosition(RC.CTUBE_OBJ_NAME)
             palmPos = self._robot.getEndTipWorldPosition()
             d = math.sqrt((tubePos[0] - palmPos[0])**2 +
                           (tubePos[1] - palmPos[1])**2)
-            self._observation.append(np.array(d, dtype=np.float32))
+            self._observation.append(np.array([d], dtype=np.float32))
 
         elif(RC.isTaskObjCatch()):
             ##############################################################################################
@@ -196,8 +199,8 @@ class RobotOperationEnvironment(gym.Env):
             ballLinVel = RC.getObjectVelocity(RC.CBALL_OBJ_NAME)
             ##self._observation.append(np.array(ballPos[0], dtype=np.float32))
             ##self._observation.append(np.array(ballPos[1], dtype=np.float32))
-            self._observation.append(np.array(ballPos[2], dtype=np.float32))
-            self._observation.append(np.array(ballLinVel[2], dtype=np.float32))
+            self._observation.append(np.array([ballPos[2]], dtype=np.float32))
+            self._observation.append(np.array([ballLinVel[2]], dtype=np.float32))
 
         elif(RC.isTaskObjTimelyPick()):
             ##############################################################################################
@@ -205,7 +208,7 @@ class RobotOperationEnvironment(gym.Env):
             #
             # Object position on conveyor belt
             objPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            self._observation.append(np.array(objPos[1], dtype=np.float32))
+            self._observation.append(np.array([objPos[1]], dtype=np.float32))
 
         return self._observation
 
@@ -246,7 +249,7 @@ class RobotOperationEnvironment(gym.Env):
                                                                                      vrep.simx_opmode_oneshot_wait)
         return (retInts[0] == 0)
 
-    def _step(self, action):
+    def step(self, action):
         ## ----------------------------------------------------------------------------------------
         if(RC.GB_TRACE):
             print('ACTION:', action)
@@ -255,7 +258,7 @@ class RobotOperationEnvironment(gym.Env):
         ##
         self._objAwayFromBasePlate = False
 
-        ## WAIT FOR V-REP SERVER SIMULATION STATE TO BE READY (ACTUALLY, THIS IS ALREADY DONE IN THE OUTER LOOP CALLING _step())
+        ## WAIT FOR V-REP SERVER SIMULATION STATE TO BE READY (ACTUALLY, THIS IS ALREADY DONE IN THE OUTER LOOP CALLING step())
         ##
         ##while(self._robot.getOperationState() != RC.CROBOT_STATE_READY):
             ##time.sleep(0.01)
@@ -269,8 +272,8 @@ class RobotOperationEnvironment(gym.Env):
             ##print('Obj Pos:', pos)
 
             self._observation = self.getObservation(action)
-            reward = self._reward()
-            done   = self._termination()
+            reward = self.reward()
+            done   = self.termination()
         else:
             reward = 0
             overlong = False
@@ -290,8 +293,8 @@ class RobotOperationEnvironment(gym.Env):
             if(not self._objAwayFromBasePlate):
                 print('Obj still on base!')
             self._observation = self.getObservation(action)
-            reward += self._reward() # Reward Addition after observation 2nd!
-            done    = self._termination() or overlong
+            reward += self.reward() # Reward Addition after observation 2nd!
+            done    = self.termination() or overlong
             if(self._objAwayFromBasePlate):
                 reward -= 100
             print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
@@ -299,7 +302,7 @@ class RobotOperationEnvironment(gym.Env):
 
         return self._observation, reward, done, {}
 
-    def _termination(self):
+    def termination(self):
         if (self._terminated):
             ##RC.stopSimulation(self._clientID)
             ##self._robot.commandJointVibration(0)
@@ -314,14 +317,12 @@ class RobotOperationEnvironment(gym.Env):
 
         if(RC.isTaskObjTimelyPick()):
             pos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-            if (pos[1] >= 0.27):
+            return (pos[1] >= 0.29)
                 #self._objGroundHit = True
-                return True
         # Simple Ground Hit Check
         else:
             self._objAwayFromBasePlate = self.isObjAwayFromBasePlate()
-            if(self._objAwayFromBasePlate):
-                return True
+            return (self._objAwayFromBasePlate)
 
         if(not RC.isTaskObjCatch()):
             res = self.detectHandOnGround()
@@ -329,9 +330,9 @@ class RobotOperationEnvironment(gym.Env):
                 ##RC.stopSimulation(self._clientID)
                 ##self._robot.commandJointVibration(0)
 
-        return res
+        return True
 
-    def _reward(self):
+    def reward(self):
         #print("reward")
         #print(__reward)
         self.__reward = 1000
@@ -584,6 +585,18 @@ class RobotOperationEnvironment(gym.Env):
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retFloats
+
+    def getMaxBasePlateSlantingAngle(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, retFloats, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CSERVER_REMOTE_API_OBJECT_NAME, \
+                                                                                     vrep.sim_scripttype_childscript,                   \
+                                                                                     CSERVER_REMOTE_FUNC_GET_MAX_PLATE_SLANTING_ANGLE,  \
+                                                                                     inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                     vrep.simx_opmode_oneshot_wait)
+        return retFloats[0]
 
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)

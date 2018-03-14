@@ -342,6 +342,14 @@ class Robot:
         res, jointHandle = vrep.simxGetObjectHandle(self._clientID, jointName, vrep.simx_opmode_oneshot_wait)
         return RC.getJointPosition(jointHandle)
 
+    def getConcernedJointsCurrentPos(self):
+        poses = []
+        for i in range(len(self._jointHandles)):
+            if(i == 3 or i == 4 or i == 5):
+                poses.append(RC.getJointPosition(self._jointHandles[i]))
+
+        return poses
+
     # This name is immutable, required by eigen_grasp
     def getCurrentDofs(self):
         dofs = [1] * self.getDofsCount()
@@ -679,24 +687,24 @@ class Robot:
             jointPoses = gbUR5OriginalRobotPos
             for i in range(len(self._jointHandles)):
                 #
-                observation.append(np.array(jointPoses[i], dtype=np.float32))
+                observation.append(np.array([jointPoses[i]], dtype=np.float32))
 
         for i in range(len(self._jointHandles)):
             if(isTaskObjHexapodBalance):
                 pos = RC.getJointPosition(self._jointHandles[i]) # Pos
                 #
-                observation.append(np.array(pos, dtype=np.float32))
+                observation.append(np.array([pos], dtype=np.float32))
             else:
                 if(i == 0 or i == 3 or i == 4 or i == 5):
                     pos = RC.getJointPosition(self._jointHandles[i])
                     #vel = RC.getJointVelocity(self._jointHandles[i])
                     #
                     if(isTaskObjHandBalance or isTaskObjSuctionBalance):
-                        observation.append(np.array(pos, dtype=np.float32)) # Pos
-                        #observation.append(np.array(vel, dtype=np.float32)) # Vel
+                        observation.append(np.array([pos], dtype=np.float32)) # Pos
+                        #observation.append(np.array([vel], dtype=np.float32)) # Vel
                     elif(isTaskObjHold):
                         force = RC.getJointForce(self._jointHandles[i])
-                        observation.append(np.array(force, dtype=np.float32)) # Force
+                        observation.append(np.array([force], dtype=np.float32)) # Force
 
         if(isTaskObjHandBalance):
             # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should
@@ -704,8 +712,8 @@ class Robot:
             #
             # Hand Joint Pos
             handJointPoses = self.getCurrentHandJointPoses()
-            observation.append(np.array(handJointPoses[2], dtype=np.float32))
-            observation.append(np.array(handJointPoses[7], dtype=np.float32))
+            observation.append(np.array([handJointPoses[2]], dtype=np.float32))
+            observation.append(np.array([handJointPoses[7]], dtype=np.float32))
 
         elif(isTaskObjHold):
             # HAND INFO (!Hand is also one factor that makes up the object condition (pos & orient), therefore should
@@ -713,18 +721,18 @@ class Robot:
             #
             # Hand Joint Pos
             handJointPoses = self.getCurrentHandJointPoses()
-            observation.append(np.array(handJointPoses[2], dtype=np.float32))
-            observation.append(np.array(handJointPoses[7], dtype=np.float32))
+            observation.append(np.array([handJointPoses[2]], dtype=np.float32))
+            observation.append(np.array([handJointPoses[7]], dtype=np.float32))
 
             handJointForces = [RC.getJointForce(self._handJointHandles[0]), RC.getJointForce(self._handJointHandles[1])]
-            observation.append(np.array(handJointForces[0], dtype=np.float32))
-            observation.append(np.array(handJointForces[1], dtype=np.float32))
+            observation.append(np.array([handJointForces[0]], dtype=np.float32))
+            observation.append(np.array([handJointForces[1]], dtype=np.float32))
 
         elif(isTaskObjCatch):
             pos0 = RC.getJointPosition(self._jointHandles[0])
             vel0 = RC.getJointVelocity(self._jointHandles[0])
-            observation.append(np.array(pos0, dtype=np.float32))
-            observation.append(np.array(vel0, dtype=np.float32))
+            observation.append(np.array([pos0], dtype=np.float32))
+            observation.append(np.array([vel0], dtype=np.float32))
 
         return observation
 

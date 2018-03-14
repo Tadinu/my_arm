@@ -116,7 +116,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     vision = False
 
-    EXPLORE = 200 #100000.
+    EXPLORE = 1 #100000.
     # Double loops of episodes and step:
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
@@ -159,6 +159,9 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         print("Cannot find the weight")
 
     print("Manipulator DDPG Training Experiment Start.")
+    dirCount = 1
+    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA_POS456/'
+    dataDir  = ''
     for episode in range(episode_count):
 
         if(RC.GB_TRACE):
@@ -248,19 +251,25 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
 
             # End for on steps
-            if np.mod(j, 3) == 0:
+            if np.mod(episode, 3) == 0:
                 if (train_indicator):
                     if(RC.GB_TRACE):
                         print("Now we save model")
-                    actor.model.save_weights("actormodel.h5", overwrite=True)
-                    with open("actormodel.json", "w") as outfile:
+                    if(np.mod(episode, 200) == 0):
+                        dirPattern = str(dirCount) + '_' + str(dirCount * 200) + "_steps/"
+                        dataDir    = DATA_DIR + dirPattern
+                        dirCount  += 1
+                    else:
+                        dataDir = ''
+                    actor.model.save_weights(dataDir+"actormodel.h5", overwrite=True)
+                    with open(dataDir+"actormodel.json", "w") as outfile:
                         json.dump(actor.model.to_json(), outfile)
 
-                    critic.model.save_weights("criticmodel.h5", overwrite=True)
-                    with open("criticmodel.json", "w") as outfile:
+                    critic.model.save_weights(dataDir+"criticmodel.h5", overwrite=True)
+                    with open(dataDir+"criticmodel.json", "w") as outfile:
                         json.dump(critic.model.to_json(), outfile)
 
-            if np.mod(j, 10) == 0:
+            if np.mod(episode, 10) == 0:
                 print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
                 print("Total Step: " + str(step))
                 print("")
@@ -302,10 +311,10 @@ def gb_observation_2_state(ob):
                               ob[6], ob[7], ob[8], ob[9]
                               ))
         elif(RC.isTaskObjSuctionBalance()):
-            return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
+            return np.hstack((ob[0], ob[1] , ob[2], ob[3], # Joint pos
                               #ob[4],                     # Vel-Trained joint vel
-                              ob[4],                      # Plate slanting degree
-                              ob[5]                       # Plate distance to base plate
+                              ob[4]                       # Plate slanting degree
+                              #ob[5]                       # Plate distance to base plate
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)

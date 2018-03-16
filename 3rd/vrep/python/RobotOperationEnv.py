@@ -171,7 +171,7 @@ class RobotOperationEnvironment(gym.GoalEnv):
             else:
                 slantingDegree = 0
             #print('SLANT', slantingDegree)
-            #self._observation.append(np.array([d], dtype=np.float32))
+            self._observation.append(np.array([d], dtype=np.float32))
             self._observation.append(np.array([slantingDegree], dtype=np.float32))
         elif(RC.isTaskObjHold()):
             ##############################################################################################

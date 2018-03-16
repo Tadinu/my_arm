@@ -146,11 +146,18 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     #Now load the weight
     print("Now we load the weight")
+    dirCount = 1
+    LOAD_DIR_NO = 10
+    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA/'
+    dataDir  = ''
     try:
-        actor.model.load_weights("actormodel.h5")
-        critic.model.load_weights("criticmodel.h5")
-        actor.target_model.load_weights("actormodel.h5")
-        critic.target_model.load_weights("criticmodel.h5")
+        dirPattern = str(LOAD_DIR_NO) + '_' + str(LOAD_DIR_NO * 200) + "_steps/"
+        dataDir    = DATA_DIR + dirPattern
+
+        actor.model.load_weights(dataDir+"actormodel.h5")
+        critic.model.load_weights(dataDir+"criticmodel.h5")
+        actor.target_model.load_weights(dataDir+"actormodel.h5")
+        critic.target_model.load_weights(dataDir+"criticmodel.h5")
         print("Weight loaded successfully!")
         print("######################################################")
         print("######################################################")
@@ -159,9 +166,6 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         print("Cannot find the weight")
 
     print("Manipulator DDPG Training Experiment Start.")
-    dirCount = 1
-    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA_POS456/'
-    dataDir  = ''
     for episode in range(episode_count):
 
         if(RC.GB_TRACE):
@@ -313,8 +317,8 @@ def gb_observation_2_state(ob):
         elif(RC.isTaskObjSuctionBalance()):
             return np.hstack((ob[0], ob[1] , ob[2], ob[3], # Joint pos
                               #ob[4],                     # Vel-Trained joint vel
-                              ob[4]                       # Plate slanting degree
-                              #ob[5]                       # Plate distance to base plate
+                              ob[4],                      # Plate slanting degree
+                              ob[5]                       # Plate distance to base plate
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)

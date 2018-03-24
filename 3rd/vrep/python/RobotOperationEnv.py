@@ -1,3 +1,5 @@
+import os
+import copy
 import math
 import numpy as np
 import random
@@ -52,15 +54,17 @@ class RobotOperationEnvironment(gym.Env):
         self.loadEnvironmentObjects()
 
         # Reset
-        self.reset() ## --> Call self._reset() defined below!
+        self.reset() ## --> Call self.reset() defined below!
 
         # After loading the robot!
         observationDim = RC.GB_STATE_DIM
         print("observationDim", observationDim)
 
         observation_high = np.array([np.finfo(np.float32).max] * observationDim)
-        self.action_space = spaces.Discrete(RC.GB_ACTION_DIM)
+        action_high = np.array([1.0] * RC.GB_ACTION_DIM)
+        self.action_space = spaces.Box(-action_high, action_high)
         self.observation_space = spaces.Box(-observation_high, observation_high)
+        self.num_envs = 1
         self.viewer = None
 
         ## DEBUG STUFFS --
@@ -105,9 +109,9 @@ class RobotOperationEnvironment(gym.Env):
     def isTerminated(self):
         return self._terminated
 
-    def _reset(self):
+    def reset(self):
         if(RC.GB_TRACE):
-            print("_reset")
+            print("reset")
         self.setTerminated(0)
         self._objGroundHit = False
         #print("Start back simulation")
@@ -135,7 +139,7 @@ class RobotOperationEnvironment(gym.Env):
         time.sleep(self._timeStep)
         return self._observation
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
@@ -165,16 +169,21 @@ class RobotOperationEnvironment(gym.Env):
             #basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
             d = math.sqrt((platePos[0] - endTipPos[0])**2 +
                           (platePos[1] - endTipPos[1])**2)
-            self._observation.append(np.array(d, dtype=np.float32))
 
-        elif(RC.isTaskObjSuctionObjectSupport()):
-            ballPos      = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
-            basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
-            d = math.sqrt((ballPos[0] - basePlatePos[0])**2 +
-                          (ballPos[1] - basePlatePos[1])**2 +
-                          (ballPos[2] - basePlatePos[2])**2)
-            self._observation.append(np.array(d, dtype=np.float32))
+            # Base Plate Normal Vector -----------------------------------------------------------------------------
+            normalVector = self.getBasePlateNormalVector()
+            if(len(normalVector) == 3):
+                slantingDegree = abs(RC.angle_between(np.array([0,0,1]), np.array(normalVector)))
+            else:
+                slantingDegree = 0
+            #print('SLANT', slantingDegree)
 
+            # Velocity Factor of Joint 4  -----------------------------------------------------------------------------
+            if(RC.isTaskObjSuctionBalancePosVel()):
+                self._observation.append(np.array([action[1]], dtype=np.float32))
+
+            self._observation.append(np.array([d], dtype=np.float32))
+            self._observation.append(np.array([slantingDegree], dtype=np.float32))
         elif(RC.isTaskObjHold()):
             ##############################################################################################
             # TUBE INFO
@@ -270,7 +279,7 @@ class RobotOperationEnvironment(gym.Env):
         res = (pos[2] < 0.5)
         return res
 
-    def _step(self, action):
+    def step(self, action):
         ## ----------------------------------------------------------------------------------------
         if(RC.GB_TRACE):
             print('ACTION:', action)
@@ -346,7 +355,7 @@ class RobotOperationEnvironment(gym.Env):
             self._observation.append(np.array(approachingTime, dtype=np.float32))
             self._observation.append(np.array(pickingTime, dtype=np.float32))
 
-            reward += self._reward()
+            reward += self.reward()
             done = (approachingTime > 5000 or pickingTime > 1000 or action[0] < 0.1 or action[1] < 0.1)
 
             print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
@@ -363,20 +372,20 @@ class RobotOperationEnvironment(gym.Env):
                     #print('GROUND HIT',i+1)
                     reward -= 100
                 if(i==2): # 3s has passed!
-                    reward += self._reward()
+                    reward += self.reward()
                 i=i+1
                 #print('Still moving',i)
 
             self._observation = self.getObservation(action)
-            reward += self._reward() # Reward Addition after observation 2nd!
-            done    = self._termination()
+            reward += self.reward() # Reward Addition after observation 2nd!
+            done    = self.termination()
             print('Env observed 2nd!', reward) # self._robot.getOperationState()
             #print("len=%r" % len(self._observation))
 
             return self._observation, reward, False, {}
             #return self._observation, reward, done, {}  ######## ducta
 
-    def _termination(self):
+    def termination(self):
         if (self._terminated):
             ##RC.stopSimulation(self._clientID)
             ##self._robot.commandJointVibration(0)
@@ -414,7 +423,7 @@ class RobotOperationEnvironment(gym.Env):
 
         return True
 
-    def _reward(self):
+    def reward(self):
         #print("reward")
         #print(__reward)
         self.__reward = 1000

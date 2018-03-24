@@ -54,10 +54,6 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_PORT = 19999
-##############################################################################################################################################################
-##############################################################################################################################################################
-
 def callback(lcl, glb):
     # stop training if reward exceeds 199
     total = sum(lcl['episode_rewards'][-101:-1]) / 100
@@ -67,36 +63,8 @@ def callback(lcl, glb):
     is_solved = totalt > 2000 and total >= 10
     return is_solved
 
-def initialize_vrep():
-    print ('Program started')
-    vrep.simxFinish(-1) # just in case, close all opened connections
-
-    global gbClientID
-    gbClientID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
-    if gbClientID!=-1:
-        print ('Connected to remote API server',gbClientID)
-
-        # Init Robot Common
-        RC.init(gbClientID)
-
-        # Start the simulation:
-        RC.startSimulation(gbClientID)
-
-        # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
-        #    robotHandle=retInts[0]
-
-        # Get scene objects data
-        res, objHandles, intData, floatData, objNames = vrep.simxGetObjectGroupData(gbClientID,vrep.sim_appobj_object_type, 0, vrep.simx_opmode_blocking)
-        if res==vrep.simx_return_ok:
-            print ('Number of objects in the scene: ',len(objHandles), len(objNames))
-            for i in range(len(objHandles)):
-                print('Obj:', objHandles[i], objNames[i])
-        else:
-            print ('Remote API function call returned with error code: ',res)
-
-        # Retrieve some handles:
-        global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
+##############################################################################################################################################################
+##############################################################################################################################################################
 
 def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     BUFFER_SIZE = 100000
@@ -139,18 +107,25 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     critic = CriticNetwork(sess, state_dim, action_dim, BATCH_SIZE, TAU, LRC)
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
-    print('START ENV', gbClientID, gbRobotHandle)
-    env = RobotOperationEnvironment(gbClientID, RC.GB_CSERVER_ROBOT_ID, gbRobotHandle)
+    print('START ENV', RC.GB_CLIENT_ID(), RC.gbRobotHandle())
+    env = RobotOperationEnvironment(RC.GB_CLIENT_ID(), RC.GB_CSERVER_ROBOT_ID, RC.gbRobotHandle())
 
     ## ---------------------------------------------------------------
 
     #Now load the weight
     print("Now we load the weight")
+    dirCount = 1
+    LOAD_DIR_NO = 10
+    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA/'
+    dataDir  = ''
     try:
-        actor.model.load_weights("actormodel.h5")
-        critic.model.load_weights("criticmodel.h5")
-        actor.target_model.load_weights("actormodel.h5")
-        critic.target_model.load_weights("criticmodel.h5")
+        dirPattern = str(LOAD_DIR_NO) + '_' + str(LOAD_DIR_NO * 200) + "_steps/"
+        dataDir    = DATA_DIR + dirPattern
+
+        actor.model.load_weights(dataDir+"actormodel.h5")
+        critic.model.load_weights(dataDir+"criticmodel.h5")
+        actor.target_model.load_weights(dataDir+"actormodel.h5")
+        critic.target_model.load_weights(dataDir+"criticmodel.h5")
         print("Weight loaded successfully!")
         print("######################################################")
         print("######################################################")
@@ -167,7 +142,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
         total_reward = 0.
         for j in range(max_steps):
 
-            if(RC.isUnknownTask() or episode == 0 or j == 0):
+            if(RC.isUnknownTask() or episode == 0):
                 ob = env.reset()
             else: #We take the ob from the previous step, since the reset returns meaningless value
                 env.reset()
@@ -230,7 +205,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #print('target_q_values:', target_q_values)
             #print('batch:', len(batch))
             for k in range(len(batch)):
-                if dones[k]:
+                if not dones[k]:
                     y_t[k] = rewards[k]
                 else:
                     y_t[k] = rewards[k] + GAMMA*target_q_values[k]
@@ -250,19 +225,25 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 print("Episode", episode, "Step", step, "Action", a_t, "Reward", r_t, "Loss", loss)
 
             # End for on steps
-            if np.mod(j, 3) == 0:
+            if np.mod(episode, 3) == 0:
                 if (train_indicator):
                     if(RC.GB_TRACE):
                         print("Now we save model")
-                    actor.model.save_weights("actormodel.h5", overwrite=True)
-                    with open("actormodel.json", "w") as outfile:
+                    if(np.mod(episode, 200) == 0):
+                        dirPattern = str(dirCount) + '_' + str(dirCount * 200) + "_steps/"
+                        dataDir    = DATA_DIR + dirPattern
+                        dirCount  += 1
+                    else:
+                        dataDir = ''
+                    actor.model.save_weights(dataDir+"actormodel.h5", overwrite=True)
+                    with open(dataDir+"actormodel.json", "w") as outfile:
                         json.dump(actor.model.to_json(), outfile)
 
-                    critic.model.save_weights("criticmodel.h5", overwrite=True)
-                    with open("criticmodel.json", "w") as outfile:
+                    critic.model.save_weights(dataDir+"criticmodel.h5", overwrite=True)
+                    with open(dataDir+"criticmodel.json", "w") as outfile:
                         json.dump(critic.model.to_json(), outfile)
 
-            if np.mod(j, 10) == 0:
+            if np.mod(episode, 10) == 0:
                 print("TOTAL REWARD @ " + str(episode) +"-th Episode  : Reward " + str(total_reward))
                 print("Total Step: " + str(step))
                 print("")
@@ -275,7 +256,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     #env.stop() # Stop Client Connection to V-REP Server
 
 def finalize_vrep():
-    RC.endSimulation(gbClientID)
+    RC.endSimulation(RC.GB_CLIENT_ID())
 
 def draw_data():
     track_hand = np.array(track_hand)
@@ -303,15 +284,16 @@ def gb_observation_2_state(ob):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
                               ob[6], ob[7], ob[8], ob[9]
                               ))
-        elif(RC.isTaskObjSuctionBalancePlate()):
-            return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
-                              #ob[4],                     # Vel-Trained joint vel
-                              ob[4],                      # Plate tilting gamma(x), beta(y)
+        elif(RC.isTaskObjSuctionBalancePosOnly()):
+            return np.hstack((ob[0], ob[1] , ob[2], ob[3], # Joint pos
+                              ob[4],                      # Plate slanting degree
                               ob[5]                       # Plate distance to base plate
                               ))
-        elif(RC.isTaskObjSuctionObjectSupport()):
-            return np.hstack((ob[0], ob[1], ob[2], ob[3], # Joint pos
-                              ob[4]                       # Ball distance to base plate
+        elif(RC.isTaskObjSuctionBalancePosVel()):
+            return np.hstack((ob[0], ob[1] , ob[2], ob[3], # Joint pos
+                              ob[4],                     # Vel-Trained joint vel
+                              ob[5],                      # Plate slanting degree
+                              ob[6]                       # Plate distance to base plate
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)

@@ -43,8 +43,6 @@ DISTFILES += \
     ddpg/replay_buffer.py \
     ddpg/ReplayBuffer.py \
     train_robot_operation_II.py \
-    ddpg2/ddpg.py \
-    ddpg2/replay_buffer.py \
     actormodel.json \
     criticmodel.json \
     actormodel.h5 \
@@ -53,9 +51,23 @@ DISTFILES += \
     UR5/ur5.py \
     UR5/ur5_ctrl.py \
     repeated_timer.py \
-    RobotOperationBallBalanceEnv.py \
-    train_robot_ball_balance.py \
-    ddpg/ActorNetworkBallBalance.py \
-    RobotOperationObjSupportEnv.py \
-    train_robot_obj_support.py \
-    ddpg/ActorNetworkObjSupport.py
+    her/actor_critic.py \
+    her/ddpg.py \
+    her/her.py \
+    her/normalizer.py \
+    her/replay_buffer.py \
+    her/rollout.py \
+    her/util.py \
+    her/experiment/config.py \
+    her/experiment/play.py \
+    her/experiment/plot.py \
+    her/experiment/train.py \
+    train_robot_operation_ddpg.py \
+    train_robot_operation_ddpg_II.py \
+    train_robot_operation_ddpg_her.py \
+    RobotOperationGoalEnv.py \
+    train_robot_operation_deepq.py \
+    dqn/dqn.py \
+    train_robot_operation_ppo.py \
+    ppo/ppo2/policies.py \
+    ppo/ppo2/ppo2.py

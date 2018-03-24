@@ -59,8 +59,10 @@ class RobotOperationEnvironment(gym.Env):
         print("observationDim", observationDim)
 
         observation_high = np.array([np.finfo(np.float32).max] * observationDim)
-        self.action_space = spaces.Discrete(RC.GB_ACTION_DIM)
+        action_high = np.array([1.0] * RC.GB_ACTION_DIM)
+        self.action_space = spaces.Box(-action_high, action_high)
         self.observation_space = spaces.Box(-observation_high, observation_high)
+        self.num_envs = 1
         self.viewer = None
 
         ## DEBUG STUFFS --

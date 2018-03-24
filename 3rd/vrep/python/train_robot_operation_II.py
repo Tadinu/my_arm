@@ -53,9 +53,6 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_PORT = 19999
-RC.GB_CSERVER_ROBOT_NAME = 'LBR_iiwa_14_R820#' # 'youBot#' / 'LBR4p#'
-RC.GB_CSERVER_ROBOT_ID = RC.CKUKA_ARM #RC.CYOUBOT
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -67,44 +64,6 @@ def callback(lcl, glb):
     #print(totalt)
     is_solved = totalt > 2000 and total >= 10
     return is_solved
-
-def initialize_vrep():
-    print ('Program started')
-    vrep.simxFinish(-1) # just in case, close all opened connections
-
-    global gbClientID
-    gbClientID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
-    if gbClientID!=-1:
-        print ('Connected to remote API server',gbClientID)
-
-        # Set Simulation in Synchronous mode
-        vrep.simxSynchronous(gbClientID,True)
-
-        # Set Simulation Step Time
-        dt = .001
-        vrep.simxSetFloatingParameter(gbClientID,
-                                      vrep.sim_floatparam_simulation_time_step,
-                                      dt, # specify a simulation time step
-                                      vrep.simx_opmode_oneshot)
-
-        # Start the simulation:
-        vrep.simxStartSimulation(gbClientID,vrep.simx_opmode_oneshot_wait)
-
-        # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
-        #    robotHandle=retInts[0]
-
-        # Get scene objects data
-        res, objHandles, intData, floatData, objNames = vrep.simxGetObjectGroupData(gbClientID,vrep.sim_appobj_object_type, 0, vrep.simx_opmode_blocking)
-        if res==vrep.simx_return_ok:
-            print ('Number of objects in the scene: ',len(objHandles), len(objNames))
-            for i in range(len(objHandles)):
-                print('Obj:', objHandles[i], objNames[i])
-        else:
-            print ('Remote API function call returned with error code: ',res)
-
-        # Retrieve some handles:
-        global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
 
 from replay_buffer import ReplayBuffer
 
@@ -429,8 +388,8 @@ def main(args):
 
         #env = gym.make(args['env'])
 
-        print('START ENV', gbClientID, gbRobotHandle)
-        env = RobotOperationEnvironment(gbClientID, RC.GB_CSERVER_ROBOT_ID, gbRobotHandle)
+        print('START ENV', RC.GB_CLIENT_ID(), RC.gbRobotHandle())
+        env = RobotOperationEnvironment(RC.GB_CLIENT_ID(), RC.GB_CSERVER_ROBOT_ID, RC.gbRobotHandle())
 
         np.random.seed(int(args['random_seed']))
         tf.set_random_seed(int(args['random_seed']))
@@ -467,14 +426,14 @@ def main(args):
 
 def finalize_vrep():
     # stop the simulation
-    vrep.simxStopSimulation(gbClientID, vrep.simx_opmode_blocking)
+    vrep.simxStopSimulation(RC.GB_CLIENT_ID(), vrep.simx_opmode_blocking)
 
     # Before closing the connection to V-REP,
     #make sure that the last command sent out had time to arrive.
-    vrep.simxGetPingTime(gbClientID)
+    vrep.simxGetPingTime(RC.GB_CLIENT_ID())
 
     # Now close the connection to V-REP:
-    vrep.simxFinish(gbClientID)
+    vrep.simxFinish(RC.GB_CLIENT_ID())
     print('V-REP Server Connection closed...')
 
 def draw_data():

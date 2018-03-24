@@ -65,4 +65,9 @@ DISTFILES += \
     train_robot_operation_ddpg.py \
     train_robot_operation_ddpg_II.py \
     train_robot_operation_ddpg_her.py \
-    RobotOperationGoalEnv.py
+    RobotOperationGoalEnv.py \
+    train_robot_operation_deepq.py \
+    dqn/dqn.py \
+    train_robot_operation_ppo.py \
+    ppo/ppo2/policies.py \
+    ppo/ppo2/ppo2.py

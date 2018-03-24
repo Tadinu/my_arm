@@ -54,10 +54,6 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_PORT = 19999
-##############################################################################################################################################################
-##############################################################################################################################################################
-
 def callback(lcl, glb):
     # stop training if reward exceeds 199
     total = sum(lcl['episode_rewards'][-101:-1]) / 100
@@ -67,36 +63,8 @@ def callback(lcl, glb):
     is_solved = totalt > 2000 and total >= 10
     return is_solved
 
-def initialize_vrep():
-    print ('Program started')
-    vrep.simxFinish(-1) # just in case, close all opened connections
-
-    global gbClientID
-    gbClientID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
-    if gbClientID!=-1:
-        print ('Connected to remote API server',gbClientID)
-
-        # Init Robot Common
-        RC.init(gbClientID)
-
-        # Start the simulation:
-        RC.startSimulation(gbClientID)
-
-        # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
-        #    robotHandle=retInts[0]
-
-        # Get scene objects data
-        res, objHandles, intData, floatData, objNames = vrep.simxGetObjectGroupData(gbClientID,vrep.sim_appobj_object_type, 0, vrep.simx_opmode_blocking)
-        if res==vrep.simx_return_ok:
-            print ('Number of objects in the scene: ',len(objHandles), len(objNames))
-            for i in range(len(objHandles)):
-                print('Obj:', objHandles[i], objNames[i])
-        else:
-            print ('Remote API function call returned with error code: ',res)
-
-        # Retrieve some handles:
-        global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
+##############################################################################################################################################################
+##############################################################################################################################################################
 
 def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     BUFFER_SIZE = 100000
@@ -116,7 +84,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     vision = False
 
-    EXPLORE = 1 #100000.
+    EXPLORE = 3000 #100000.
     # Double loops of episodes and step:
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
@@ -139,20 +107,21 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     critic = CriticNetwork(sess, state_dim, action_dim, BATCH_SIZE, TAU, LRC)
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
-    print('START ENV', gbClientID, gbRobotHandle)
-    env = RobotOperationEnvironment(gbClientID, RC.GB_CSERVER_ROBOT_ID, gbRobotHandle)
+    print('START ENV', RC.GB_CLIENT_ID(), RC.gbRobotHandle())
+    env = RobotOperationEnvironment(RC.GB_CLIENT_ID(), RC.GB_CSERVER_ROBOT_ID, RC.gbRobotHandle())
 
     ## ---------------------------------------------------------------
 
     #Now load the weight
     print("Now we load the weight")
-    dirCount = 1
-    LOAD_DIR_NO = 10
-    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA/'
+    LOAD_DIR_NO = 14
+    dirCount = LOAD_DIR_NO
+    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA/DDPG/'
     dataDir  = ''
     try:
         dirPattern = str(LOAD_DIR_NO) + '_' + str(LOAD_DIR_NO * 200) + "_steps/"
         dataDir    = DATA_DIR + dirPattern
+        print('LOAD ', dataDir)
 
         actor.model.load_weights(dataDir+"actormodel.h5")
         critic.model.load_weights(dataDir+"criticmodel.h5")
@@ -286,7 +255,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     #env.stop() # Stop Client Connection to V-REP Server
 
 def finalize_vrep():
-    RC.endSimulation(gbClientID)
+    RC.endSimulation(RC.GB_CLIENT_ID())
 
 def draw_data():
     track_hand = np.array(track_hand)
@@ -314,11 +283,16 @@ def gb_observation_2_state(ob):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], # Joint pos and vel
                               ob[6], ob[7], ob[8], ob[9]
                               ))
-        elif(RC.isTaskObjSuctionBalance()):
+        elif(RC.isTaskObjSuctionBalancePosOnly()):
             return np.hstack((ob[0], ob[1] , ob[2], ob[3], # Joint pos
-                              #ob[4],                     # Vel-Trained joint vel
                               ob[4],                      # Plate slanting degree
                               ob[5]                       # Plate distance to base plate
+                              ))
+        elif(RC.isTaskObjSuctionBalancePosVel()):
+            return np.hstack((ob[0], ob[1] , ob[2], ob[3], # Joint pos
+                              ob[4],                       # Vel-Trained joint vel
+                              ob[5],                       # Plate slanting degree
+                              ob[6]                        # Plate distance to base plate
                               ))
         elif(RC.isTaskObjHold()):
             return np.hstack((ob[0], ob[1], ob[2], ob[3], ob[4], ob[5], ob[6], # Joint i (pos)
@@ -346,6 +320,6 @@ def gb_observation_2_state(ob):
                           ))
 
 if __name__ == "__main__":
-    initialize_vrep()
-    startTraining(RC.GB_MODE_TRAINING)
-    finalize_vrep()
+    RC.initialize_vrep()
+    startTraining(RC.GB_DDPG_MODE_TRAINING)
+    RC.finalize_vrep()

@@ -63,41 +63,8 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_PORT = 19999
 ##############################################################################################################################################################
 ##############################################################################################################################################################
-
-def initialize_vrep():
-    print ('Program started')
-    vrep.simxFinish(-1) # just in case, close all opened connections
-
-    global gbClientID
-    gbClientID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
-    if gbClientID!=-1:
-        print ('Connected to remote API server',gbClientID)
-
-        # Init Robot Common
-        RC.init(gbClientID)
-
-        # Start the simulation:
-        RC.startSimulation(gbClientID)
-
-        # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
-        #    robotHandle=retInts[0]
-
-        # Get scene objects data
-        res, objHandles, intData, floatData, objNames = vrep.simxGetObjectGroupData(gbClientID,vrep.sim_appobj_object_type, 0, vrep.simx_opmode_blocking)
-        if res==vrep.simx_return_ok:
-            print ('Number of objects in the scene: ',len(objHandles), len(objNames))
-            for i in range(len(objHandles)):
-                print('Obj:', objHandles[i], objNames[i])
-        else:
-            print ('Remote API function call returned with error code: ',res)
-
-        # Retrieve some handles:
-        global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
-
 def mpi_average(value):
     if value == []:
         value = [0.]
@@ -166,8 +133,8 @@ def train(policy, rollout_worker, evaluator,
 def startTraining(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, policy_save_interval, clip_return,
                   override_params={}, save_policies=True):
 
-    print('START ENV', gbClientID, gbRobotHandle)
-    env = RobotOperationGoalEnvironment(gbClientID, RC.GB_CSERVER_ROBOT_ID, gbRobotHandle)
+    print('START ENV', RC.GB_CLIENT_ID(), RC.gbRobotHandle())
+    env = RobotOperationGoalEnvironment(RC.GB_CLIENT_ID(), RC.GB_CSERVER_ROBOT_ID, RC.gbRobotHandle())
     config.set_cached_env(env)
     #assert hasattr(config.CACHED_ENV, '_max_episode_steps')
 
@@ -260,7 +227,7 @@ def startTraining(env_name, logdir, n_epochs, num_cpu, seed, replay_strategy, po
         policy_save_interval=policy_save_interval, save_policies=save_policies)
 
 if __name__ == '__main__':
-    initialize_vrep()
+    RC.initialize_vrep()
     parser = argparse.ArgumentParser(description='provide arguments for DDPG+HER agent')
 
     parser.add_argument('--env_name', type=str, default='FetchReach-v0', help='the name of the OpenAI Gym environment that you want to train on')
@@ -286,4 +253,4 @@ if __name__ == '__main__':
                   args['replay_strategy'],
                   args['policy_save_interval'],
                   args['clip_return'])
-    finalize_vrep()
+    RC.finalize_vrep()

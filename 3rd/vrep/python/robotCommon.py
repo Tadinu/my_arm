@@ -14,12 +14,13 @@ import numpy.linalg as la
 from numpy.linalg import norm
 
 GB_TRACE = 0
-GB_MODE_TRAINING = 0 # 1: Training, 0: Enjoying/Running/Testing
-GB_MODE_ENJOYING = 0
+GB_DDPG_MODE_TRAINING = 0 # 1: Training, 0: Enjoying/Running/Testing
+GB_DDPG_MODE_ENJOYING = 0
 
 # ================================================================
-# SERVER REMOTE API OBJECT NAME ----------------------------------
+# SERVER INFO ----------------------------------------------------
 #
+CSERVER_PORT = 19999
 CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
 
 # ================================================================
@@ -76,16 +77,17 @@ CSUCTION_PAD_NAME     = 'suctionPad'
 #
 CTASK_ID_UNKNOWN             = -1
 CTASK_ID_OBJ_HAND_BALANCE    = 1
-CTASK_ID_OBJ_SUCTION_BALANCE = 2
-CTASK_ID_OBJ_HEXAPOD_BALANCE = 3
-CTASK_ID_OBJ_HOLD            = 4
-CTASK_ID_OBJ_CATCH           = 5
-CTASK_ID_OBJ_BALANCE         = 6
-CTASK_ID_OBJ_MOVE_CATCH      = 7
-CTASK_ID_OBJ_AVOID           = 8
-CTASK_ID_OBJ_TIMELY_PICK     = 9 # On conveyor belt
+CTASK_ID_OBJ_SUCTION_BALANCE_POS_ONLY = 2
+CTASK_ID_OBJ_SUCTION_BALANCE_POS_VEL = 3
+CTASK_ID_OBJ_HEXAPOD_BALANCE = 4
+CTASK_ID_OBJ_HOLD            = 5
+CTASK_ID_OBJ_CATCH           = 6
+CTASK_ID_OBJ_BALANCE         = 7
+CTASK_ID_OBJ_MOVE_CATCH      = 8
+CTASK_ID_OBJ_AVOID           = 9
+CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 
-GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE
+GB_TASK_ID = CTASK_ID_OBJ_SUCTION_BALANCE_POS_VEL
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -94,7 +96,14 @@ def isTaskObjHandBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HAND_BALANCE
 
 def isTaskObjSuctionBalance():
-    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE
+    return ((GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_POS_ONLY) or \
+            (GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_POS_VEL))
+
+def isTaskObjSuctionBalancePosVel():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_POS_VEL
+
+def isTaskObjSuctionBalancePosOnly():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_BALANCE_POS_ONLY
 
 def isTaskObjHexapodBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HEXAPOD_BALANCE
@@ -126,7 +135,11 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         # 4 (1 Arm Twist joint, 1 Arm Wrist joint, 2 revolute hand finger base joints)
         GB_ACTION_DIM = 4
         GB_STATE_DIM  = 10
-    if(isTaskObjSuctionBalance()):
+    if(isTaskObjSuctionBalancePosVel()):
+        # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
+        GB_ACTION_DIM = 3
+        GB_STATE_DIM  = 7
+    elif(isTaskObjSuctionBalancePosOnly()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
         GB_STATE_DIM  = 6
@@ -162,10 +175,42 @@ elif(GB_CSERVER_ROBOT_ID == CHEXAPOD):
     GB_STATE_DIM  = 20
     GB_CSERVER_ROBOT_NAME = CHEXAPOD_NAME
 
-def init(clientID):
-    global GB_CLIENT_ID
-    GB_CLIENT_ID = clientID
-    #print('CLIENTID', GB_CLIENT_ID)
+def GB_CLIENT_ID():
+    return _GB_CLIENT_ID
+
+def gbRobotHandle():
+    return _gbRobotHandle
+
+def initialize_vrep():
+    print ('Program started')
+    vrep.simxFinish(-1) # just in case, close all opened connections
+
+    global _GB_CLIENT_ID
+    _GB_CLIENT_ID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
+    if _GB_CLIENT_ID!=-1:
+        print ('Connected to remote API server',_GB_CLIENT_ID)
+
+        # Start the simulation:
+        startSimulation(_GB_CLIENT_ID)
+
+        # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(_GB_CLIENT_ID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
+        #    robotHandle=retInts[0]
+
+        # Get scene objects data
+        res, objHandles, intData, floatData, objNames = vrep.simxGetObjectGroupData(_GB_CLIENT_ID,vrep.sim_appobj_object_type, 0, vrep.simx_opmode_blocking)
+        if res==vrep.simx_return_ok:
+            print ('Number of objects in the scene: ',len(objHandles), len(objNames))
+            for i in range(len(objHandles)):
+                print('Obj:', objHandles[i], objNames[i])
+        else:
+            print ('Remote API function call returned with error code: ',res)
+
+        # Retrieve some handles:
+        global _gbRobotHandle
+        res, _gbRobotHandle = vrep.simxGetObjectHandle(_GB_CLIENT_ID, GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
+
+def finalize_vrep():
+    endSimulation(_GB_CLIENT_ID)
 
 def startSimulation(clientID):
     # http://www.coppeliarobotics.com/helpFiles/en/remoteApiModusOperandi.htm#synchronous
@@ -189,7 +234,7 @@ def stopSimulation(clientID):
 
 def endSimulation(clientID):
     # stop the simulation
-    RC.stopSimulation(clientID)
+    stopSimulation(clientID)
 
     # Before closing the connection to V-REP,
     #make sure that the last command sent out had time to arrive.
@@ -199,11 +244,12 @@ def endSimulation(clientID):
     vrep.simxFinish(clientID)
     print('V-REP Server Connection closed...')
 
+
 def getObjectWorldPosition(objectName):
-    res, objectHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
+    res, objectHandle = vrep.simxGetObjectHandle(_GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
 
     # Enabled streaming of the object position:
-    res, objectPos    = vrep.simxGetObjectPosition(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_streaming)
+    res, objectPos    = vrep.simxGetObjectPosition(_GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
     # Retrieves the time needed for a command to be sent to the server,
@@ -212,118 +258,118 @@ def getObjectWorldPosition(objectName):
     # the network load, whether a simulation is running, whether the
     # simulation is real-time, the simulation time step, etc.
     # The function is blocking.
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, objectPos    = vrep.simxGetObjectPosition(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_buffer)
+    res, objectPos    = vrep.simxGetObjectPosition(_GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetObjectPosition(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_discontinue)
+    vrep.simxGetObjectPosition(_GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_discontinue)
 
     return objectPos
 
 def getObjectOrientation(objectName):
-    res, objectHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
+    res, objectHandle = vrep.simxGetObjectHandle(_GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
 
     # Enabled streaming of the object position:
-    res, eulerAngles  = vrep.simxGetObjectOrientation(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_streaming)
+    res, eulerAngles  = vrep.simxGetObjectOrientation(_GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, eulerAngles  = vrep.simxGetObjectOrientation(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_buffer)
+    res, eulerAngles  = vrep.simxGetObjectOrientation(_GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetObjectOrientation(GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_discontinue)
+    vrep.simxGetObjectOrientation(_GB_CLIENT_ID, objectHandle, -1, vrep.simx_opmode_discontinue)
 
     return eulerAngles
 
 def getObjectVelocity(objectName):
-    res, objectHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
+    res, objectHandle = vrep.simxGetObjectHandle(_GB_CLIENT_ID, objectName, vrep.simx_opmode_oneshot_wait)
 
     # Enabled streaming of the object position:
-    res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_streaming)
+    res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(_GB_CLIENT_ID, objectHandle, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_buffer)
+    res, objectLinearVel, objectAngVel = vrep.simxGetObjectVelocity(_GB_CLIENT_ID, objectHandle, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetObjectVelocity(GB_CLIENT_ID, objectHandle, vrep.simx_opmode_discontinue)
+    vrep.simxGetObjectVelocity(_GB_CLIENT_ID, objectHandle, vrep.simx_opmode_discontinue)
 
     return objectLinearVel
 
 def getJointVelocity(jointHandle):
     # http://www.coppeliarobotics.com/helpFiles/en/objectParameterIDs.htm
     # 2012: vrep.sim_jointfloatparam_velocity
-    res, jointVel = vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_streaming)
+    res, jointVel = vrep.simxGetObjectFloatParameter(_GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, jointVel = vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_buffer)
+    res, jointVel = vrep.simxGetObjectFloatParameter(_GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetObjectFloatParameter(GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_discontinue)
+    vrep.simxGetObjectFloatParameter(_GB_CLIENT_ID, jointHandle, 2012, vrep.simx_opmode_discontinue)
 
     return jointVel
 
 def getJointForce(jointHandle):
-    #res, jointHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)
+    #res, jointHandle = vrep.simxGetObjectHandle(_GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)
 
     # Enabled streaming of the joint force:
-    res, jointForce = vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
+    res, jointForce = vrep.simxGetJointForce(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, jointForce = vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
+    res, jointForce = vrep.simxGetJointForce(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetJointForce(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
+    vrep.simxGetJointForce(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
 
     return jointForce
 
 def getJointPosition(jointHandle):
-    #res, jointHandle = vrep.simxGetObjectHandle(GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)
+    #res, jointHandle = vrep.simxGetObjectHandle(_GB_CLIENT_ID, jointName, vrep.simx_opmode_oneshot_wait)
 
     # Enabled streaming of the joint position:
-    res, jointPos = vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
+    res, jointPos = vrep.simxGetJointPosition(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, jointPos = vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
+    res, jointPos = vrep.simxGetJointPosition(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetJointPosition(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
+    vrep.simxGetJointPosition(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
 
     return jointPos
 
 def getJointMatrix(jointHandle):
-    res, jointMatrix = vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
+    res, jointMatrix = vrep.simxGetJointMatrix(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_streaming)
 
     # Wait until the first data has arrived (just any blocking funtion):
-    vrep.simxGetPingTime(GB_CLIENT_ID)
+    vrep.simxGetPingTime(_GB_CLIENT_ID)
 
     # Now you can read the data that is being continuously streamed:
-    res, jointMatrix = vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
+    res, jointMatrix = vrep.simxGetJointMatrix(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_buffer)
 
     # Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     # to stream unessesary data and eventually slow down.
-    vrep.simxGetJointMatrix(GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
+    vrep.simxGetJointMatrix(_GB_CLIENT_ID, jointHandle, vrep.simx_opmode_discontinue)
 
     return jointMatrix
 

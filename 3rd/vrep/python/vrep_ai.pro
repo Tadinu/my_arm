@@ -60,4 +60,7 @@ DISTFILES += \
     train_robot_obj_support.py \
     ddpg/ActorNetworkObjSupport.py \
     train_robot_obj_support_II.py \
-    replay_buffer.py
+    replay_buffer.py \
+    ppo/ppo2/policies.py \
+    ppo/ppo2/ppo2.py \
+    train_robot_operation_ppo.py

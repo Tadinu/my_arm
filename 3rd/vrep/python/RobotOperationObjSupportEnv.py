@@ -53,16 +53,15 @@ class RobotOperationEnvironment(gym.Env):
         # INITIALIZE ENVIRONMENT
         self.loadEnvironmentObjects()
 
-        # Reset
-        self.reset() ## --> Call self._reset() defined below!
-
         # After loading the robot!
         observationDim = RC.GB_STATE_DIM
         print("observationDim", observationDim)
 
         observation_high = np.array([np.finfo(np.float32).max] * observationDim)
-        self.action_space = spaces.Discrete(RC.GB_ACTION_DIM)
+        action_high = np.array([1.0] * RC.GB_ACTION_DIM)
+        self.action_space = spaces.Box(-action_high, action_high)
         self.observation_space = spaces.Box(-observation_high, observation_high)
+        self.num_envs = 1
         self.viewer = None
 
         ## DEBUG STUFFS --
@@ -135,7 +134,7 @@ class RobotOperationEnvironment(gym.Env):
         time.sleep(self._timeStep)
         return self._observation
 
-    def _seed(self, seed=None):
+    def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
@@ -254,16 +253,22 @@ class RobotOperationEnvironment(gym.Env):
             time.sleep(2)
         self._observation = self.getObservation(action)
         reward += self.reward() # Reward Addition after observation 2nd!
-        done    = self._termination() or overlong
+        done    = self.termination() or overlong
         if(self._objAwayFromBasePlate):
             reward -= 100
+        else:
+            # DISTANCE TO RESET POSE
+            d = self.getDistanceToResetPose() * 100
+            #print('DISTANCE: ', d)
+            reward += d
+
         print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
         #print("len=%r" % len(self._observation))
 
         ##return self._observation, reward, False, {}
         return self._observation, reward, done, {}
 
-    def _termination(self):
+    def termination(self):
         if (self._terminated):
             ##RC.stopSimulation(self._clientID)
             ##self._robot.commandJointVibration(0)
@@ -295,7 +300,7 @@ class RobotOperationEnvironment(gym.Env):
             #print('DDDD:', d)
 
             # Orientation of the base plate -----------------------------------------------------------------------
-            suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
+            #suctionPadOrient = RC.getObjectOrientation(RC.CSUCTION_PAD_NAME)
             slantingDegree = abs(RC.angle_between(np.array([0,0,1]), np.array(self.getBasePlateNormalVector())))
             #print('SUC', slantingDegree)
             if(slantingDegree < math.pi/2):
@@ -476,6 +481,18 @@ class RobotOperationEnvironment(gym.Env):
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retFloats
+
+    def getDistanceToResetPose(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, distance, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, "Robotiiwa", \
+                                                                                    vrep.sim_scripttype_childscript,       \
+                                                                                    "gbGetDistanceToResetPoseFromClient",  \
+                                                                                    inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                    vrep.simx_opmode_oneshot_wait)
+        return distance[0]
 
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)

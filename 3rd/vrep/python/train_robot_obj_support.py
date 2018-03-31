@@ -54,7 +54,6 @@ except:
     print ('--------------------------------------------------------------')
     print ('')
 
-CSERVER_PORT = 19999
 ##############################################################################################################################################################
 ##############################################################################################################################################################
 
@@ -66,37 +65,6 @@ def callback(lcl, glb):
     #print(totalt)
     is_solved = totalt > 2000 and total >= 10
     return is_solved
-
-def initialize_vrep():
-    print ('Program started')
-    vrep.simxFinish(-1) # just in case, close all opened connections
-
-    global gbClientID
-    gbClientID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
-    if gbClientID!=-1:
-        print ('Connected to remote API server',gbClientID)
-
-        # Init Robot Common
-        RC.init(gbClientID)
-
-        # Start the simulation:
-        RC.startSimulation(gbClientID)
-
-        # Load a robot instance:    res,retInts,retFloats,retStrings,retBuffer=vrep.simxCallScriptFunction(clientID,'remoteApiCommandServer',vrep.sim_scripttype_childscript,'loadRobot',[],[0,0,0,0],['d:/v_rep/qrelease/release/test.ttm'],emptyBuff,vrep.simx_opmode_oneshot_wait)
-        #    robotHandle=retInts[0]
-
-        # Get scene objects data
-        res, objHandles, intData, floatData, objNames = vrep.simxGetObjectGroupData(gbClientID,vrep.sim_appobj_object_type, 0, vrep.simx_opmode_blocking)
-        if res==vrep.simx_return_ok:
-            print ('Number of objects in the scene: ',len(objHandles), len(objNames))
-            for i in range(len(objHandles)):
-                print('Obj:', objHandles[i], objNames[i])
-        else:
-            print ('Remote API function call returned with error code: ',res)
-
-        # Retrieve some handles:
-        global gbRobotHandle
-        res, gbRobotHandle = vrep.simxGetObjectHandle(gbClientID, RC.GB_CSERVER_ROBOT_NAME, vrep.simx_opmode_oneshot_wait)
 
 def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     BUFFER_SIZE = 100000

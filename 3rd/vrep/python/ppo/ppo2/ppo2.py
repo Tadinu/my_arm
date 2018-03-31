@@ -122,7 +122,8 @@ class Runner(object):
             mb_dones.append(self.dones)
 
             # tad ++
-            self.env.reset()
+            if(self.dones):
+                self.env.reset()
 
             print('Step ', _,'-----------------------------------------------------------')
             print('Start waiting for the next action', self.env._robot.getOperationState())

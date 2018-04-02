@@ -85,10 +85,11 @@ CTASK_ID_OBJ_BALANCE         = 7
 CTASK_ID_OBJ_MOVE_CATCH      = 8
 CTASK_ID_OBJ_AVOID           = 9
 CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
+CTASK_ID_OBJ_TIMELY_CATCH    = 11 # In the air
 
-CTASK_OBJ_TIMELY_PICK_POSITION = 0.29
+CTASK_OBJ_TIMELY_PICK_POSITION = 0.26
 
-GB_TASK_ID = CTASK_ID_OBJ_TIMELY_PICK #CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
+GB_TASK_ID = CTASK_ID_OBJ_TIMELY_CATCH #CTASK_ID_OBJ_TIMELY_PICK
 
 def isUnknownTask():
     return GB_TASK_ID == CTASK_ID_UNKNOWN
@@ -120,6 +121,9 @@ def isTaskObjMoveCatch():
 
 def isTaskObjTimelyPick():
     return GB_TASK_ID == CTASK_ID_OBJ_TIMELY_PICK
+
+def isTaskObjTimelyCatch():
+    return GB_TASK_ID == CTASK_ID_OBJ_TIMELY_CATCH
 
 def doJointVibration():
     return isTaskObjHandBalance() or isTaskObjHold()
@@ -160,15 +164,19 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
     GB_CSERVER_ROBOT_NAME = CKUKA_ARM_NAME
 
 elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_BARRETT_HAND):
-    GB_ACTION_DIM = 8 # 8(6 Kuka arm joints & 2 Hand finger angle)
+    GB_ACTION_DIM = 8 # 8 (6 Kuka arm joints & 2 Hand finger angle)
     GB_STATE_DIM  = 12
     GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
 
-elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_GRIPPER): ## if(isTaskObjTimelyPick()):
-    # Target Reaching Vel & Obj Gripping Vel
-    GB_ACTION_DIM = 2
-    GB_STATE_DIM  = 3 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
+elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_GRIPPER):
     GB_CSERVER_ROBOT_NAME = CUR5_ARM_NAME
+    if(isTaskObjTimelyPick()):
+        # Target Reaching Vel & Obj Gripping Vel
+        GB_ACTION_DIM = 2
+        GB_STATE_DIM  = 3 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
+    elif(isTaskObjTimelyCatch()):
+        GB_ACTION_DIM = 3
+        GB_STATE_DIM  = 4 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
 
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
     GB_ACTION_DIM = 1

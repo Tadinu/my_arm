@@ -211,6 +211,8 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     if(osp.exists(CMODEL_PATH)):
         model.load(CMODEL_PATH)
         print('Loading model successfully!')
+    else:
+        print(CMODEL_PATH, 'NOT LOADED!')
     # tad--
     nupdates = total_timesteps//nbatch
     #print('Update:', nupdates)

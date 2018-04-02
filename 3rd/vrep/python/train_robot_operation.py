@@ -205,7 +205,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
             #print('target_q_values:', target_q_values)
             #print('batch:', len(batch))
             for k in range(len(batch)):
-                if not dones[k]:
+                if dones[k]:
                     y_t[k] = rewards[k]
                 else:
                     y_t[k] = rewards[k] + GAMMA*target_q_values[k]

@@ -84,7 +84,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     vision = False
 
-    EXPLORE = 100. #100000.
+    EXPLORE = 2000. #100000.
     # Double loops of episodes and step:
     # --> To make the env reset in case the agent learns too successfully without failing (done), avoid outfitting (learning by heart, instead of exploring new ways/actions)
     # A new episode is designed to proceed to if done (termination) or a threshold (max_steps) is reached.
@@ -107,18 +107,25 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
     critic = CriticNetwork(sess, state_dim, action_dim, BATCH_SIZE, TAU, LRC)
     buff = ReplayBuffer(BUFFER_SIZE)    #Create replay buffer
 
-    print('START ENV', gbClientID, gbRobotHandle)
-    env = RobotOperationEnvironment(gbClientID, RC.GB_CSERVER_ROBOT_ID, gbRobotHandle)
-
+    print('START ENV', RC.GB_CLIENT_ID(), RC.gbRobotHandle())
+    env = RobotOperationEnvironment(RC.GB_CLIENT_ID(), RC.GB_CSERVER_ROBOT_ID, RC.gbRobotHandle())
     ## ---------------------------------------------------------------
 
     #Now load the weight
     print("Now we load the weight")
+    LOAD_DIR_NO = 3
+    dirCount = LOAD_DIR_NO
+    DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/!!!kuka_suction_object_support_not_reset_obj_support_branch/DDPG/'
+    dataDir  = ''
     try:
-        actor.model.load_weights("actormodel.h5")
-        critic.model.load_weights("criticmodel.h5")
-        actor.target_model.load_weights("actormodel.h5")
-        critic.target_model.load_weights("criticmodel.h5")
+        dirPattern = str(LOAD_DIR_NO) + '_' + str(LOAD_DIR_NO * 100) + "_steps/"
+        dataDir    = DATA_DIR + dirPattern
+        print('LOAD ', dataDir)
+
+        actor.model.load_weights(dataDir+"actormodel.h5")
+        critic.model.load_weights(dataDir+"criticmodel.h5")
+        actor.target_model.load_weights(dataDir+"actormodel.h5")
+        critic.target_model.load_weights(dataDir+"criticmodel.h5")
         print("Weight loaded successfully!")
         print("######################################################")
         print("######################################################")
@@ -142,7 +149,10 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 elif done: #We take the ob from the previous step, since the reset returns meaningless value
                     env.reset()
             else:
-                ob = env.reset()
+                if(RC.isUnknownTask() or j == 0):
+                    ob = env.reset()
+                elif done: #We take the ob from the previous step, since the reset returns meaningless value
+                    env.reset()
             # !NOTE: HERE WE COULD DECIDE EITHER ONE OF 2 LEARNING PROBLEMS:
             # 1. LET THE ROBOT LEARN FROM ONLY ONE BASE POSTURE (RESET AFTER EVERY LEARNING STEP), NO MATTER HOW THE RESULT OF THE PREVIOUS
             # 2. LET THE ROBOT LEARN FROM ANY BASE POSTURE, MEANING THAT IF THE PREVIOUS STEP STILL HOLD THE OBJ ON BASE, IT KEEP LEARNING WITHOUT DOING RESET!
@@ -230,12 +240,18 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
                 if (train_indicator):
                     if(RC.GB_TRACE):
                         print("Now we save model")
-                    actor.model.save_weights("actormodel.h5", overwrite=True)
-                    with open("actormodel.json", "w") as outfile:
+                    if(np.mod(j, 100) == 0):
+                        dirPattern = str(dirCount) + '_' + str(dirCount * 100) + "_steps/"
+                        dataDir    = DATA_DIR + dirPattern
+                        dirCount  += 1
+                    else:
+                        dataDir = ''
+                    actor.model.save_weights(dataDir+"actormodel.h5", overwrite=True)
+                    with open(dataDir+"actormodel.json", "w") as outfile:
                         json.dump(actor.model.to_json(), outfile)
 
-                    critic.model.save_weights("criticmodel.h5", overwrite=True)
-                    with open("criticmodel.json", "w") as outfile:
+                    critic.model.save_weights(dataDir+"criticmodel.h5", overwrite=True)
+                    with open(dataDir+"criticmodel.json", "w") as outfile:
                         json.dump(critic.model.to_json(), outfile)
 
             if np.mod(j, 10) == 0:
@@ -283,6 +299,6 @@ def gb_observation_2_state(ob):
                               ))
 
 if __name__ == "__main__":
-    initialize_vrep()
+    RC.initialize_vrep()
     startTraining(RC.GB_MODE_TRAINING)
-    finalize_vrep()
+    RC.finalize_vrep()

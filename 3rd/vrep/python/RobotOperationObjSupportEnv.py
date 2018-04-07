@@ -148,7 +148,7 @@ class RobotOperationEnvironment(gym.Env):
             #self._observation.append(np.array(action[1], dtype=np.float32))
 
         #robotId = self._robot.id()
-        if(RC.isTaskObjSuctionObjectSupport()):
+        if(RC.isTaskObjSuctionObjectSupport() or RC.isTaskObjSuctionObjectRotate()):
             # Cuboid Pos ------------------------------------------------------------------------------------------
             cuboidPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
             #self._observation.append(np.array(cuboidPos[0], dtype=np.float32))
@@ -173,7 +173,15 @@ class RobotOperationEnvironment(gym.Env):
             slantingDegree = abs(RC.angle_between(np.array([0,0,1]), np.array(self.getBasePlateNormalVector())))
 
             self._observation.append(np.array(d*math.cos(slantingDegree), dtype=np.float32))
-            self._observation.append(np.array(slantingDegree, dtype=np.float32))
+            if(RC.isTaskObjSuctionObjectSupport()):
+                self._observation.append(np.array(slantingDegree, dtype=np.float32))
+            else:
+                objLinearVel, objAngVel = RC.getObjectVelocity(RC.CCUBOID_OBJ_NAME)
+                #print('ANG ', objAngVel[0],objAngVel[1],objAngVel[2])
+                self._observation.append(np.array(objAngVel[2], dtype=np.float32))
+                for i in range(len(action)):
+                    self._observation.append(np.array(action[i], dtype=np.float32))
+
 
         return self._observation
 
@@ -246,6 +254,7 @@ class RobotOperationEnvironment(gym.Env):
             if(operationTime > 4000):
                 overlong = True
                 print('STEP: OVER LONG', operationTime)
+                reward -= operationTime
                 break
 
         # Wait for some time to check again the on-base-plate state of the object:
@@ -256,11 +265,12 @@ class RobotOperationEnvironment(gym.Env):
         done    = self.termination() or overlong
         if(self._objAwayFromBasePlate):
             reward -= 100
-        else:
+        elif(RC.isTaskObjSuctionObjectSupport()):
             # DISTANCE TO RESET POSE
             d = self.getDistanceToResetPose() * 100
             #print('DISTANCE: ', d)
             reward += d
+        #elif(RC.isTaskObjSuctionObjectRotate()):
 
         print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
         #print("len=%r" % len(self._observation))
@@ -307,7 +317,12 @@ class RobotOperationEnvironment(gym.Env):
                 self.__reward -= d*math.cos(slantingDegree)
             else:
                 self.__reward -= d
-            self.__reward -= slantingDegree
+
+            if(RC.isTaskObjSuctionObjectSupport()):
+                self.__reward -= slantingDegree
+            elif(RC.isTaskObjSuctionObjectRotate()):
+                objLinearVel, objAngVel = RC.getObjectVelocity(RC.CCUBOID_OBJ_NAME)
+                self.__reward += abs(objAngVel[2])
 
             #alpha2 = suctionPadOrient[0] # Around x
             #beta2  = suctionPadOrient[1] # Around y
@@ -344,7 +359,7 @@ class RobotOperationEnvironment(gym.Env):
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
+            objLinearVel, objectAngVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only
@@ -382,7 +397,7 @@ class RobotOperationEnvironment(gym.Env):
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
+            objLinearVel, objectAngVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only

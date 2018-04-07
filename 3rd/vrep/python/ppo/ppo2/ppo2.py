@@ -16,7 +16,12 @@ from baselines.common import explained_variance
 
 import robotCommon as RC
 
-CMODEL_PATH = "ppo_model"
+#CMODEL_PATH = "ppo_model"
+CMODEL_NAME = "ppo_model"
+dirNo = 5
+modelNo = 39
+CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/!!!kuka_suction_object_support_not_reset_obj_support_branch/PPO3/" + \
+              str(dirNo) + "/" + CMODEL_NAME + str(modelNo)
 
 class Model(object):
     def __init__(self, *, policy, ob_space, ac_space, nbatch_act, nbatch_train,
@@ -212,6 +217,8 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     if(osp.exists(CMODEL_PATH)):
         model.load(CMODEL_PATH)
         print('Loading model successfully!')
+    else:
+        print('MODEL NOT LOADED!')
     # tad--
     nupdates = total_timesteps//nbatch
     #print('Update:', nupdates)

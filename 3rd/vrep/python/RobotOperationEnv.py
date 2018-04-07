@@ -198,7 +198,7 @@ class RobotOperationEnvironment(gym.Env):
             # Ball Object
             # Ball z position only
             ballPos    = RC.getObjectWorldPosition(RC.CBALL_OBJ_NAME)
-            ballLinVel = RC.getObjectVelocity(RC.CBALL_OBJ_NAME)
+            ballLinVel, ballAngVel = RC.getObjectVelocity(RC.CBALL_OBJ_NAME)
             ##self._observation.append(np.array(ballPos[0], dtype=np.float32))
             ##self._observation.append(np.array(ballPos[1], dtype=np.float32))
             self._observation.append(np.array(ballPos[2], dtype=np.float32))
@@ -389,7 +389,7 @@ class RobotOperationEnvironment(gym.Env):
                     #self.__reward -= (abs(alpha1) + abs(beta1))
 
                     #endTipOrient = self._robot.getEndTipOrientation()
-                    #endTipVelocity = self._robot.getEndTipVelocity()
+                    #endTipLinVel, endTipAngVel = self._robot.getEndTipVelocity()
                     #print('Endtip Vel', endTipVelocity)
                 else:
                     self.__reward -= 100
@@ -478,7 +478,7 @@ class RobotOperationEnvironment(gym.Env):
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
+            objLinearVel, objectAngVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only
@@ -516,7 +516,7 @@ class RobotOperationEnvironment(gym.Env):
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
+            objLinearVel, objectAngVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only

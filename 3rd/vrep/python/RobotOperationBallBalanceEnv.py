@@ -285,7 +285,7 @@ class RobotOperationEnvironment(gym.Env):
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
+            objLinearVel, objectAngVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only
@@ -323,7 +323,7 @@ class RobotOperationEnvironment(gym.Env):
             objsPos.append(objPos)
             # This returns a list of two vector3 values (3 floats in a list) representing the linear velocity [x,y,z]
             # and angular velocity [wx,wy,wz] in Cartesian worldspace coordinates.
-            objLinearVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
+            objLinearVel, objectAngVel = RC.getObjectVelocity(RC.CFALL_OBJS_NAMES[i])
             #print("OBJPS:",i, objPos)
             objInfo+= objPos
             #objInfo.append(objLinearVel[2]) # zVel only

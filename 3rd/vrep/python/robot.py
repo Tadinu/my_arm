@@ -668,9 +668,10 @@ class Robot:
     def getObservation(self):
         observation = []
         #endTipPos = self.getEndTipWorldPosition()
-        isTaskObjHandBalance    = RC.isTaskObjHandBalance()
-        isTaskObjSuctionBalancePlate = RC.isTaskObjSuctionBalancePlate()
-        isTaskObjSuctionObjectSupport  = RC.isTaskObjSuctionObjectSupport()
+        isTaskObjHandBalance          = RC.isTaskObjHandBalance()
+        isTaskObjSuctionBalancePlate  = RC.isTaskObjSuctionBalancePlate()
+        isTaskObjSuctionObjectSupport = RC.isTaskObjSuctionObjectSupport()
+        isTaskObjSuctionObjectRotate  = RC.isTaskObjSuctionObjectRotate()
         isTaskObjHexapodBalance = RC.isTaskObjHexapodBalance()
         isTaskObjHold           = RC.isTaskObjHold()
         isTaskObjCatch          = RC.isTaskObjCatch()
@@ -694,12 +695,20 @@ class Robot:
                     #
                     observation.append(np.array(pos, dtype=np.float32)) # Pos
                     #observation.append(np.array(vel, dtype=np.float32)) # Vel
+            elif(isTaskObjSuctionObjectRotate):
+                if(i == 0 or i == 2 or i == 4):
+                    #pos = RC.getJointPosition(self._jointHandles[i])
+                    vel = RC.getJointVelocity(self._jointHandles[i])
+                    #
+                    #observation.append(np.array(pos, dtype=np.float32)) # Pos
+                    #print('vel ', i, ' :', vel)
+                    observation.append(np.array(vel, dtype=np.float32)) # Vel
             else:
                 if(i == 0 or i == 3 or i == 4 or i == 5):
                     pos = RC.getJointPosition(self._jointHandles[i])
                     #vel = RC.getJointVelocity(self._jointHandles[i])
                     #
-                    if(isTaskObjHandBalance or isTaskObjSuctionBalancePlate or isTaskObjSuctionObjectSupport):
+                    if(isTaskObjHandBalance or isTaskObjSuctionBalancePlate):
                         observation.append(np.array(pos, dtype=np.float32)) # Pos
                         #observation.append(np.array(vel, dtype=np.float32)) # Vel
                     elif(isTaskObjHold):
@@ -830,8 +839,8 @@ class Robot:
         return eulerAngles
 
     def getHandVelocity(self):
-        vel = RC.getObjectVelocity(RC.CBARRETT_HAND_NAME)
-        return vel
+        linVel, angVel = RC.getObjectVelocity(RC.CBARRETT_HAND_NAME)
+        return linVel
 
     def doInverseKinematicsCalculation(self):
         count = 0

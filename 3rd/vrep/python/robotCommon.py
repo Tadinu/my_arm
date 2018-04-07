@@ -79,13 +79,14 @@ CTASK_ID_UNKNOWN             = -1
 CTASK_ID_OBJ_HAND_BALANCE    = 1
 CTASK_ID_OBJ_SUCTION_BALANCE_PLATE  = 2
 CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT = 3
-CTASK_ID_OBJ_HEXAPOD_BALANCE = 4
-CTASK_ID_OBJ_HOLD            = 5
-CTASK_ID_OBJ_CATCH           = 6
-CTASK_ID_OBJ_BALANCE         = 7
-CTASK_ID_OBJ_MOVE_CATCH      = 8
-CTASK_ID_OBJ_AVOID           = 9
-CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
+CTASK_ID_OBJ_SUCTION_OBJECT_ROTATE  = 4
+CTASK_ID_OBJ_HEXAPOD_BALANCE = 5
+CTASK_ID_OBJ_HOLD            = 6
+CTASK_ID_OBJ_CATCH           = 7
+CTASK_ID_OBJ_BALANCE         = 8
+CTASK_ID_OBJ_MOVE_CATCH      = 9
+CTASK_ID_OBJ_AVOID           = 10
+CTASK_ID_OBJ_TIMELY_PICK     = 11 # On conveyor belt
 
 GB_TASK_ID = CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT #CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
 
@@ -100,6 +101,9 @@ def isTaskObjSuctionBalancePlate():
 
 def isTaskObjSuctionObjectSupport():
     return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_OBJECT_SUPPORT
+
+def isTaskObjSuctionObjectRotate():
+    return GB_TASK_ID == CTASK_ID_OBJ_SUCTION_OBJECT_ROTATE
 
 def isTaskObjHexapodBalance():
     return GB_TASK_ID == CTASK_ID_OBJ_HEXAPOD_BALANCE
@@ -139,6 +143,10 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3
         GB_STATE_DIM  = 5
+    elif(isTaskObjSuctionObjectRotate()):
+        # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
+        GB_ACTION_DIM = 3
+        GB_STATE_DIM  = 8
     elif(isTaskObjHold()):
         # 2 Hand open Close Joints (force) & 2 revolute hand finger base joints (vel)
         GB_ACTION_DIM = 4
@@ -299,7 +307,7 @@ def getObjectVelocity(objectName):
     # to stream unessesary data and eventually slow down.
     vrep.simxGetObjectVelocity(_GB_CLIENT_ID, objectHandle, vrep.simx_opmode_discontinue)
 
-    return objectLinearVel
+    return objectLinearVel, objectAngVel
 
 def getJointVelocity(jointHandle):
     # http://www.coppeliarobotics.com/helpFiles/en/objectParameterIDs.htm

@@ -263,13 +263,17 @@ class RobotOperationEnvironment(gym.Env):
         self._observation = self.getObservation(action)
         reward += self.reward() # Reward Addition after observation 2nd!
         done    = self.termination() or overlong
+
         if(self._objAwayFromBasePlate):
-            reward -= 100
+            reward -= 5000
         elif(RC.isTaskObjSuctionObjectSupport()):
             # DISTANCE TO RESET POSE
             d = self.getDistanceToResetPose() * 100
             #print('DISTANCE: ', d)
-            reward += d
+            if(d<60):
+                reward -= (60-d)*10
+            else:
+                reward += d
         #elif(RC.isTaskObjSuctionObjectRotate()):
 
         print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
@@ -305,8 +309,8 @@ class RobotOperationEnvironment(gym.Env):
             #if(not self.isObjAwayFromBasePlate()):
             cuboidPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
             basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
-            d = math.sqrt((cuboidPos[0] - basePlatePos[0])**2 +
-                          (cuboidPos[1] - basePlatePos[1])**2)
+            d = 0.5 * math.sqrt((cuboidPos[0] - basePlatePos[0])**2 +
+                                (cuboidPos[1] - basePlatePos[1])**2)
             #print('DDDD:', d)
 
             # Orientation of the base plate -----------------------------------------------------------------------

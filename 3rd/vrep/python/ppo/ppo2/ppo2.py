@@ -18,9 +18,9 @@ import robotCommon as RC
 
 #CMODEL_PATH = "ppo_model"
 CMODEL_NAME = "ppo_model"
-dirNo = 5
-modelNo = 39
-CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/!!!kuka_suction_object_support_not_reset_obj_support_branch/PPO3/" + \
+dirNo = 1
+modelNo = 6
+CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/!!!kuka_suction_object_support_not_reset_obj_support_branch/PPO5/" + \
               str(dirNo) + "/" + CMODEL_NAME + str(modelNo)
 
 class Model(object):

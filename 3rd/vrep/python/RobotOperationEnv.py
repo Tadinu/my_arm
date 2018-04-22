@@ -240,11 +240,11 @@ class RobotOperationEnvironment(gym.Env):
             objPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
             endTipPos = RC.getObjectWorldPosition('RG2')
             zDelta    = objPos[2] - endTipPos[2]
-            d = math.sqrt((objPos[0] - endTipPos[0])**2 +
-                          (objPos[1] - endTipPos[1])**2 +
-                          (objPos[1] - endTipPos[1])**2)
+            #d = math.sqrt((objPos[0] - endTipPos[0])**2 +
+            #              (objPos[1] - endTipPos[1])**2 +
+            #              (objPos[1] - endTipPos[1])**2)
             #self._observation.append(np.array(d, dtype=np.float32))
-            #d = self.getTimelyCatchObjectDistance()
+            d = self.getTimelyCatchObjectDistance()
             self._observation.append(np.array(zDelta, dtype=np.float32))
             self._observation.append(np.array(d, dtype=np.float32))
 
@@ -296,7 +296,10 @@ class RobotOperationEnvironment(gym.Env):
             ##self._robot.commandJointVibration(0)
             #return True
 
-        res = (pos[2] < 0.5)
+        if(RC.isTaskObjTimelyCatch()):
+            res = (pos[2] <= 0.1)
+        else:
+            res = (pos[2] < 0.5)
         return res
 
     def step(self, action):
@@ -397,54 +400,43 @@ class RobotOperationEnvironment(gym.Env):
         ###
         elif(RC.isTaskObjTimelyCatch()):
             objName = RC.CCUBOID_OBJ_NAME
-            pos = RC.getObjectWorldPosition(objName)
-
-            self._objGroundHit = self.isObjGroundHit()
+            #pos = RC.getObjectWorldPosition(objName)
             self._robotOperationTime = self.getRobotOperationTime()
-            while((False == self._objGroundHit) and self._robot.getOperationState() != RC.CROBOT_STATE_MOVING_ENDED):
+
+            APPROACHING_TIME_LIMIT = 7000
+            PICKING_TIME_LIMIT     = 1000
+
+            # WAIT FOR ACTION ENDED
+            #
+            reward += self.reward()
+            #
+            while(self._robot.getOperationState() != RC.CROBOT_STATE_MOVING_ENDED):
                 #print('Obj Pos:', pos)
-                pos = RC.getObjectWorldPosition(objName)
+                self._objGroundHit = self.isObjGroundHit()
+                if(self._objGroundHit):
+                    reward -= 100
+                # ------------------------------------------------------------
+                time = self.getRobotOperationTime() - self._robotOperationTime
+                #print('RUN TIME:', time)
+                if(time > (APPROACHING_TIME_LIMIT + PICKING_TIME_LIMIT)):
+                    self._observation = self.getObservation(action)
+                    self._observation.append(np.array(0, dtype=np.float32))
+                    self._observation.append(np.array(0, dtype=np.float32))
+                    reward = -time
+                    print('MOVING TOO LONG', time)
+                    print('Env observed!', reward,' - ',False) # self._robot.getOperationState()
+                    return self._observation, reward, False, {}  ######## ducta
 
             #print('END-Obj Pos:', pos)
-
-            # EITHER MOVING_ENDED or not, get the operation time
             self._robotOperationTime = self.getRobotOperationTime()
             #print('OPER TIME:', self._robotOperationTime)
 
             # PUNISHMENT POLICY
             #
-            # P1 --
-            if(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING_ENDED and (False == self._objGroundHit)):
-                d = self.getTimelyPickObjectDistance() # pos[1] - RC.CTASK_OBJ_TIMELY_PICK_POSITION
-                t = 5000*d + 400
-                print('TOO SOON', d)
-                reward -= t
-
-            # P2 --
-            elif(self._objGroundHit):
-                d = self.getCurrentRobotPosDistanceToPrePickPose()
-                d = d * 500
-                #print('DISTANCE: ', d)
-                # !NOTE:
-                # d value will decide not yet reaching pre-pick pose --
-                # Reached pre-pick pose --
-
-                while(self._robot.getOperationState() != RC.CROBOT_STATE_MOVING_ENDED):
-                    time = self.getRobotOperationTime() - self._robotOperationTime
-                    #print('RUN TIME:', time)
-                    if(time > 7000):
-                        self._observation = self.getObservation(action)
-                        self._observation.append(np.array(0, dtype=np.float32))
-                        self._observation.append(np.array(0, dtype=np.float32))
-                        reward = -time
-                        return self._observation, reward, True, {}  ######## ducta
-
-                ti = (self.getRobotOperationTime() - self._robotOperationTime)/100
-                d  += ti
-                print('Late:', d, ':', ti)
-                reward -= d
-
-            # P3 --
+            # P1 -------------------------------------------------------------------------------------------------
+            #
+            #!NOTE: THESE VALUES ARE ONLY VALID AFTER self._robot.getOperationState() == RC.CROBOT_STATE_MOVING_ENDED,
+            # ELSE RETURN 0
             approachingTime = self.getTimelyPickApproachingTime()
             pickingTime     = self.getTimelyPickGrippingTime()
             print('OPER TIME', approachingTime, ' --- ', pickingTime)
@@ -455,17 +447,51 @@ class RobotOperationEnvironment(gym.Env):
             self._observation.append(np.array(approachingTime, dtype=np.float32))
             self._observation.append(np.array(pickingTime, dtype=np.float32))
 
-            reward += self.reward()
-            isSlowApproaching = (action[0] < 0.1) or (approachingTime > 7000)
-            isSlowGripping    = (action[1] < 0.1) or (pickingTime > 1000)
-            if(isSlowApproaching):
-                reward -= approachingTime
-            if(isSlowGripping):
-                reward -= pickingTime
-            done = not (isSlowApproaching or isSlowGripping)
+            isSlowApproaching = (action[0] < 0.1) or (approachingTime > APPROACHING_TIME_LIMIT)
+            isSlowGripping    = (action[1] < 0.1) or (pickingTime     > PICKING_TIME_LIMIT)
+
+            if(isSlowApproaching and isSlowGripping):
+                reward -= (approachingTime + pickingTime)
+            elif(isSlowApproaching):
+                reward -= (approachingTime + PICKING_TIME_LIMIT     - action[1])
+            elif(isSlowGripping):
+                reward -= (pickingTime     + APPROACHING_TIME_LIMIT - action[0])
+
+            done = not (isSlowApproaching or isSlowGripping) # Here, we intentionally reverse the meaning for cancelling off all < 0.1 values
+
+            if(not done):
+                print('TOO SLOW ACT')
+                print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
+                return self._observation, reward, done, {}  ######## ducta
+
+            # ----------------------------------------------------------------------------------------------------
+            self._objGroundHit = self.isObjGroundHit()
+            pos = RC.getObjectWorldPosition(objName)
+            #print('OBJ Z POS:', pos[2])
+
+            # P2 -------------------------------------------------------------------------------------------------
+            # OBJ ON GROUND NOW
+            # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
+            if(pos[2]>=0.3 and pos[2] <= 0.5):
+                reward += 5000 - abs(pos[2] - 0.36)
+                print('Obj CAUGHT! APPARE!')
+
+            # P3 -------------------------------------------------------------------------------------------------
+            # OBJ ON GROUND NOW
+            # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
+            elif(self._objGroundHit):
+                reward -= (approachingTime + pickingTime)/10
+                print('Obj Already On ground..Late?')
+            #
+            # P4 -------------------------------------------------------------------------------------------------
+            # OBJ STILL FALLING
+            elif(pos[2] > 0.5):
+                d = self.getTimelyCatchObjectDistance()
+                t = 5000*d
+                print('TOO SOON', d)
+                reward -= t
 
             print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
-
             return self._observation, reward, done, {}  ######## ducta
 
         ### OTHERS ##############################################################################

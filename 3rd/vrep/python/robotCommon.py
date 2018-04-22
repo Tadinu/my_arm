@@ -175,7 +175,7 @@ elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_GRIPPER):
         GB_ACTION_DIM = 2
         GB_STATE_DIM  = 3 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
     elif(isTaskObjTimelyCatch()):
-        GB_ACTION_DIM = 3
+        GB_ACTION_DIM = 2
         GB_STATE_DIM  = 4 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
 
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
@@ -386,6 +386,25 @@ def getJointMatrix(jointHandle):
 
     return jointMatrix
 
+# ===================================================================================================
+# == GEO FUNCTS =====================================================================================
+#
+# Ref: https://stackoverflow.com/questions/31735499/calculate-angle-clockwise-between-two-points
+# https://stackoverflow.com/questions/44416555/efficient-3d-signed-angle-calculation-in-python-using-arctan2
+def length(v):
+    return sqrt(v[0]**2+v[1]**2+v[2]**2)
+def dot_product(v,w):
+   return v[0]*w[0]+v[1]*w[1]+v[2]*w[2]
+def determinant(v,w):
+   return v[0]*w[1]-v[1]*w[0]
+def angle_clockwise(A, B):
+    inner=getAngleFromTwoVectors(A,B)
+    det = determinant(A,B)
+    if det<0: #this is a property of the det. If the det < 0 then B is clockwise of A
+        return inner
+    else: # if the det > 0 then A is immediately clockwise of B
+        return 360-inner
+
 def getDistanceFromPointToLine(p, a, b):
     p1 = np.array(p, dtype=np.float32)
     a1 = np.array(a, dtype=np.float32)
@@ -401,6 +420,17 @@ def getAngleFromTwoVectors(v1, v2, acute=1):
     else:
         return 2 * np.pi - angle
 
+    #cosang = np.dot(v1, v2) / (norm(v1) * norm(v2))
+    #sinang = np.cross(v1, v2) / (norm(v1) * norm(v2))
+    #return np.arctan2(sinang, cosang)
+
+    # Numpy's arctan2(y, x) will compute the counterclockwise angle (in radians) between the origin
+    # and the point (x, y).
+
+    # You could do this for your points A and B, then subtract the second angle from the first to
+    # get the signed clockwise angular difference. This will be between -π and π, so in order to
+    # get a positive angle between 0 and 2π you could then take the modulo against 2π. Finally you
+    # can convert radians to degrees using np.rad2deg.
 
 ################################################################################################################
 # V-REP IMPORTANT KNOWLEDGE:

@@ -19,8 +19,8 @@ import robotCommon as RC
 #CMODEL_PATH = "ppo_model"
 CMODEL_NAME = "ppo_model"
 dirNo = 1
-modelNo = 6
-CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/!!!kuka_suction_object_support_not_reset_obj_support_branch/PPO5/" + \
+modelNo = 0
+CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/kuka_suction_object_support/PPO_MOVE_FAR/" + \
               str(dirNo) + "/" + CMODEL_NAME + str(modelNo)
 
 class Model(object):
@@ -127,7 +127,7 @@ class Runner(object):
             mb_dones.append(self.dones)
 
             # tad ++
-            if(self.dones):
+            if(self.dones): # If object is still on base plate, not reset!
                 self.env.reset()
 
             print('Step ', _,'-----------------------------------------------------------')
@@ -216,7 +216,7 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     # tad++
     if(osp.exists(CMODEL_PATH)):
         model.load(CMODEL_PATH)
-        print('Loading model successfully!')
+        print('Model loaded successfully!')
     else:
         print('MODEL NOT LOADED!')
     # tad--

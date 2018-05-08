@@ -49,6 +49,8 @@ class RobotOperationEnvironment(gym.Env):
         self._mutex = threading.Lock()
         self._objAwayFromBasePlate = False
         self._robotOperationTime = 0
+        self._distanceFromPrevPose = 0
+        self._distanceFromPrevPoseStr = ''
 
         # INITIALIZE ENVIRONMENT
         self.loadEnvironmentObjects()
@@ -111,6 +113,7 @@ class RobotOperationEnvironment(gym.Env):
             print("_reset")
         self.setTerminated(0)
         self._objAwayFromBasePlate = False
+        self._distanceFromPrevPoseStr = ''
         #print("Start back simulation")
         #RC.startSimulation(self._clientID)
 
@@ -169,12 +172,17 @@ class RobotOperationEnvironment(gym.Env):
             #self._observation.append(np.array(alpha1, dtype=np.float32))
             #self._observation.append(np.array(beta1, dtype=np.float32))
 
-            # Base Plate Normal Vector -----------------------------------------------------------------------------
+            # Slanting Angle --------------------------------------------------------------------------------------
             slantingDegree = abs(RC.angle_between(np.array([0,0,1]), np.array(self.getBasePlateNormalVector())))
 
+            # Offset off the base center  -------------------------------------------------------------------------
             self._observation.append(np.array(d*math.cos(slantingDegree), dtype=np.float32))
             if(RC.isTaskObjSuctionObjectSupport()):
                 self._observation.append(np.array(slantingDegree, dtype=np.float32))
+                 # !NOTE: THIS FUNCTION MUST BE CALLED ONLY ONCE IN STEP()
+                self._distanceFromPrevPose = self.getDistanceToPrevPose()
+                # Add into Observation
+                #self._observation.append(np.array(self._distanceFromPrevPose, dtype=np.float32))
             else:
                 objLinearVel, objAngVel = RC.getObjectVelocity(RC.CCUBOID_OBJ_NAME)
                 #print('ANG ', objAngVel[0],objAngVel[1],objAngVel[2])
@@ -260,7 +268,8 @@ class RobotOperationEnvironment(gym.Env):
         # Wait for some time to check again the on-base-plate state of the object:
         if(not self._objAwayFromBasePlate):
             time.sleep(2)
-        self._observation = self.getObservation(action)
+
+        self._observation    = self.getObservation(action)
         reward += self.reward() # Reward Addition after observation 2nd!
         done    = self.termination() or overlong
 
@@ -268,14 +277,25 @@ class RobotOperationEnvironment(gym.Env):
             reward -= 5000
         elif(RC.isTaskObjSuctionObjectSupport()):
             # DISTANCE TO RESET POSE
-            d = self.getDistanceToResetPose() * 100
-            #print('DISTANCE: ', d)
-            if(d<60):
-                reward -= (60-d)*10
-            else:
-                reward += d
-        #elif(RC.isTaskObjSuctionObjectRotate()):
+            #d1 = self.getDistanceToResetPose() * 100
+            d2 = self._distanceFromPrevPose * 100
+            self._distanceFromPrevPoseStr += ',' + str(d2)
+            #print('DISTANCE: ', reward, d2, self._distanceFromPrevPoseStr)
+            #print('PREV POSE DISTANCE: ', self._distanceFromPrevPoseStr)
+            reward += d2
 
+            if(d2<60):
+                reward -= 500
+                if(self.isObjectAlmostStayOnBaseCenter()):
+                    reward -= 5000
+                    #done = True
+                else:
+                    cuboidPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+                    if(cuboidPos[2] <= 0.7):
+                        reward -= 6000
+                        done = True
+
+        #elif(RC.isTaskObjSuctionObjectRotate()):
         print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
         #print("len=%r" % len(self._observation))
 
@@ -513,9 +533,29 @@ class RobotOperationEnvironment(gym.Env):
                                                                                     vrep.simx_opmode_oneshot_wait)
         return distance[0]
 
+    def getDistanceToPrevPose(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, distance, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, "Robotiiwa", \
+                                                                                    vrep.sim_scripttype_childscript,       \
+                                                                                    "gbGetDistanceToPrevPoseFromClient",  \
+                                                                                    inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                    vrep.simx_opmode_oneshot_wait)
+        return distance[0]
+
+    def isObjectAlmostStayOnBaseCenter(self):
+        # Distance from base plate pos and cuboid center
+        cuboidPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+        basePlatePos = RC.getObjectWorldPosition(RC.CBASE_PLATE_OBJ_NAME)
+        d = math.sqrt((cuboidPos[0] - basePlatePos[0])**2 +
+                      (cuboidPos[1] - basePlatePos[1])**2)
+        print('DIS:', d)
+        return (d <= 0.15)
+
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)
-
 
     def detectHandOnGround(self):
         handPos = self._robot.getHandWorldPosition()

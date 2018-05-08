@@ -69,7 +69,7 @@ def startTrainingPPO2(num_timesteps, seed):
     ppo2.learn(policy=policy, env=env, nsteps=128, nminibatches=32,
         lam=0.95, gamma=0.99, noptepochs=10, log_interval=1,
         ent_coef=0.0,
-        lr=3e-4,
+        lr=1.5e-4,
         cliprange=0.2,
         total_timesteps=num_timesteps, save_interval=1)
 

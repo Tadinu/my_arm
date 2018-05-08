@@ -140,9 +140,9 @@ if(GB_CSERVER_ROBOT_ID == CKUKA_ARM_BARRETT_HAND):
         GB_ACTION_DIM = 3
         GB_STATE_DIM  = 6
     elif(isTaskObjSuctionObjectSupport()):
-        # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
+        # 3 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint)
         GB_ACTION_DIM = 3
-        GB_STATE_DIM  = 5
+        GB_STATE_DIM  = 5 # (3 joint values, slanting angle, distance offset to the base center)
     elif(isTaskObjSuctionObjectRotate()):
         # 2 (1 Middle Twist joint, 1 Elbow joint, 1 Wrist joint), Base joint as fixed movement (environment role)
         GB_ACTION_DIM = 3

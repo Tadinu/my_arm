@@ -674,6 +674,7 @@ class Robot:
         isTaskObjCatch          = RC.isTaskObjCatch()
         isTaskObjTimelyPick     = RC.isTaskObjTimelyPick()
         isTaskObjTimelyCatch    = RC.isTaskObjTimelyCatch()
+        isTaskCarUShapeTurn     = RC.isTaskObjTimelyCatch()
 
         if(False): #isTaskObjTimelyPick
             inputInts    = [self._robotHandle] #[objHandles[16]]

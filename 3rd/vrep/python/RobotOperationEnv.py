@@ -120,8 +120,10 @@ class RobotOperationEnvironment(gym.Env):
 
         ##1- OBSERVATION --
         self._observation = self.getObservation([0]*RC.GB_ACTION_DIM)
-        self._observation.append(np.array(0, dtype=np.float32))
-        self._observation.append(np.array(0, dtype=np.float32))
+        l = RC.GB_STATE_DIM - len(self._observation)
+        if(l > 0):
+            for i in range(l):
+                self._observation.append(np.array(0, dtype=np.float32))
 
         ##2- RESET ROBOT POS --
         self._robot.resetRobot() # Time sleep inside
@@ -236,18 +238,20 @@ class RobotOperationEnvironment(gym.Env):
             ##############################################################################################
             # OBJ INFO
             #
-            # Object position on conveyor belt
-            objPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+            # Object position
+            #objPos    = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+            d         = self.getTimelyCatchObjectAltitude()
             endTipPos = RC.getObjectWorldPosition('RG2')
-            zDelta    = objPos[2] - endTipPos[2]
+            #zDelta    = d - endTipPos[2]
             #d = math.sqrt((objPos[0] - endTipPos[0])**2 +
             #              (objPos[1] - endTipPos[1])**2 +
             #              (objPos[1] - endTipPos[1])**2)
-            #self._observation.append(np.array(d, dtype=np.float32))
-            d = self.getTimelyCatchObjectDistance()
-            self._observation.append(np.array(zDelta, dtype=np.float32))
+            self._observation.append(np.array(endTipPos[2], dtype=np.float32))
             self._observation.append(np.array(d, dtype=np.float32))
 
+        #elif(RC.isTaskCarUShapeTurn()):
+            ##############################################################################################
+            #
         return self._observation
 
     def reloadFallingObjects(self):
@@ -338,7 +342,7 @@ class RobotOperationEnvironment(gym.Env):
             self._robotOperationTime = self.getRobotOperationTime()
             #print('OPER TIME:', self._robotOperationTime)
 
-            # PUNISHMENT POLICY
+            # REWARDING POLICY
             #
             # P1 --
             if(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING_ENDED and pos[1] >= RC.CTASK_OBJ_TIMELY_PICK_POSITION):
@@ -420,8 +424,10 @@ class RobotOperationEnvironment(gym.Env):
                 #print('RUN TIME:', time)
                 if(time > (APPROACHING_TIME_LIMIT + PICKING_TIME_LIMIT)):
                     self._observation = self.getObservation(action)
-                    self._observation.append(np.array(0, dtype=np.float32))
-                    self._observation.append(np.array(0, dtype=np.float32))
+                    l = RC.GB_STATE_DIM - len(self._observation)
+                    if(l > 0):
+                        for i in range(l):
+                            self._observation.append(np.array(0, dtype=np.float32))
                     reward = -time
                     print('MOVING TOO LONG', time)
                     print('Env observed!', reward,' - ',False) # self._robot.getOperationState()
@@ -431,7 +437,13 @@ class RobotOperationEnvironment(gym.Env):
             self._robotOperationTime = self.getRobotOperationTime()
             #print('OPER TIME:', self._robotOperationTime)
 
-            # PUNISHMENT POLICY
+            # REWARDING POLICY
+            #
+            # ----------------------------------------------------------------------------------------------------
+            self._objGroundHit = self.isObjGroundHit()
+            posZ = self.getTimelyCatchObjectAltitude() + 0.1
+            posZReal = RC.getObjectWorldPosition(objName)[2]
+            print('OBJ Z POS:', posZ, posZReal)
             #
             # P1 -------------------------------------------------------------------------------------------------
             #
@@ -446,6 +458,7 @@ class RobotOperationEnvironment(gym.Env):
             self._observation = self.getObservation(action)
             self._observation.append(np.array(approachingTime, dtype=np.float32))
             self._observation.append(np.array(pickingTime, dtype=np.float32))
+            self._observation.append(np.array(posZReal, dtype=np.float32)) # posZ is already added as object altitude
 
             isSlowApproaching = (action[0] < 0.1) or (approachingTime > APPROACHING_TIME_LIMIT)
             isSlowGripping    = (action[1] < 0.1) or (pickingTime     > PICKING_TIME_LIMIT)
@@ -464,37 +477,65 @@ class RobotOperationEnvironment(gym.Env):
                 print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
                 return self._observation, reward, done, {}  ######## ducta
 
-            # ----------------------------------------------------------------------------------------------------
-            self._objGroundHit = self.isObjGroundHit()
-            pos = RC.getObjectWorldPosition(objName)
-            #print('OBJ Z POS:', pos[2])
-
             # P2 -------------------------------------------------------------------------------------------------
             # OBJ ON GROUND NOW
             # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
-            if(pos[2]>=0.3 and pos[2] <= 0.5):
-                reward += 5000 - abs(pos[2] - 0.36)
-                print('Obj CAUGHT! APPARE!')
+            if(posZ >= 0.9 and posZ <= 6): #2.5 for original height 7
+                reward += 5000 - abs(posZReal - 0.36)*10
+                if(posZReal >= 0.3 and posZReal <= 2.5):
+                    print('Obj CAUGHT! APPARE!')
+                else:
+                    print('Obj SO CLOSE!')
+                #done = True
 
             # P3 -------------------------------------------------------------------------------------------------
             # OBJ ON GROUND NOW
             # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
-            elif(self._objGroundHit):
-                reward -= (approachingTime + pickingTime)/10
-                print('Obj Already On ground..Late?')
+            elif(posZ < 0.9):
+                reward -= (approachingTime + pickingTime)*10
+                print('Obj Already passed through..Late?')
+                #done = False
+            elif(posZ <= 10):
+                reward += (approachingTime + pickingTime)/10
+                print('ALMOST CAUGHT. A LITTLE BIT SOON')
+                #done = True
             #
-            # P4 -------------------------------------------------------------------------------------------------
+            # P4 ------------------------------------------------------------------------------------------------
             # OBJ STILL FALLING
-            elif(pos[2] > 0.5):
-                d = self.getTimelyCatchObjectDistance()
-                t = 5000*d
+            elif(posZ > 10):
+                d = self.getTimelyCatchObjectAltitude()
+                t = 200*d
                 print('TOO SOON', d)
                 reward -= t
+                #done = False
+            print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
+            return self._observation, reward, done, {}  ######## ducta
+
+        #########################################################################################################
+        ### CAR USHAPE TURN -------------------------------------------------------------------------------------
+        ###
+        elif(RC.isTaskCarUShapeTurn()):
+            self._robotOperationTime = self.getRobotOperationTime()
+
+            # WAIT FOR ACTION ENDED
+            #
+            reward += self.reward()
+            #
+            while(self._robot.getOperationState() != RC.CROBOT_STATE_MOVING_ENDED):
+                pass
+
+            # REWARDING POLICY
+            #
+            # OBSERVATION
+            #
+            self._observation = self.getObservation(action)
 
             print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
             return self._observation, reward, done, {}  ######## ducta
 
-        ### OTHERS ##############################################################################
+        #########################################################################################################
+        ### OTHERS ##############################################################################################
+        #
         else:
             #time.sleep(self._timeStep)
             #!!!Wait for some time since starting the action then observe:
@@ -851,19 +892,19 @@ class RobotOperationEnvironment(gym.Env):
                                                                                         vrep.simx_opmode_oneshot_wait)
         return objectDistance[0]
 
-    def getTimelyCatchObjectDistance(self):
+    def getTimelyCatchObjectAltitude(self):
         inputInts    = [self._robotHandle] #[objHandles[16]]
         inputFloats  = []
         inputStrings = ''
         inputBuffer  = bytearray()
         ##inputBuffer.append(78)
         ##inputBuffer.append(42)
-        res, retInts, objectDistance, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME, \
+        res, retInts, objectAltitude, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME, \
                                                                                         vrep.sim_scripttype_childscript,    \
-                                                                                        'getObjectDistanceFromClient',      \
+                                                                                        'getObjectAltitudeFromClient',      \
                                                                                         inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                         vrep.simx_opmode_oneshot_wait)
-        return objectDistance[0]
+        return objectAltitude[0]
 
     def getBeltVelocity(self):
         inputInts    = [self._robotHandle] #[objHandles[16]]
@@ -879,6 +920,20 @@ class RobotOperationEnvironment(gym.Env):
                                                                                         vrep.simx_opmode_oneshot_wait)
         return beltVelocity[0]
 
+    def getInAirObjectPos(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = ''
+        inputBuffer  = bytearray()
+        ##inputBuffer.append(78)
+        ##inputBuffer.append(42)
+        res, retInts, objectPos, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, RC.CUR5_ARM_NAME, \
+                                                                                        vrep.sim_scripttype_childscript,    \
+                                                                                        'gbGetInAirObjectPosFromClient',      \
+                                                                                        inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                        vrep.simx_opmode_oneshot_wait)
+        return objectPos[0]
+
     def showStatusBarMessage(self, message):
         vrep.simxAddStatusbarMessage(self._clientID, message, vrep.simx_opmode_oneshot)
 
@@ -887,3 +942,4 @@ class RobotOperationEnvironment(gym.Env):
         handPos = self._robot.getHandWorldPosition()
         #print('HAND POS', handPos)
         return handPos[2] < 0.1
+

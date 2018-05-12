@@ -32,6 +32,7 @@ CUR5_ARM_BARRETT_HAND  = 4
 CKUKA_ARM_SUCTION_PAD  = CKUKA_ARM_BARRETT_HAND
 CUR5_ARM_GRIPPER = 5
 CHEXAPOD = 6
+CCAR = 7
 
 # ================================================================
 # ROBOT OPERATION STATE-------------------------------------------
@@ -57,6 +58,7 @@ CYOUBOT_NAME        = 'youBot'# 'LBR4p'
 CJACO_ARM_HAND_NAME = 'JacoHand'
 CBARRETT_HAND_NAME  = 'BarrettHand'
 CHEXAPOD_NAME       = 'hexapod'
+CCAR_NAME           = 'hexapod'
 
 # ================================================================
 # OBJECT NAMES ---------------------------------------------------
@@ -86,6 +88,7 @@ CTASK_ID_OBJ_MOVE_CATCH      = 8
 CTASK_ID_OBJ_AVOID           = 9
 CTASK_ID_OBJ_TIMELY_PICK     = 10 # On conveyor belt
 CTASK_ID_OBJ_TIMELY_CATCH    = 11 # In the air
+CTASK_ID_CAR_USHAPE_TURN     = 12
 
 CTASK_OBJ_TIMELY_PICK_POSITION = 0.26
 
@@ -127,6 +130,9 @@ def isTaskObjTimelyCatch():
 
 def doJointVibration():
     return isTaskObjHandBalance() or isTaskObjHold()
+
+def isTaskCarUShapeTurn():
+    return GB_TASK_ID == CTASK_ID_CAR_USHAPE_TURN
 
 # ================================================================
 # ACTION, STATE DIMENSIONS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -176,7 +182,7 @@ elif(GB_CSERVER_ROBOT_ID == CUR5_ARM_GRIPPER):
         GB_STATE_DIM  = 3 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
     elif(isTaskObjTimelyCatch()):
         GB_ACTION_DIM = 2
-        GB_STATE_DIM  = 4 # (8) 6 joint vels and cuboid distance pos (3D & 2D distances)
+        GB_STATE_DIM  = 5 # Approaching & Picking Time + Final Object Altitude + Current Object Altitude + Current Endtip Altitude
 
 elif(GB_CSERVER_ROBOT_ID == CJACO_ARM_HAND):
     GB_ACTION_DIM = 1
@@ -187,6 +193,11 @@ elif(GB_CSERVER_ROBOT_ID == CHEXAPOD):
     GB_ACTION_DIM = 3
     GB_STATE_DIM  = 20
     GB_CSERVER_ROBOT_NAME = CHEXAPOD_NAME
+
+elif(GB_CSERVER_ROBOT_ID == CCAR):
+    GB_ACTION_DIM = 3
+    GB_STATE_DIM  = 4
+    GB_CSERVER_ROBOT_NAME = CCAR_NAME
 
 def GB_CLIENT_ID():
     return _GB_CLIENT_ID

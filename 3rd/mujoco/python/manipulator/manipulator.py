@@ -156,16 +156,19 @@ if __name__ == "__main__":
     action = np.array([-0.05, 0., -0.1, 0.5])
     #print('LEN ', len(robot.sim.data.ctrl), len(robot.sim.model.actuator_biastype))
 
-    qvel = 0.01
+    qvel = 1
     qpos = 0.1
-    robot.move_end_effector(target)
+
     while True:
         #robot.act(action)
-        qpos +=0.1
-        qvel +=0.1
-        robot.move_to_qpos(CCATCH_QPOS, qvel)
-        robot.sim.step()
-        robot.move_to_qpos(CBASE_QPOS, qvel)
+        robot.move_end_effector(target)
+        qpos += 0.1
+        qvel -= 0.01
+        robot.move_joint_by_id(10, qpos, qvel)
+        robot.move_joint_by_name('robot0:elbow_flex_joint', qpos, qvel)
+
+        #robot.move_to_qpos(CCATCH_QPOS, qvel)
+        #robot.move_to_qpos(CBASE_QPOS, qvel)
         #robot.print_joint_info(9)
 
         robot.sim.step()

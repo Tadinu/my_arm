@@ -478,36 +478,39 @@ class RobotOperationEnvironment(gym.Env):
                 return self._observation, reward, done, {}  ######## ducta
 
             # P2 -------------------------------------------------------------------------------------------------
+            MIN_THRESHOLD_1 = 0.5
+            MAX_THRESHOLD_1 = 3.5
+            MAX_THRESHOLD_2 = 7
             # OBJ ON GROUND NOW
             # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
-            if(posZ >= 0.9 and posZ <= 6): #2.5 for original height 7
-                reward += 5000 - abs(posZReal - 0.36)*10
+            if(posZ >= MIN_THRESHOLD_1 and posZ <= MAX_THRESHOLD_1): #2.5 for original height 7
+                reward += 5000 - abs(posZ - 0.6865) * 10 - abs(posZReal - 0.36)*10
                 if(posZReal >= 0.3 and posZReal <= 2.5):
                     print('Obj CAUGHT! APPARE!')
                 else:
                     print('Obj SO CLOSE!')
-                #done = True
+                done = True
 
             # P3 -------------------------------------------------------------------------------------------------
             # OBJ ON GROUND NOW
             # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
-            elif(posZ < 0.9):
-                reward -= (approachingTime + pickingTime)*10
+            elif(posZ < MIN_THRESHOLD_1):
+                reward -= (approachingTime + pickingTime) - abs(posZ - MIN_THRESHOLD_1) * 10
                 print('Obj Already passed through..Late?')
-                #done = False
-            elif(posZ <= 10):
-                reward += (approachingTime + pickingTime)/10
+                done = False
+            elif(posZ <= MAX_THRESHOLD_2):
+                reward += (approachingTime + pickingTime)/10 + abs(posZ - MAX_THRESHOLD_2)*10
                 print('ALMOST CAUGHT. A LITTLE BIT SOON')
-                #done = True
+                done = True
             #
             # P4 ------------------------------------------------------------------------------------------------
             # OBJ STILL FALLING
-            elif(posZ > 10):
+            elif(posZ > MAX_THRESHOLD_2):
                 d = self.getTimelyCatchObjectAltitude()
-                t = 200*d
+                t = 200*d + abs(posZ - MAX_THRESHOLD_2)*10
                 print('TOO SOON', d)
                 reward -= t
-                #done = False
+                done = False
             print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
             return self._observation, reward, done, {}  ######## ducta
 

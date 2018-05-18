@@ -478,14 +478,17 @@ class RobotOperationEnvironment(gym.Env):
                 return self._observation, reward, done, {}  ######## ducta
 
             # P2 -------------------------------------------------------------------------------------------------
-            MIN_THRESHOLD_1 = 0.5
-            MAX_THRESHOLD_1 = 3.5
-            MAX_THRESHOLD_2 = 7
+
+            MIN_THRESHOLD_1 = 0.9
+            MAX_THRESHOLD_1 = 3
+            MAX_THRESHOLD_2 = 10
+            CATCHING_POSZ      = 0.9698 # 0.6865 for HEIGHT 14
+            CATCHING_POSZ_REAL = 0.36
             # OBJ ON GROUND NOW
             # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
             if(posZ >= MIN_THRESHOLD_1 and posZ <= MAX_THRESHOLD_1): #2.5 for original height 7
-                reward += 5000 - abs(posZ - 0.6865) * 10 - abs(posZReal - 0.36)*10
-                if(posZReal >= 0.3 and posZReal <= 2.5):
+                reward += 5000 - abs(posZ - CATCHING_POSZ) * 10 - abs(posZReal - CATCHING_POSZ_REAL)*10
+                if(posZReal >= 0.26 and posZReal <= 2.5):
                     print('Obj CAUGHT! APPARE!')
                 else:
                     print('Obj SO CLOSE!')

@@ -36,6 +36,10 @@ CSERVER_REMOTE_FUNC_RELOAD_FALL_OBJS  = 'reloadFallingObjectsFromClient'
 CSERVER_REMOTE_FUNC_DETECT_OBJ_GROUND = 'detectObjectOnGroundFromClient'
 CSERVER_REMOTE_FUNC_OPERATION_TIME    = 'getRobotOperationTimeToTheMomentFromClient'
 
+MIN_THRESHOLD_1    = 0.3
+MAX_THRESHOLD_1    = 2.5
+MAX_THRESHOLD_2    = 3
+
 class RobotOperationEnvironment(gym.Env):
 
     def __init__(self, clientID, robotId, robotHandle):
@@ -49,6 +53,11 @@ class RobotOperationEnvironment(gym.Env):
         self._mutex = threading.Lock()
         self._objGroundHit = False
         self._robotOperationTime = 0
+
+        self.CATCHING_POSZ      = 0.54 # 0.6865 for HEIGHT 14
+        self.CATCHING_POSZ_REAL = 0.36
+        self.CATCHING_POSZ_REAL_DELTA = 10
+        self._posZDeltaStr = ''
 
         # INITIALIZE ENVIRONMENT
         self.loadEnvironmentObjects()
@@ -444,6 +453,9 @@ class RobotOperationEnvironment(gym.Env):
             posZ = self.getTimelyCatchObjectAltitude() + 0.1
             posZReal = RC.getObjectWorldPosition(objName)[2]
             print('OBJ Z POS:', posZ, posZReal)
+            posZDelta = abs(posZReal - self.CATCHING_POSZ_REAL)
+            self._posZDeltaStr += str(posZDelta) + ','
+            print('DELTA TRACK:',  self._posZDeltaStr)
             #
             # P1 -------------------------------------------------------------------------------------------------
             #
@@ -478,21 +490,27 @@ class RobotOperationEnvironment(gym.Env):
                 return self._observation, reward, done, {}  ######## ducta
 
             # P2 -------------------------------------------------------------------------------------------------
-
-            MIN_THRESHOLD_1 = 0.9
-            MAX_THRESHOLD_1 = 3
-            MAX_THRESHOLD_2 = 10
-            CATCHING_POSZ      = 0.9698 # 0.6865 for HEIGHT 14
-            CATCHING_POSZ_REAL = 0.36
+            #
             # OBJ ON GROUND NOW
+            #
             # ALREADY HANDLED ABOVE by -100 reward if () during waiting for moving ended
-            if(posZ >= MIN_THRESHOLD_1 and posZ <= MAX_THRESHOLD_1): #2.5 for original height 7
-                reward += 5000 - abs(posZ - CATCHING_POSZ) * 10 - abs(posZReal - CATCHING_POSZ_REAL)*10
-                if(posZReal >= 0.26 and posZReal <= 2.5):
-                    print('Obj CAUGHT! APPARE!')
+            if(posZ >= MIN_THRESHOLD_1 and posZ <= MAX_THRESHOLD_1):
+                posZDelta = abs(posZReal - self.CATCHING_POSZ_REAL)
+                reward += 5000 - abs(posZ - self.CATCHING_POSZ) * 10 - posZDelta *10
+
+                # CAUGHT --
+                if(posZReal >= 0.3 and posZReal <= 0.5):
+                    # Update Catching PosZ Real Delta
+                    if(posZDelta < self.CATCHING_POSZ_REAL_DELTA):
+                        self.CATCHING_POSZ = posZ
+                        # Save for next time referencing comparison
+                        self.CATCHING_POSZ_REAL_DELTA = posZDelta
+                    print('Obj CAUGHT! APPARE!:')
+
+                # ALMOST CAUGHT --
                 else:
                     print('Obj SO CLOSE!')
-                done = True
+                #done = True
 
             # P3 -------------------------------------------------------------------------------------------------
             # OBJ ON GROUND NOW
@@ -500,11 +518,11 @@ class RobotOperationEnvironment(gym.Env):
             elif(posZ < MIN_THRESHOLD_1):
                 reward -= (approachingTime + pickingTime) - abs(posZ - MIN_THRESHOLD_1) * 10
                 print('Obj Already passed through..Late?')
-                done = False
+                #done = False
             elif(posZ <= MAX_THRESHOLD_2):
                 reward += (approachingTime + pickingTime)/10 + abs(posZ - MAX_THRESHOLD_2)*10
                 print('ALMOST CAUGHT. A LITTLE BIT SOON')
-                done = True
+                #done = True
             #
             # P4 ------------------------------------------------------------------------------------------------
             # OBJ STILL FALLING
@@ -513,7 +531,7 @@ class RobotOperationEnvironment(gym.Env):
                 t = 200*d + abs(posZ - MAX_THRESHOLD_2)*10
                 print('TOO SOON', d)
                 reward -= t
-                done = False
+                #done = False
             print('Env observed!', reward,' - ',done) # self._robot.getOperationState()
             return self._observation, reward, done, {}  ######## ducta
 

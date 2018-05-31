@@ -18,9 +18,9 @@ import robotCommon as RC
 
 #CMODEL_PATH = "ppo_model"
 CMODEL_NAME = "ppo_model"
-dirNo = 4
-modelNo = 19
-CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA/PPO/" + \
+dirNo = 1
+modelNo = 0
+CMODEL_PATH = "/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/SUCTION_PLATE_BALANCE_DATA/PPO_FAR/" + \
               str(dirNo) + "/" + CMODEL_NAME + str(modelNo)
 
 class Model(object):
@@ -215,7 +215,9 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     # tad++
     if(osp.exists(CMODEL_PATH)):
         model.load(CMODEL_PATH)
-        print('Loading model successfully!')
+        print('Model loaded successfully!')
+    else:
+        print('MODEL NOT LOADED!')
     # tad--
     nupdates = total_timesteps//nbatch
     #print('Update:', nupdates)

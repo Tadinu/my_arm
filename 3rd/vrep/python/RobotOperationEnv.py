@@ -269,6 +269,7 @@ class RobotOperationEnvironment(gym.GoalEnv):
         ##
         ##while(self._robot.getOperationState() != RC.CROBOT_STATE_READY):
             ##time.sleep(0.01)
+        time.sleep(0.5)
         self._robot.applyAction(action)
 
         if(RC.isTaskObjTimelyPick()):
@@ -284,6 +285,10 @@ class RobotOperationEnvironment(gym.GoalEnv):
         else:
             reward = 0
             overlong = False
+            twistJointPosBefore = RC.getJointPosition(self._robot._jointHandles[4])
+            maxJointVel = 0
+            #print('TWIST POS BEFORE', twistJointPosBefore)
+
             while(self._robot.getOperationState() == RC.CROBOT_STATE_MOVING):
                 #time.sleep(0.05)
                 self._objAwayFromBasePlate = self.isObjAwayFromBasePlate()
@@ -291,19 +296,45 @@ class RobotOperationEnvironment(gym.GoalEnv):
                     #print('GROUND HIT',i+1)
                     reward -= 10
 
+                jointVel = abs(RC.getJointVelocity(self._robot._jointHandles[4]))
+                if(maxJointVel < jointVel):
+                    maxJointVel = jointVel
+
                 #print('Still moving', operationTime)
                 if(self.getRobotOperationTime() > 7000):
                     overlong = True
                     break
 
+            twistJointPosAfter = RC.getJointPosition(self._robot._jointHandles[4])
+            #print('TWIST POS AFTER', twistJointPosAfter)
+
+            # Give more reward for twisting joint 4, 6 of higher level of bending!
+            #d1 = self.getDistanceToResetPose()*100
+            #print('BENDING DISTANCE: ', d1)
+            #if(d1<100):
+            #    reward -= 1000
+
+            # Give more reward for twisting joint 5 of higher velocity!
+            d2 = abs(twistJointPosAfter - twistJointPosBefore)*100
+            if(d2<300):
+                reward -= 500
+
             # Wait for some time to check again the on-base-plate state of the object:
             if(not self._objAwayFromBasePlate):
+                #reward += abs(twistJointPosAfter - twistJointPosBefore)*100
+                #print('BENDING DISTANCE: ', d1)
+                print('TWISTING DISTANCE: ', d2)
+                print('MAX JOINT VEL', maxJointVel)
+                #reward += d1
+                reward += d2
+                reward += maxJointVel*10
                 print('Obj still on base!')
+
             self._observation = self.getObservation(action)
             reward += self.reward() # Reward Addition after observation 2nd!
             done    = self.termination() or overlong
             if(self._objAwayFromBasePlate):
-                reward -= 100
+                reward -= 1000
             print('Env observed 2nd!', reward, done) # self._robot.getOperationState()
             #print("len=%r" % len(self._observation))
 
@@ -568,6 +599,18 @@ class RobotOperationEnvironment(gym.GoalEnv):
                                                                                      inputInts, inputFloats, inputStrings, inputBuffer, \
                                                                                      vrep.simx_opmode_oneshot_wait)
         return retInts[0]
+
+    def getDistanceToResetPose(self):
+        inputInts    = [self._robotHandle] #[objHandles[16]]
+        inputFloats  = []
+        inputStrings = []
+        inputBuffer  = bytearray()
+        res, retInts, distance, retStrings, retBuffer = vrep.simxCallScriptFunction(self._clientID, "Robotiiwa", \
+                                                                                    vrep.sim_scripttype_childscript,       \
+                                                                                    "gbGetDistanceToResetPoseFromClient",  \
+                                                                                    inputInts, inputFloats, inputStrings, inputBuffer, \
+                                                                                    vrep.simx_opmode_oneshot_wait)
+        return distance[0]
 
     def getBasePlateNormalVector(self):
         inputInts    = [self._robotHandle] #[objHandles[16]]

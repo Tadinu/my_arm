@@ -697,6 +697,8 @@ class Robot:
             else:
                 if(i == 0 or i == 3 or i == 4 or i == 5):
                     pos = RC.getJointPosition(self._jointHandles[i])
+                    #if(i==0):
+                    #    print('POS BALANCE :', pos)
                     #vel = RC.getJointVelocity(self._jointHandles[i])
                     #
                     if(isTaskObjHandBalance or isTaskObjSuctionBalance):

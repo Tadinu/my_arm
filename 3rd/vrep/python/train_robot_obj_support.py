@@ -113,7 +113,7 @@ def startTraining(train_indicator=0):    #1 means Train, 0 means simply Run
 
     #Now load the weight
     print("Now we load the weight")
-    LOAD_DIR_NO = 3
+    LOAD_DIR_NO = 17
     dirCount = LOAD_DIR_NO
     DATA_DIR = '/home/brhm/DUC/RobotArm/src/my_arm/3rd/vrep/python/BKU/kuka_suction_object_support/DDPG/'
     dataDir  = ''

@@ -51,6 +51,8 @@ class RobotOperationEnvironment(gym.Env):
         self._robotOperationTime = 0
         self._distanceFromPrevPose = 0
         self._distanceFromPrevPoseStr = ''
+        self._freeCount = 0
+        self._isSmoothTraining = False
 
         # INITIALIZE ENVIRONMENT
         self.loadEnvironmentObjects()
@@ -178,11 +180,12 @@ class RobotOperationEnvironment(gym.Env):
             # Offset off the base center  -------------------------------------------------------------------------
             self._observation.append(np.array(d*math.cos(slantingDegree), dtype=np.float32))
             if(RC.isTaskObjSuctionObjectSupport()):
-                self._observation.append(np.array(slantingDegree, dtype=np.float32))
-                 # !NOTE: THIS FUNCTION MUST BE CALLED ONLY ONCE IN STEP()
-                self._distanceFromPrevPose = self.getDistanceToPrevPose()
-                # Add into Observation
-                #self._observation.append(np.array(self._distanceFromPrevPose, dtype=np.float32))
+                if(not self._isSmoothTraining):
+                    self._observation.append(np.array(slantingDegree, dtype=np.float32))
+                    # !NOTE: THIS FUNCTION MUST BE CALLED ONLY ONCE IN STEP()
+                    self._distanceFromPrevPose = self.getDistanceToPrevPose()
+                    # Add into Observation
+                    #self._observation.append(np.array(self._distanceFromPrevPose, dtype=np.float32))
             else:
                 objLinearVel, objAngVel = RC.getObjectVelocity(RC.CCUBOID_OBJ_NAME)
                 #print('ANG ', objAngVel[0],objAngVel[1],objAngVel[2])
@@ -234,6 +237,16 @@ class RobotOperationEnvironment(gym.Env):
         ## ----------------------------------------------------------------------------------------
         if(RC.GB_TRACE):
             print('ACTION:', action)
+        if(self._isSmoothTraining):
+            if(action[0] < 0.5 or action[1] < 0.5 or action[2] < 0.5):
+                reward = self.reward()
+                for i in range(3):
+                    if(action[i] < 0.5):
+                        w = 0.5-action[i]
+                        reward -= w * 100
+                print('TOO SLOW -> SKIP! ', reward, True)
+                self._observation    = self.getObservation(action)
+                return self._observation, reward, True, {}
         ## ----------------------------------------------------------------------------------------
         ## APPLY ACTION START
         ##
@@ -276,24 +289,27 @@ class RobotOperationEnvironment(gym.Env):
         if(self._objAwayFromBasePlate):
             reward -= 5000
         elif(RC.isTaskObjSuctionObjectSupport()):
-            # DISTANCE TO RESET POSE
-            #d1 = self.getDistanceToResetPose() * 100
-            d2 = self._distanceFromPrevPose * 100
-            self._distanceFromPrevPoseStr += ',' + str(d2)
-            #print('DISTANCE: ', reward, d2, self._distanceFromPrevPoseStr)
-            #print('PREV POSE DISTANCE: ', self._distanceFromPrevPoseStr)
-            reward += d2
+            if(self._isSmoothTraining):
+                reward += (action[0] + action[1] + action[2]) * 100
+            else:
+                # DISTANCE TO RESET POSE
+                #d1 = self.getDistanceToResetPose() * 100
+                d2 = self._distanceFromPrevPose * 100
+                self._distanceFromPrevPoseStr += ',' + str(d2)
+                #print('DISTANCE: ', reward, d2, self._distanceFromPrevPoseStr)
+                #print('PREV POSE DISTANCE: ', self._distanceFromPrevPoseStr)
+                reward += d2
 
-            if(d2<60):
-                reward -= 500
-                if(self.isObjectAlmostStayOnBaseCenter()):
-                    reward -= 5000
-                    #done = True
-                else:
-                    cuboidPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
-                    if(cuboidPos[2] <= 0.7):
-                        reward -= 6000
-                        done = True
+                if(d2<60):
+                    reward -= 500
+                    if(self.isObjectAlmostStayOnBaseCenter()):
+                        reward -= 5000
+                        #done = True
+                    else:
+                        cuboidPos = RC.getObjectWorldPosition(RC.CCUBOID_OBJ_NAME)
+                        if(cuboidPos[2] <= 0.7):
+                            reward -= 6000
+                            done = True
 
         #elif(RC.isTaskObjSuctionObjectRotate()):
         print('Env observed 2nd!', reward, done) # self._robot.getOperationState()

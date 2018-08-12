@@ -22,6 +22,7 @@ Hands and Arms packages:
 * [PISA-IIT Soft Hand](https://github.com/CentroEPiaggio/pisa-iit-soft-hand)
 * [Shadow Hand](http://www.shadowrobot.com/products/dexterous-hand/)
 * [Shadow Hand Ros Package](http://wiki.ros.org/Robots/Shadow_Hand)
+* [ROS Leap Motion](https://github.com/warp1337/rosleapmotion)
 
 AI frameworks:
 * [OpenAI gym](https://openai.com/)

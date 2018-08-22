@@ -109,7 +109,7 @@ bool RobotThread::init()
     connect(_pThread, &QThread::started, this, &RobotThread::run);
     ros::init(_init_argc, _pInit_argv, CMY_ARM_NODE_NAME);  // Name of the node specified in launch file
     // !NOTE:
-    // IF U WANT YOUR PUBLISHERS WORK ALSO FOR RVIZ, OF WHICH THE DEFAULT TOPI AS /joint_states,
+    // IF U WANT YOUR PUBLISHERS WORK ALSO FOR RVIZ, OF WHICH THE DEFAULT TOPIC AS /joint_states,
     // -> NO PACKAGE NAME SHOULD BE USED HERE!
 #ifdef MY_ARM_RVIZ
     _node_handle = new ros::NodeHandle();

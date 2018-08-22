@@ -1,17 +1,18 @@
-QT -= core
-QT -= gui
+QT += qml quick core gui xml network opengl concurrent
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = vrep_cpp
+TARGET = RobotSensors
 TEMPLATE = app
 
 CONFIG += c++11
 CONFIG += console
 CONFIG -= app_bundle
 
-
+# http://www.coppeliarobotics.com/helpFiles/en/remoteApiClientSide.htm#c
 DEFINES -= UNICODE
 DEFINES += NON_MATLAB_PARSING
 DEFINES += MAX_EXT_API_CONNECTIONS=255
+DEFINES += QT_COMPIL
 
 *-msvc* {
     QMAKE_CXXFLAGS += -O2
@@ -23,7 +24,7 @@ DEFINES += MAX_EXT_API_CONNECTIONS=255
     QMAKE_CXXFLAGS += -Wno-unused-parameter
     QMAKE_CXXFLAGS += -Wno-strict-aliasing
     QMAKE_CXXFLAGS += -Wno-empty-body
-    QMAKE_CXXFLAGS += -Wno-write-strings
+    QMAKE_CXXFLAGS += -Wno-write-stringsQMLItemInfo
 
     QMAKE_CXXFLAGS += -Wno-unused-but-set-variable
     QMAKE_CXXFLAGS += -Wno-unused-local-typedefs
@@ -47,13 +48,12 @@ macx {
 }
 
 unix:!macx {
+    LIBS += -lrt
 }
 
 INCLUDEPATH+= /usr/include \
               /usr/local/include \
               ./include        \
-              \ ## ROS
-              /opt/ros/kinetic/include \
               \ ## V-REP
               /home/brhm/V-REP/programming \
               /home/brhm/V-REP/programming/remoteApi
@@ -61,7 +61,19 @@ INCLUDEPATH+= /usr/include \
 SOURCES += \
     src/extApi.c \
     src/extApiPlatform.c \
-    src/vrep_ai.cpp
+    src/commondefines.cpp \
+    src/QMLAdapter.cpp \
+    src/QMLItemAgent.cpp \
+    src/QMLItemInfo.cpp \
+    src/RbGlobal.cpp \
+    src/RbMainWindowAgent.cpp \
+    src/RbRobotAgent.cpp \
+    src/RbRobotControllerMain.cpp \
+    src/RbRobotSensorAdapter.cpp \
+    src/RbRobotThread.cpp \
+    src/RbStateMachine.cpp \
+    src/VREPAdapter.cpp \
+    src/RbSensorAgent.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -76,4 +88,30 @@ DEFINES += QT_DEPRECATED_WARNINGS NON_MATLAB_PARSING
 
 HEADERS += \
     include/extApi.h \
-    include/extApiPlatform.h
+    include/extApiPlatform.h \
+    include/v_repConst.h \
+    include/commondefines.h \
+    include/RbGlobal.h \
+    include/QMLAdapter.h \
+    include/QMLItemAgent.h \
+    include/QMLItemInfo.h \
+    include/RbMainWindowAgent.h \
+    include/RbRobotAgent.h \
+    include/RbRobotControllerMain.h \
+    include/RbRobotSensorAdapter.h \
+    include/RbRobotThread.h \
+    include/RbStateMachine.h \
+    include/RbGlobal.h \
+    include/VREPAdapter.h \
+    include/RbSensorAgent.h
+
+DISTFILES += \
+    qml/RobotPanel.qml \
+    javascript/qmlcommonresource.js \
+    javascript/qmlcommonutil.js \
+    res/images/joystick_background.png \
+    res/images/joystick_thumb.png \
+    res/images/joypad.svg
+
+RESOURCES += \
+    qml.qrc

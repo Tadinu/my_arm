@@ -74,7 +74,8 @@ SOURCES += \
 
 HEADERS +=\
     /home/brhm/V-REP/programming/remoteApi/extApi.h \
-    /home/brhm/V-REP/programming/remoteApi/extApiPlatform.h
+    /home/brhm/V-REP/programming/remoteApi/extApiPlatform.h \
+    ../../../../../../../../../V-REP/programming/include/v_repConst.h
 
 unix:!symbian {
     maemo5 {

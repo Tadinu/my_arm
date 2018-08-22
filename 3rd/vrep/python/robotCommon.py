@@ -25,22 +25,23 @@ CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
 # ================================================================
 # ROBOT IDS ------------------------------------------------------
 #
-CYOUBOT = 1
-CJACO_ARM_HAND = 2
+CYOUBOT                = 1
+CJACO_ARM_HAND         = 2
 CKUKA_ARM_BARRETT_HAND = 3
 CUR5_ARM_BARRETT_HAND  = 4
 CKUKA_ARM_SUCTION_PAD  = CKUKA_ARM_BARRETT_HAND
-CUR5_ARM_GRIPPER = 5
-CHEXAPOD = 6
+CUR5_ARM_GRIPPER       = 5
+CHEXAPOD               = 6
+CROBOT_CAR             = 7
 
 # ================================================================
 # ROBOT OPERATION STATE-------------------------------------------
 #
-CROBOT_STATE_READY  = 1 # After Reset is finished
-CROBOT_STATE_MOVING = 2 # Running an action
-CROBOT_STATE_MOVING_ENDED = 3 # Running an action
-CROBOT_STATE_RESETTING_ARM_ENDED  = 4 # Running Arm Reset
-CROBOT_STATE_RESETTING_HAND = 5 # Running Hand Reset
+CROBOT_STATE_READY               = 1 # After Reset is finished
+CROBOT_STATE_MOVING              = 2 # Running an action
+CROBOT_STATE_MOVING_ENDED        = 3 # Running an action
+CROBOT_STATE_RESETTING_ARM_ENDED = 4 # Running Arm Reset
+CROBOT_STATE_RESETTING_HAND      = 5 # Running Hand Reset
 
 # ================================================================
 # SERVER ROBOT ID !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -51,12 +52,13 @@ GB_CSERVER_ROBOT_NAME = ''
 # ================================================================
 # ROBOT NAMES ----------------------------------------------------
 #
-CUR5_ARM_NAME       = 'UR5'
-CKUKA_ARM_NAME      = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
-CYOUBOT_NAME        = 'youBot'# 'LBR4p'
-CJACO_ARM_HAND_NAME = 'JacoHand'
-CBARRETT_HAND_NAME  = 'BarrettHand'
-CHEXAPOD_NAME       = 'hexapod'
+CUR5_ARM_NAME          = 'UR5'
+CKUKA_ARM_NAME         = 'LBR_iiwa_14_R820' # 'LBR_iiwa_7_R800'
+CYOUBOT_NAME           = 'youBot'# 'LBR4p'
+CJACO_ARM_HAND_NAME    = 'JacoHand'
+CBARRETT_HAND_NAME     = 'BarrettHand'
+CHEXAPOD_NAME          = 'hexapod'
+CPIONEER_P3DX_CAR_NAME = 'Pioneer_p3dx'
 
 # ================================================================
 # OBJECT NAMES ---------------------------------------------------

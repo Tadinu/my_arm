@@ -3,9 +3,6 @@
 
 //#include "obstacle.h"
 
-#include <QList>
-#include <QColor>
-
 #include "QMLItemAgent.h"
 #include "RbGlobal.h"
 #include "RbStateMachine.h"
@@ -28,32 +25,34 @@ private:
 
 public:
     enum RB_SENSOR_STATE {
-        VOID_DATA,
-        DATA,
+        INITIALIZED,
+        DATA_FETCHING,
+        UI_UPDATING,
 
         RB_SENSOR_STATE_TOTAL
     };
 
     RbSensorAgent(const RbSensorProperties& prop);
-    ~RbSensorAgent() {
-    }
+    ~RbSensorAgent();
 
-    // General Properties --
+    // General Properties --------------------------
     int type() const         { return _prop._type; }
     int id()   const         { return _prop._id;   }
     const char* name() const { return _prop._name; }
 
-    QVector<float> getSensorData();
-
-    // State machine --
-    void init() {}
+    // State machine methods -----------------------
     void initializeStateMachine();
-
+    void startStateMachineOperation();
     RbSMRule<RbSensorAgent>* getStateMachine() {
         return _stateMachine;
     }
 
-    void startStateMachineOperation();
+    // Functionality methods -----------------------
+    void initState();
+    void fetchSensorData();
+    void updateUI();
+    QVector<float> getSensorData();
+    bool isFaulted();
 
 public slots:
 

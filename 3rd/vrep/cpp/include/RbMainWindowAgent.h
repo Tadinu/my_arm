@@ -18,7 +18,6 @@
 
 #include <QTimer>
 
-//#include "RbRobotAgent.h"
 #include "RbRobotThread.h"
 
 class RbMainWindowAgent : public QObject

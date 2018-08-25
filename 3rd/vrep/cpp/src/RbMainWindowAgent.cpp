@@ -1,7 +1,5 @@
-//#include "CommonLib/commondefines.h"
 #include "RbMainWindowAgent.h"
 #include "RbGlobal.h"
-//#include "commonresource.h"
 
 #include <QtGui>
 #include <QThread>
@@ -16,9 +14,7 @@
 //#include <tchar.h>
 #include <functional> // std::bind
 
-//#include "RbRobotAgent.h"
-
-#define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x)   (sizeof(x) / sizeof((x)[0]))
 
 RbMainWindowAgent* RbMainWindowAgent::_instance = nullptr;
 
@@ -28,7 +24,7 @@ RbMainWindowAgent::RbMainWindowAgent(int argc, char **argv, QObject *parent)
      _robotThread(argc, argv)
 {
     //connect(&_robotThread, &RbRobotThread::jointPosUpdated, this, &RbMainWindowAgent::updateJointPosInfo);
-    _robotThread.init();
+    _robotThread.startThreading();
 }
 
 RbMainWindowAgent::~RbMainWindowAgent()

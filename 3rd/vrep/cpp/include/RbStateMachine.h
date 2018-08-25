@@ -8,10 +8,10 @@ class RbSMRule
 {
 public:
     bool (T::*pfCheck)();  /* Address of transition function. */
-    bool fNot;                  /* Flag=True if inverted transition. */
-    void (T::*pAction)();       /* Address of action function. */
-    int irulNearRule;           /* Index of neighbor rule. */
-    int irulNextRule;           /* Index of next rule. */
+    bool fNot;             /* Flag=True if inverted transition. */
+    void (T::*pAction)();  /* Address of action function. */
+    int irulNearRule;      /* Index of neighbor rule. */
+    int irulNextRule;      /* Index of next rule. */
 };
 
 /* Type state machine (stm): */
@@ -31,20 +31,21 @@ public:
     {
         RbSMRule<T>* smRules = object->getStateMachine();
         int currentState     = object->getCurrentStateRuleId();
-        bool (T::*pfCheck)();
-        void (T::*pAction)();
-        bool checkResult = true;
-        bool fNot;
-        int nextStateId = currentState;
+        bool (T::*pfCheck)() = nullptr;
+        void (T::*pAction)() = nullptr;
+        bool checkResult     = true;
+        bool fNot            = false;
+        int nextStateId      = currentState;
         do {
             pfCheck = (*(smRules + nextStateId)).pfCheck;
             pAction = (*(smRules + nextStateId)).pAction;
             fNot    = (*(smRules + nextStateId)).fNot;
-            checkResult = RB_MEMFUNC_CALL(*object, pfCheck)();
+            checkResult = (pfCheck == nullptr) ? false :
+                                                 RB_MEMFUNC_CALL(*object, pfCheck)();
 
             if (checkResult && !fNot ||
                 !checkResult && fNot) {
-                RB_MEMFUNC_CALL(*object, pAction)();
+                if(pAction != nullptr) RB_MEMFUNC_CALL(*object, pAction)();
                 nextStateId = (*(smRules + nextStateId)).irulNextRule;
                 return nextStateId;
             }

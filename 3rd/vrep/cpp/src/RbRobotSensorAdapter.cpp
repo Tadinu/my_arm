@@ -74,8 +74,15 @@ void RbRobotSensorAdapter::initializeSensorAgents()
         {RbGlobal::RB_SENSOR_TYPE_ULTRASONIC, RB_SENSOR_ULTRASONIC_16,    "Pioneer_p3dx_ultrasonicSensor16" },
     };
 
-    for(VUInt8 i = RB_SENSOR_FIRST; i < RB_SENSOR_TOTAL; i++) {
+    for(int i = RB_SENSOR_FIRST; i < RB_SENSOR_TOTAL; i++) {
         _sensorAgentList << new RbSensorAgent(sensorPropList[i]);
+    }
+}
+
+void RbRobotSensorAdapter::runSensorOperation()
+{
+    for(int i = 0; i < _sensorAgentList.size(); i++) {
+        _sensorAgentList[i]->startThreading();
     }
 }
 
@@ -90,10 +97,22 @@ QVector<float> RbRobotSensorAdapter::getSensorData(VUInt8 sensorId)
 
 RbSensorAgent* RbRobotSensorAdapter::sensorAgent(int sensorId)
 {
-    for(VUInt8 i = RB_SENSOR_FIRST; i < RB_SENSOR_TOTAL; i++) {
+    for(int i = 0; i < _sensorAgentList.size(); i++) {
         if(_sensorAgentList[i]->id() == sensorId) {
             return _sensorAgentList[i];
         }
     }
     return nullptr;
+}
+
+bool RbRobotSensorAdapter::isFaulted()
+{
+    int faultSensorId = -1;
+    for(int i = 0; i < _sensorAgentList.size(); i++) {
+        if(_sensorAgentList[i]->isFaulted()) {
+            return faultSensorId;
+        }
+    }
+
+    return faultSensorId;
 }

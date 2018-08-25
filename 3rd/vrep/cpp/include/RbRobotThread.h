@@ -6,13 +6,12 @@
 #include <QVector3D>
 #include <QQuaternion>
 #include <QStringList>
-#include <stdlib.h>
 #include <QMutex>
-#include <mutex>
 #include <iostream>
-#include "assert.h"
+#include <assert.h>
 
 #include "RbStateMachine.h"
+#include "RbRobotAgent.h"
 
 class RbRobotThread : public QObject {
     Q_OBJECT
@@ -23,18 +22,17 @@ public:
     virtual ~RbRobotThread();
 
     enum RB_ROBOT_MANAGEMENT_STATE {
-        INIT,
-        IDLE,
-        OPERATING,
+        INITIALIZED,
+        ROBOT_AGENT_STARTED,
+        SENSOR_AGENT_STARTED,
 
         RB_ROBOT_MANAGE_STATE_TOTAL
     };
 
     // ##############################################################################
-    // STATE MACHINE MEMBER METHODS -------------------------------------------------
+    // STATE MACHINE METHODS & PROPERTIES -------------------------------------------
     //
     bool fTrue() { return true; }
-    bool init();
     void initializeStateMachine();
     void startStateMachineOperation();
 
@@ -44,6 +42,12 @@ public:
 
     int getCurrentStateRuleId()                 { return _currentStateRuleId;        }
     void setCurrentStateRuleId(int stateRuleId) { _currentStateRuleId = stateRuleId; }
+
+    // Functionality methods --
+    void startRobotAgent();
+    bool isRobotAgentFaulted();
+    void startSensorAgents();
+    bool isSensorAgentsFaulted();
 
 public slots:
     void run();
@@ -57,17 +61,23 @@ private:
     const char * _topic;
 
     int _robotId;
-
-    QTimer* _serviceTimer;
-    QThread * _pThread;
-    QMutex* _pMutex; // std::mutex
-    QVector3D _robot_pos;
+    RbRobotAgent* _robotAgent;
 
 private:
-    // STATE MACHINE PROPERTIES -----------------------------------------------------
-    //
     int _currentStateRuleId;
     RbSMRule<RbRobotThread>* _stateMachine; // pointing to static defined data
+
+    // ##############################################################################
+    // THREADING --------------------------------------------------------------------
+    //
+public:
+    bool startThreading();
+
+private:
+    QTimer* _serviceTimer;
+    QThread *_thread;
+    QMutex* _mutex;
+    QVector3D _robot_pos;
 };
 #endif
 

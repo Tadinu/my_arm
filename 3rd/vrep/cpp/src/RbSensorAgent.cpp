@@ -7,13 +7,13 @@
 
 void RbSensorAgent::initializeStateMachine()
 {
-    //static RbSMRule<RbSensorAgent> machine[RbSensorAgent::RB_SENSOR_STATE_TOTAL] =
-    //{
-    //    /* 0 */ { &RbRobotAgent::fTrue,          false, &RbRobotAgent::init,    0, 1 },
-    //    /* 1 */ { &RbRobotAgent::checkIdle,      false, &RbRobotAgent::operate, 0, 2 },
-    //    /* 2 */ { &RbRobotAgent::checkOperating, false, &RbRobotAgent::goIdle,  1, 1 }
-    //};
-    //_stateMachine = machine;
+    static RbSMRule<RbSensorAgent> machine[RbSensorAgent::RB_SENSOR_STATE_TOTAL] =
+    {
+        /* 0 */ { &RbSensorAgent::fTrue, false, &RbSensorAgent::initState,         0, 1 },
+        /* 1 */ { &RbSensorAgent::fTrue, false, &RbSensorAgent::fetchSensorData,   1, 2 },
+        /* 2 */ { &RbSensorAgent::fTrue, false, &RbSensorAgent::updateUI,          1, 1 }
+    };
+    _stateMachine = machine;
 }
 
 void RbSensorAgent::startStateMachineOperation()
@@ -30,7 +30,31 @@ RbSensorAgent::RbSensorAgent(const RbSensorProperties& prop) :
                QMLItemAgent(),
                _prop(prop)
 {
+    setRunningOnThread(true);
     initializeStateMachine();
+}
+
+RbSensorAgent::~RbSensorAgent()
+{}
+
+void RbSensorAgent::initState()
+{
+    QML_ITEM_LOCAL_INVOKE_I(setState, INITIALIZED);
+}
+
+void RbSensorAgent::fetchSensorData()
+{
+    QVector<float> sensorData = this->getSensorData();
+    //printf("%s - %d: %d\n", RB_SENSOR_SYSTEM()->sensorAgentList()[i]->name(),
+    //                        RB_SENSOR_SYSTEM()->sensorAgentList()[i]->id(),
+    //                        sensorData.size());
+    printf("===============================================================\n");
+    QML_ITEM_LOCAL_INVOKE_I(setState, DATA_FETCHING);
+}
+
+void RbSensorAgent::updateUI()
+{
+    QML_ITEM_LOCAL_INVOKE_I(setState, UI_UPDATING);
 }
 
 QVector<float> RbSensorAgent::getSensorData()
@@ -68,3 +92,7 @@ QVector<float> RbSensorAgent::getSensorData()
     return sensorData;
 }
 
+bool RbSensorAgent::isFaulted()
+{
+    return false;
+}

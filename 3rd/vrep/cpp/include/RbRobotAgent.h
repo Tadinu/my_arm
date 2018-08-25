@@ -17,7 +17,7 @@ class RbRobotAgent : public QMLItemAgent
 public:
 
     enum RB_ROBOT_STATE {
-        INIT,
+        INITIALIZED,
         IDLE,
         OPERATING,
 
@@ -27,7 +27,7 @@ public:
     RbRobotAgent();
     ~RbRobotAgent() {}
 
-    void init() {}
+    // State machine methods ------------------------
     void initializeStateMachine();
     void startStateMachineOperation();
 
@@ -35,8 +35,11 @@ public:
         return _stateMachine;
     }
 
-    bool checkOperating();
-    bool checkIdle();
+    // Functionality Methods ------------------------
+    bool isOperating();
+    bool isIdle();
+    bool isFaulted();
+    void initState();
     void operate();
     void goIdle();
 

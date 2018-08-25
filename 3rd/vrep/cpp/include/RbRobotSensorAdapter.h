@@ -49,11 +49,10 @@ public:
     void initialize();
     void initializeSensorAgents();
     void runSensorOperation();
-    QVector<float> getSensorData(VUInt8 sensorId = -1);
 
     const QVector<RbSensorAgent*>& sensorAgentList() { return _sensorAgentList; }
     RbSensorAgent* sensorAgent(int sensorId);
-    bool isFaulted();
+    bool isHalted();
 signals:
 
 
@@ -61,7 +60,7 @@ private:
     RbRobotSensorAdapter();
     static RbRobotSensorAdapter* _instance;
 
-    QMutex* _pMutex;
+    QMutex* _mutex;
     QVector<RbSensorAgent*> _sensorAgentList;
 };
 

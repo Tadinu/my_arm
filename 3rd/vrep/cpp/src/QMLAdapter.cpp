@@ -108,18 +108,9 @@ QObject* QMLAdapter::getRbQMLItem(int qmlItemId)
 {
     assert(qmlItemId >= 0 && qmlItemId < QMLAdapter::QML_ITEM_TOTAL);
 
-#if 1
     QQmlProperty prop(RbGlobal::qmlCom(), QMLAdapter::QML_PROPERTY_ITEM[qmlItemId]);
     QObject * obj = qvariant_cast<QObject *>(prop.read()); //!!!
     return obj;
-#else
-    if (_k3pmQMLItemList[qmlItemId] != nullptr) {
-        QObject * obj = qvariant_cast<QObject *>(_k3pmQMLItemList[qmlItemId]->read()); //!!!
-        return obj;
-    }
-    else
-        return nullptr;
-#endif
 }
 
 void QMLAdapter::openQMLItem(int qmlItemId)

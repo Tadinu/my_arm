@@ -17,7 +17,13 @@
 #include <QThread>
 #include <QMutex>
 
+
+#define RB_APP     QUrl(QStringLiteral("qrc:///qml/MainWindow.qml")) // pragma Singleton here-in
+#define RB_MAIN_APP (RB_APP)
+#define RB_NAME ("Pioneer_p3dx")
+
 #define RB_MEMFUNC_CALL(object, method) ((object).*(method))
+#define RB_CHECK_SIGNAL_CONNECTED(signal) (isSignalConnected(QMetaMethod::fromSignal(signal))) // Call inside QObject class
 
 // INVOKE METHODS RUNNING ON ANOTHER THREAD -----------------------------------------
 //

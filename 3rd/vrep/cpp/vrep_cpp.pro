@@ -1,4 +1,4 @@
-QT += qml quick core gui xml network opengl concurrent
+QT += 3dcore 3drender 3dinput 3dquick 3dquickextras qml quick core gui xml network opengl concurrent
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = RobotSensors
@@ -64,16 +64,15 @@ SOURCES += \
     src/commondefines.cpp \
     src/QMLAdapter.cpp \
     src/QMLItemAgent.cpp \
-    src/QMLItemInfo.cpp \
     src/RbGlobal.cpp \
     src/RbMainWindowAgent.cpp \
     src/RbRobotAgent.cpp \
-    src/RbRobotControllerMain.cpp \
     src/RbRobotSensorAdapter.cpp \
-    src/RbRobotThread.cpp \
     src/RbStateMachine.cpp \
     src/VREPAdapter.cpp \
-    src/RbSensorAgent.cpp
+    src/RbSensorAgent.cpp \
+    src/main.cpp \
+    src/RbRobotMangThread.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -94,16 +93,14 @@ HEADERS += \
     include/RbGlobal.h \
     include/QMLAdapter.h \
     include/QMLItemAgent.h \
-    include/QMLItemInfo.h \
     include/RbMainWindowAgent.h \
     include/RbRobotAgent.h \
-    include/RbRobotControllerMain.h \
     include/RbRobotSensorAdapter.h \
-    include/RbRobotThread.h \
     include/RbStateMachine.h \
     include/RbGlobal.h \
     include/VREPAdapter.h \
-    include/RbSensorAgent.h
+    include/RbSensorAgent.h \
+    include/RbRobotMangThread.h
 
 DISTFILES += \
     qml/RobotPanel.qml \
@@ -114,4 +111,5 @@ DISTFILES += \
     res/images/joypad.svg
 
 RESOURCES += \
-    qml.qrc
+    qml.qrc \
+    obj.qrc

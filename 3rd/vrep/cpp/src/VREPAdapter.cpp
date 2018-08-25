@@ -23,6 +23,7 @@ bool VREPAdapter::checkInstance()
 }
 
 VREPAdapter::VREPAdapter():
+             _vrepMutex(new QMutex()),
              _vrepRobotHandle(-1),
              _vrepClientId(-1)
 {
@@ -30,6 +31,9 @@ VREPAdapter::VREPAdapter():
 
 VREPAdapter::~VREPAdapter()
 {
+    _vrepMutex->tryLock(500);
+    _vrepMutex->unlock(); // futile if tryLock() failed!
+    delete _vrepMutex;
 }
 
 void VREPAdapter::deleteInstance()
@@ -89,10 +93,22 @@ void VREPAdapter::endSimulation(int _vrepClientId)
     cout << "V-REP Server Connection closed!";
 }
 
+void VREPAdapter::lock()
+{
+    _vrepMutex->lock();
+}
+
+void VREPAdapter::unlock()
+{
+    _vrepMutex->unlock();
+}
+
 int VREPAdapter::waitForCommandSentToServer()
 {
     int waitTime = 0;
     simxGetPingTime(_vrepClientId, &waitTime);
+
+    extApi_sleepMs(50);
     return waitTime;
 }
 
@@ -241,7 +257,7 @@ QVector3D VREPAdapter::getObjectOrientation(const char* objectName)
     VUInt8 res = simxGetObjectHandle(_vrepClientId, objectName, &objectHandle, simx_opmode_oneshot_wait);
     VREP_RETURN_QVECTOR3D_NOK()
 
-    // Enabled streaming of the object position:
+    // Enabled streaming of the object orientation:
     simxFloat eulerAngles[3] = {0,0,0};
     res = simxGetObjectOrientation(_vrepClientId, objectHandle, -1, eulerAngles, simx_opmode_streaming);
 
@@ -258,9 +274,10 @@ QVector3D VREPAdapter::getObjectOrientation(const char* objectName)
     return QVector3D(eulerAngles[0], eulerAngles[1], eulerAngles[2]);
 }
 
-#define VREP_RETURN_FLOAT_NOK() if(res != simx_return_ok) { \
-                                    return 0.0f; \
+#define VREP_RETURN_FLOAT_NOK() if(res != simx_return_ok) {    \
+                                    return 0.0f;               \
                                 }
+
 
 float VREPAdapter::getObjectVelocity(const char* objectName)
 {

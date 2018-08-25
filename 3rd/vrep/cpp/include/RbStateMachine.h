@@ -45,6 +45,7 @@ public:
 
             if (checkResult && !fNot ||
                 !checkResult && fNot) {
+                //printf("Check %d\n", pAction);
                 if(pAction != nullptr) RB_MEMFUNC_CALL(*object, pAction)();
                 nextStateId = (*(smRules + nextStateId)).irulNextRule;
                 return nextStateId;

@@ -48,7 +48,7 @@ RobotLeapAdapter::~RobotLeapAdapter()
     _controller.removeListener(*_hands_listener);
     V_DELETE_POINTER_ARRAY(_hands_listener);
 
-    _pMutex->unlock(); // infutile if tryLock() failed!
+    _pMutex->unlock(); // futile if tryLock() failed!
     delete _pMutex;
 }
 

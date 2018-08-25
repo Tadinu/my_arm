@@ -7,7 +7,7 @@
 #include "RbGlobal.h"
 #include "RbStateMachine.h"
 
-class RbRobotSensorAdapter; // As friend class
+class RbRobotSensorAdapter; // To be registered as friend class
 
 class RbSensorAgent : public QMLItemAgent
 {
@@ -26,8 +26,7 @@ private:
 public:
     enum RB_SENSOR_STATE {
         INITIALIZED,
-        DATA_FETCHING,
-        UI_UPDATING,
+        DATA_FETCHED,
 
         RB_SENSOR_STATE_TOTAL
     };
@@ -42,7 +41,7 @@ public:
 
     // State machine methods -----------------------
     void initializeStateMachine();
-    void startStateMachineOperation();
+    void runStateMachineOperation();
     RbSMRule<RbSensorAgent>* getStateMachine() {
         return _stateMachine;
     }
@@ -50,9 +49,10 @@ public:
     // Functionality methods -----------------------
     void initState();
     void fetchSensorData();
-    void updateUI();
-    QVector<float> getSensorData();
-    bool isFaulted();
+    bool isHalted();
+
+signals:
+    void querySensorData(int sensorType, int sensorId);
 
 public slots:
 

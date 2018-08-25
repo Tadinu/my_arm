@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/obj/robot_car.obj</file>
+        <file>res/obj/arrow.obj</file>
+    </qresource>
+</RCC>

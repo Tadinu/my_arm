@@ -1,18 +1,15 @@
-#include "RbMainWindowAgent.h"
-#include "RbGlobal.h"
-
-#include <QtGui>
 #include <QThread>
 #include <QtConcurrent/QtConcurrentRun>
-#include <QUrl>
 #include <QMutex>
 #include <QFuture>
-#include <QDateTime>
-#include <QFile>
-//#include <QFileDialog>
 
-//#include <tchar.h>
-#include <functional> // std::bind
+#include "RbMainWindowAgent.h"
+#include "RbGlobal.h"
+#include "VREPAdapter.h"
+
+#ifdef ROBOT_SENSORS
+#include "RbRobotSensorAdapter.h"
+#endif
 
 #define ARRAY_SIZE(x)   (sizeof(x) / sizeof((x)[0]))
 
@@ -21,14 +18,16 @@ RbMainWindowAgent* RbMainWindowAgent::_instance = nullptr;
 // --- CalibrationDialog ---
 RbMainWindowAgent::RbMainWindowAgent(int argc, char **argv, QObject *parent)
     :QObject(parent),
-     _robotThread(argc, argv)
+     _robotThread(new RbRobotMangThread(argc, argv))
 {
-    //connect(&_robotThread, &RbRobotThread::jointPosUpdated, this, &RbMainWindowAgent::updateJointPosInfo);
-    _robotThread.startThreading();
+    _robotThread->startThreading();
 }
 
 RbMainWindowAgent::~RbMainWindowAgent()
 {
+    // RbRobotSensorAdapter --
+    //
+    RbRobotSensorAdapter::deleteInstance();
 }
 
 RbMainWindowAgent *RbMainWindowAgent::getInstance(int argc, char **argv)
@@ -64,9 +63,45 @@ void RbMainWindowAgent::initializeQMLContent()
 
 void RbMainWindowAgent::initializeQMLItemAgents()
 {
+    // Robot & Sensor Agents (must be done while this RbRobotMangThread is still running on Main thread and after root QML component is loaded!)
+    this->startRobotAgent();
+    this->startSensorAgents();
 }
 
-
-void RbMainWindowAgent::qmlLog(QVariant logVariant)
+void RbMainWindowAgent::startRobotAgent()
 {
+    printf("START ROBOT AGENT\n");
+    //
+    _robotAgent = new RbRobotAgent();
+    connect(_robotAgent, &RbRobotAgent::queryOrientation, _robotThread, &RbRobotMangThread::queryRobotOrientation);
+    _robotAgent->startThreading(); // Also run its state machine inside (being connected to QThread::started())
+}
+
+bool RbMainWindowAgent::isRobotAgentHalted()
+{
+    return _robotAgent->isHalted();
+}
+
+void RbMainWindowAgent::startSensorAgents()
+{
+    printf("START SENSOR AGENTS\n");
+#ifdef ROBOT_SENSORS
+    RB_SENSOR_SYSTEM()->initialize();
+    //
+    const QVector<RbSensorAgent*>& sensorAgentList = RB_SENSOR_SYSTEM()->sensorAgentList();
+    for(int i = 0; i < sensorAgentList.size(); i++) {
+        connect(sensorAgentList[i], &RbSensorAgent::querySensorData, _robotThread, &RbRobotMangThread::queryRobotSensorData);
+    }
+    //
+    RB_SENSOR_SYSTEM()->runSensorOperation(); // Run their own state machine inside (being connected to QThread::started())
+#endif
+}
+
+bool RbMainWindowAgent::isSensorAgentsHalted()
+{
+#ifdef ROBOT_SENSORS
+    return RB_SENSOR_SYSTEM()->isHalted();
+#else
+    return false;
+#endif
 }

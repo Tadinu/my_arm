@@ -3,6 +3,7 @@
 
 #include <QtCore>
 #include <QMutex>
+#include <QVector3D>
 
 extern "C" {
     #include "extApi.h"
@@ -33,6 +34,9 @@ public:
     void startSimulation(int clientID);
     void endSimulation(int clientID);
 
+    void lock();
+    void unlock();
+
     // V-REP COPPELIA ++
     // Source: ~/V-REP/programming/remoteApiBindings/lib
     void testConnectionToServer();
@@ -54,16 +58,18 @@ public:
     static void deleteInstance();
     static bool checkInstance();
 
+    int waitForCommandSentToServer();
 signals:
 
 private:
     VREPAdapter();
     static VREPAdapter* _instance;
 
-    int waitForCommandSentToServer();
-
     int _vrepRobotHandle;
     int _vrepClientId;
+
+    // Mutex to allow only one agent threat to make a call to V-REP API Server at a time!
+    QMutex* _vrepMutex;
 };
 
 #endif // _ROBOT_VREP_ADAPTER_H_

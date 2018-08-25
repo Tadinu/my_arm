@@ -22,7 +22,7 @@ RobotRealSenseAdapter::~RobotRealSenseAdapter()
     _pMutex->tryLock(500);
 
 
-    _pMutex->unlock(); // infutile if tryLock() failed!
+    _pMutex->unlock(); // futile if tryLock() failed!
     delete _pMutex;
 }
 

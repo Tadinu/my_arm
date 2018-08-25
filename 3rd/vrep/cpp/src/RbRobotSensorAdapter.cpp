@@ -22,15 +22,15 @@ bool RbRobotSensorAdapter::checkInstance()
 }
 
 RbRobotSensorAdapter::RbRobotSensorAdapter():
-                  _pMutex(new QMutex(QMutex::Recursive))
+                  _mutex(new QMutex())
 {
 }
 
 RbRobotSensorAdapter::~RbRobotSensorAdapter()
 {
-    _pMutex->tryLock(500);
-    _pMutex->unlock(); // infutile if tryLock() failed!
-    delete _pMutex;
+    _mutex->tryLock(500);
+    _mutex->unlock(); // futile if tryLock() failed!
+    delete _mutex;
 }
 
 void RbRobotSensorAdapter::deleteInstance()
@@ -86,15 +86,6 @@ void RbRobotSensorAdapter::runSensorOperation()
     }
 }
 
-QVector<float> RbRobotSensorAdapter::getSensorData(VUInt8 sensorId)
-{
-    RbSensorAgent* sensorAgent = this->sensorAgent(sensorId);
-    if(sensorAgent)
-        return sensorAgent->getSensorData();
-
-    return QVector<float>();
-}
-
 RbSensorAgent* RbRobotSensorAdapter::sensorAgent(int sensorId)
 {
     for(int i = 0; i < _sensorAgentList.size(); i++) {
@@ -105,14 +96,14 @@ RbSensorAgent* RbRobotSensorAdapter::sensorAgent(int sensorId)
     return nullptr;
 }
 
-bool RbRobotSensorAdapter::isFaulted()
+bool RbRobotSensorAdapter::isHalted()
 {
-    int faultSensorId = -1;
+    int haltedSensorId = -1;
     for(int i = 0; i < _sensorAgentList.size(); i++) {
-        if(_sensorAgentList[i]->isFaulted()) {
-            return faultSensorId;
+        if(_sensorAgentList[i]->isHalted()) {
+            return haltedSensorId;
         }
     }
 
-    return faultSensorId;
+    return haltedSensorId;
 }

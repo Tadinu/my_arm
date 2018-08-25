@@ -51,7 +51,7 @@ typedef QVariant (RbMainWindowAgent::*RBOP_VAR_VAR)(QVariant, QVariant);
         }
 
 // -----------------------------------------------------------------------------------
-// K3PM's LOCAL <QML_ITEM>.QML funcs:
+// LOCAL <QML_ITEM>.QML funcs:
 #define QML_ITEM_INVOKE(qmlItemId, func)                                                       \
         QMetaObject::invokeMethod(QMLAdapter::getInstance()->getRbQMLItem(qmlItemId), #func);
 #define QML_ITEM_LOCAL_INVOKE(func)                                                            \

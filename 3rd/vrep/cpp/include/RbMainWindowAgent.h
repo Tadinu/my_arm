@@ -2,23 +2,10 @@
 #define RB_MAINWINDOW_AGENT_H
 
 #include <QObject>
-#include <QDateTime>
 #include <QtCore>
-//#include <QtSerialPort/QSerialPort>
 #include "QMLAdapter.h"
 #include "QMLItemAgent.h"
-#include <QMessageBox>
-
-#include <QAbstractListModel>
-#include <QtQml>
-#include <QtNetwork/QLocalServer>
-#include <QThread>
-#include <QMutex>
-#include <QFuture>
-
-#include <QTimer>
-
-#include "RbRobotThread.h"
+#include "RbRobotMangThread.h"
 
 class RbMainWindowAgent : public QObject
 {
@@ -28,19 +15,25 @@ public:
 public:
     RbMainWindowAgent(int argc = 0, char **argv = 0, QObject *parent = 0);
     ~RbMainWindowAgent();
-    Q_INVOKABLE void qmlLog(QVariant logVariant);
 
     static RbMainWindowAgent *getInstance(int argc = 0, char **argv = 0);
     static void deleteInstance();
     void initializeQMLItemAgents();
     void initializeQMLContent();
     void setQmlCom(QObject* qmlCom);
+
+    void startRobotAgent();
+    bool isRobotAgentHalted();
+    void startSensorAgents();
+    bool isSensorAgentsHalted();
+
+    RbRobotAgent* getRobotAgent() { return _robotAgent; }
 public slots:
 
-    // QMLAdapter::VROBOT_ARM_ELEMENT
 private:
     static RbMainWindowAgent *_instance;
-    RbRobotThread _robotThread;
+    RbRobotMangThread* _robotThread;
+    RbRobotAgent* _robotAgent;
 };
 
 #endif // RB_MAINWINDOW_AGENT_H

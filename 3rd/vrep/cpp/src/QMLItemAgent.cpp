@@ -52,7 +52,7 @@ QMLItemAgent::~QMLItemAgent()
     _mutex->tryLock(5000);
     _mutex->unlock();
 
-    if(!_thread->wait(5000)) //Wait until it actually has terminated (max. 5 sec)
+    if(_thread != nullptr && !_thread->wait(5000)) //Wait until it actually has terminated (max. 5 sec)
     {
         qWarning("Thread deadlock detected, bad things may have happened !!!");
         _thread->terminate(); //Thread didn't exit in time, probably deadlocked, terminate it!
@@ -80,8 +80,7 @@ void QMLItemAgent::setupAgentAndUI(const QString& qmlPropertyName)
     _itemUI = qvariant_cast<QObject *>(prop.read()); //!!!
 
     // [C++ Item Agent]
-    QMetaObject::invokeMethod(_itemUI, "regItemAgent", 
-                              Q_ARG(QVariant, QVariant::fromValue(this)));
+    RB_THREAD_INVOKE_I(_itemUI, regItemAgent, QVariant::fromValue(this));
 
     //
     setupUI();
@@ -99,15 +98,36 @@ void QMLItemAgent::setRunningOnThread(bool isYes)
 
 void QMLItemAgent::startThreading()
 {
+    // -----------------------------------------------------------
+    // Threading start
     if(!_isRunningOnThread) {
         return;
     }
-    // -----------------------------------------------------------
-    // Threading start
+    //
     _thread = new QThread();
-    this->moveToThread(_thread);
     _mutex = new QMutex();
 
-    connect(_thread, &QThread::started, this, &QMLItemAgent::run);
-    _thread->start();
+    // -----------------------------------------------------------
+    // MOVE THIS TO THE THREAD
+    this->setParent(nullptr);
+    this->moveToThread(_thread);
+    /* !Note:
+        You can only use moveToThread in case when
+
+            Your object has no parent (because otherwise the parent will have different thread affinity)
+            You are on the object's OWNER thread so you actually 'push' the object from current thread to another
+
+        So your error message says you're violating the second case.
+        !!!You MUST call object's moveToThread from the thread that created the object.!!!
+    */
+
+    // -----------------------------------------------------------
+    // START EVENT LOOP OF THE THREAD:
+    _thread->start(); // --> run() --> exec(), starts its internal event loop
+}
+
+void QMLItemAgent::runTask()
+{
+    //printf("QMLItemAgent - RUN TASK\n");
+    this->runStateMachineOperation();
 }

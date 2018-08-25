@@ -3,14 +3,14 @@
 
 #include "QMLAdapter.h"
 #include "RbGlobal.h"
+#include "VREPAdapter.h"
 
 void RbRobotAgent::initializeStateMachine()
 {
-    static RbSMRule<RbRobotAgent> machine[RbRobotAgent::RB_ROBOT_STATE_TOTAL] =
+    static RbSMRule<RbRobotAgent> machine[] =
     {
-        /* 0 */ { &RbRobotAgent::fTrue,       false, &RbRobotAgent::initState, 0, 1 },
-        /* 1 */ { &RbRobotAgent::isIdle,      false, &RbRobotAgent::operate,   0, 2 },
-        /* 2 */ { &RbRobotAgent::isOperating, false, &RbRobotAgent::goIdle,    1, 1 }
+        /* 0 */ { &RbRobotAgent::fTrue, false, &RbRobotAgent::initState, 0, 1 },
+        /* 1 */ { &RbRobotAgent::fTrue, false, &RbRobotAgent::operate,   0, 0 },
     };
     _stateMachine = machine;
 }
@@ -21,11 +21,13 @@ RbRobotAgent::RbRobotAgent() :
 {
     setRunningOnThread(true);
     initializeStateMachine();
+    QMLItemAgent::setupAgentAndUI("_robotCar");
 }
 
-void RbRobotAgent::startStateMachineOperation()
+void RbRobotAgent::runStateMachineOperation()
 {
     int currentStateId = RbStateMachine<RbRobotAgent>::run(this);
+    //printf("RbRobotAgent::runStateMachineOperation - %d - %d\n", currentStateId, this->getCurrentStateRuleId());
     if (currentStateId > 0) {
         this->setCurrentStateRuleId(currentStateId);
     }
@@ -34,7 +36,7 @@ void RbRobotAgent::startStateMachineOperation()
 // ==========================================================================================
 void RbRobotAgent::initState()
 {
-    QML_ITEM_LOCAL_INVOKE_I(setState, INITIALIZED);
+    RB_THREAD_INVOKE_I(_itemUI, setState, INITIALIZED);
 }
 
 bool RbRobotAgent::isIdle()
@@ -51,17 +53,40 @@ bool RbRobotAgent::isOperating()
     return var.toInt() == OPERATING;
 }
 
-void RbRobotAgent::operate() 
+void RbRobotAgent::operate()
 {
-    QML_ITEM_LOCAL_INVOKE_I(setState, OPERATING);
+    // 1 - OPERATE THE ROBOT
+    // ...
+
+    // 2 - UPDATE THE ROBOT CONDITION TO UI:
+    // State --
+    RB_THREAD_INVOKE_I(_itemUI, setState, OPERATING);
+
+    //printf("Query Orientation\n");
+    emit queryOrientation();
 }
 
 void RbRobotAgent::goIdle()
 {
-    QML_ITEM_LOCAL_INVOKE_I(setState, IDLE);
+    RB_THREAD_INVOKE_I(_itemUI, setState, IDLE);
 }
 
-bool RbRobotAgent::isFaulted()
+bool RbRobotAgent::isHalted()
 {
-    return false;
+    static bool halted = true;
+    // First time
+    if(halted) {
+        halted = false;
+        return true;
+    }
+    // Next times
+    else {
+        return halted;
+    }
+}
+
+void RbRobotAgent::updateOrientationUI(const QVector3D& orient)
+{
+    RB_THREAD_INVOKE_I(_itemUI, setOrientation, orient);
+    //QML_ITEM_LOCAL_INVOKE_I(setOrientation, orient);
 }

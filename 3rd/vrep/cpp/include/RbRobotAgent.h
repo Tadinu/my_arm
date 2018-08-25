@@ -14,12 +14,15 @@ class RbRobotAgent : public QMLItemAgent
 {
     Q_OBJECT
     Q_ENUMS(RB_ROBOT_STATE)
+
 public:
 
     enum RB_ROBOT_STATE {
         INITIALIZED,
         IDLE,
         OPERATING,
+        ABOUT_COLLISION, // OBJECT IN PROXIMITY DETECTED
+        COLLISION,
 
         RB_ROBOT_STATE_TOTAL
     };
@@ -29,7 +32,7 @@ public:
 
     // State machine methods ------------------------
     void initializeStateMachine();
-    void startStateMachineOperation();
+    void runStateMachineOperation();
 
     RbSMRule<RbRobotAgent>* getStateMachine() {
         return _stateMachine;
@@ -38,10 +41,14 @@ public:
     // Functionality Methods ------------------------
     bool isOperating();
     bool isIdle();
-    bool isFaulted();
+    bool isHalted();
     void initState();
     void operate();
     void goIdle();
+    void updateOrientationUI(const QVector3D& orient);
+
+signals:
+    void queryOrientation();
 
 public slots:
     void onStateChanged() {

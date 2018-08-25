@@ -35,7 +35,7 @@ public:
     virtual void init();
     void setRunningOnThread(bool isYes);
 
-protected:
+//protected:
     QObject* UI() const;
     void setupUI();
     virtual bool event (QEvent * e) {}
@@ -61,22 +61,25 @@ public:
     bool fTrue() { return true; }
     virtual void initState(){}
     virtual void initializeStateMachine() {}
-    virtual void startStateMachineOperation() {}
+    virtual void runStateMachineOperation() {}
 
+    virtual bool isHalted() { return false;}
 private:
     int _currentStateRuleId;
 
     // ##############################################################################
     // THREADING  -------------------------------------------------------------------
     //
-public:
+public slots:
+    virtual void runTask();
     void startThreading();
-    virtual void run() { this-> startStateMachineOperation(); }
 
 private:
     QThread* _thread;
     QMutex* _mutex;
     bool _isRunningOnThread;
+
+    int _priorityNo;
 };
 
 #endif // QML_ITEM_AGENT_H

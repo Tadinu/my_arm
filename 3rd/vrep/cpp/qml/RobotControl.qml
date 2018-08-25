@@ -7,7 +7,7 @@ import com.rb.qmladapter 1.0
 import MainGBSingletonObject 1.0 // MAINGB
 
 import "qrc:///javascript/qmlcommonresource.js" as RBRC
-import "qrc:///javascript/qmlcommonutil.js" as RBUTIL
+
 
 import "qrc:///qml"
 

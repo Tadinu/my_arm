@@ -54,7 +54,7 @@ RobotVoxelyzeAdapter::~RobotVoxelyzeAdapter()
     V_DELETE_POINTER(_voxelMeshRender);
     V_DELETE_POINTER(_voxelMutex);
 #endif
-    V_DELETE_POINTER(_pMutex);  // infutile if tryLock() failed!
+    V_DELETE_POINTER(_pMutex);  // futile if tryLock() failed!
 }
 
 void RobotVoxelyzeAdapter::deleteInstance()

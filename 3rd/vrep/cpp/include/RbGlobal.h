@@ -272,7 +272,8 @@ public:
         RB_SENSOR_TYPE_VISION = 1,
         RB_SENSOR_TYPE_FLOOR,
         RB_SENSOR_TYPE_FORCE,
-        RB_SENSOR_TYPE_ULTRASONIC
+        RB_SENSOR_TYPE_ULTRASONIC,
+        RB_SENSOR_TYPE_TACTILE
     };
 
 public:

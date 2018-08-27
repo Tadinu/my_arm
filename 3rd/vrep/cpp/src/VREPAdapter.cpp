@@ -219,15 +219,18 @@ void VREPAdapter::testCommands()
                                         return QVector3D(0,0,0); \
                                     }
 
+#define VREP_GET_OBJECT_HANDLE(opMode) simxGetObjectHandle(_vrepClientId, objectName, &objectHandle, opMode)
+#define VREP_GET_OBJECT_POS(opMode)    simxGetObjectPosition(_vrepClientId, objectHandle, -1, objectPos, opMode)
+
 QVector3D VREPAdapter::getObjectWorldPosition(const char* objectName)
 {
     int objectHandle = -1;
-    VUInt8 res = simxGetObjectHandle(_vrepClientId, objectName, &objectHandle, simx_opmode_oneshot_wait);
+    VUInt8 res = VREP_GET_OBJECT_HANDLE(simx_opmode_oneshot_wait);
     VREP_RETURN_QVECTOR3D_NOK()
 
     // Enabled streaming of the object position:
     simxFloat objectPos[3];
-    res = simxGetObjectPosition(_vrepClientId, objectHandle, -1, objectPos, simx_opmode_streaming);
+    res = VREP_GET_OBJECT_POS(simx_opmode_streaming);
     VREP_RETURN_QVECTOR3D_NOK()
 
     // Wait until the first data has arrived (just any blocking funtion):
@@ -240,36 +243,37 @@ QVector3D VREPAdapter::getObjectWorldPosition(const char* objectName)
     waitForCommandSentToServer();
 
     // Now you can read the data that is being continuously streamed:
-    res = simxGetObjectPosition(_vrepClientId, objectHandle, -1, objectPos, simx_opmode_buffer);
+    res = VREP_GET_OBJECT_POS(simx_opmode_buffer);
     VREP_RETURN_QVECTOR3D_NOK()
 
     // Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     // to stream unessesary data and eventually slow down.
-    res = simxGetObjectPosition(_vrepClientId, objectHandle, -1, objectPos, simx_opmode_discontinue);
+    res = VREP_GET_OBJECT_POS(simx_opmode_discontinue);
     VREP_RETURN_QVECTOR3D_NOK()
 
     return QVector3D(objectPos[0], objectPos[1], objectPos[2]);
 }
 
+#define VREP_GET_OBJECT_ORIENT(opMode)  simxGetObjectOrientation(_vrepClientId, objectHandle, -1, eulerAngles, opMode)
 QVector3D VREPAdapter::getObjectOrientation(const char* objectName)
 {
     int objectHandle = -1;
-    VUInt8 res = simxGetObjectHandle(_vrepClientId, objectName, &objectHandle, simx_opmode_oneshot_wait);
+    VUInt8 res = VREP_GET_OBJECT_HANDLE(simx_opmode_oneshot_wait);
     VREP_RETURN_QVECTOR3D_NOK()
 
     // Enabled streaming of the object orientation:
     simxFloat eulerAngles[3] = {0,0,0};
-    res = simxGetObjectOrientation(_vrepClientId, objectHandle, -1, eulerAngles, simx_opmode_streaming);
+    res = VREP_GET_OBJECT_ORIENT(simx_opmode_streaming);
 
     // Wait until the first data has arrived (just any blocking funtion):
     waitForCommandSentToServer();
 
     // Now you can read the data that is being continuously streamed:
-    res = simxGetObjectOrientation(_vrepClientId, objectHandle, -1, eulerAngles, simx_opmode_buffer);
+    res = VREP_GET_OBJECT_ORIENT(simx_opmode_buffer);
 
     // Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     // to stream unessesary data and eventually slow down.
-    res = simxGetObjectOrientation(_vrepClientId, objectHandle, -1, eulerAngles, simx_opmode_discontinue);
+    res = VREP_GET_OBJECT_ORIENT(simx_opmode_discontinue);
 
     return QVector3D(eulerAngles[0], eulerAngles[1], eulerAngles[2]);
 }
@@ -279,6 +283,9 @@ QVector3D VREPAdapter::getObjectOrientation(const char* objectName)
                                 }
 
 
+#define VREP_GET_OBJECT_ORIENT(opMode)  simxGetObjectVelocity(_vrepClientId, objectHandle, \
+                                        &objectLinearVel, &objectAngVel, opMode)
+
 float VREPAdapter::getObjectVelocity(const char* objectName)
 {
     int objectHandle = -1;
@@ -287,25 +294,19 @@ float VREPAdapter::getObjectVelocity(const char* objectName)
 
     // Enabled streaming of the object position:
     simxFloat objectLinearVel = 0.0f, objectAngVel = 0.0f;
-    res = simxGetObjectVelocity(_vrepClientId, objectHandle,
-                                &objectLinearVel, &objectAngVel,
-                                simx_opmode_streaming);
+    res = VREP_GET_OBJECT_ORIENT(simx_opmode_streaming);
     VREP_RETURN_FLOAT_NOK()
 
     // Wait until the first data has arrived (just any blocking funtion):
     waitForCommandSentToServer();
 
     // Now you can read the data that is being continuously streamed:
-    res = simxGetObjectVelocity(_vrepClientId, objectHandle,
-                                &objectLinearVel, &objectAngVel,
-                                simx_opmode_buffer);
+    res = VREP_GET_OBJECT_ORIENT(simx_opmode_buffer);
     VREP_RETURN_FLOAT_NOK()
 
     // Inform the server (i.e. V-REP) to stop streaming that data, otherwise the server will continue
     // to stream unessesary data and eventually slow down.
-    res = simxGetObjectVelocity(_vrepClientId, objectHandle,
-                                &objectLinearVel, &objectAngVel,
-                                simx_opmode_discontinue);
+    res = VREP_GET_OBJECT_ORIENT(simx_opmode_discontinue);
 
     return objectLinearVel;
 }

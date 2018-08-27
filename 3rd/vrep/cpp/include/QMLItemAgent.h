@@ -74,7 +74,7 @@ public slots:
     virtual void runTask();
     void startThreading();
 
-private:
+protected:
     QThread* _thread;
     QMutex* _mutex;
     bool _isRunningOnThread;

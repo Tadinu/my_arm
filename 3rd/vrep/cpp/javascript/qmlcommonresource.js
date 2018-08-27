@@ -9,14 +9,16 @@ var AXIS = {
 }
 
 var COLOR = {
-    TRANSPARENT: "transparent",
-    WHITE      : "white"      ,
-    BLUE       : "#3A90DF"    ,
-    GREEN      : "#4FB5AD"    ,
-    RED        : "#FD595B"    ,
-    GRAY       : "#AAAFB3"    ,
-    LIGHTGRAY  : "#E2E7EB"    ,
-    BLACK      : "#2B2B29"    ,
+    TRANSPARENT : "transparent",
+    WHITE       : "white"      ,
+    BLUE        : "#3A90DF"    ,
+    GREEN       : "#4FB5AD"    ,
+    RED         : "#FD595B"    ,
+    GRAY        : "#AAAFB3"    ,
+    LIGHTGRAY   : "#E2E7EB"    ,
+    BLACK       : "#2B2B29"    ,
+    BROWN       : "#804000"    ,
+    LIGHT_BROWN : "#CC6600"
 };
 
 

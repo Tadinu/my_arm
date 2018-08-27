@@ -36,21 +36,17 @@ void RbRobotAgent::runStateMachineOperation()
 // ==========================================================================================
 void RbRobotAgent::initState()
 {
-    RB_THREAD_INVOKE_I(_itemUI, setState, INITIALIZED);
+    setUIState(INITIALIZED);
 }
 
 bool RbRobotAgent::isIdle()
 {
-    QVariant var;
-    RB_THREAD_BLOCKING_INVOKE_RET(_itemUI, getState, var)
-    return var.toInt() == IDLE;
+    return getUIState() == IDLE;
 }
 
 bool RbRobotAgent::isOperating()
 {
-    QVariant var;
-    RB_THREAD_BLOCKING_INVOKE_RET(_itemUI, getState, var)
-    return var.toInt() == OPERATING;
+    return getUIState() == OPERATING;
 }
 
 void RbRobotAgent::operate()
@@ -60,7 +56,7 @@ void RbRobotAgent::operate()
 
     // 2 - UPDATE THE ROBOT CONDITION TO UI:
     // State --
-    RB_THREAD_INVOKE_I(_itemUI, setState, OPERATING);
+    setUIState(OPERATING);
 
     //printf("Query Orientation\n");
     emit queryOrientation();
@@ -68,7 +64,7 @@ void RbRobotAgent::operate()
 
 void RbRobotAgent::goIdle()
 {
-    RB_THREAD_INVOKE_I(_itemUI, setState, IDLE);
+    setUIState(IDLE);
 }
 
 bool RbRobotAgent::isHalted()
@@ -87,6 +83,24 @@ bool RbRobotAgent::isHalted()
 
 void RbRobotAgent::updateOrientationUI(const QVector3D& orient)
 {
+    _mutex->lock();
     RB_THREAD_INVOKE_I(_itemUI, setOrientation, orient);
     //QML_ITEM_LOCAL_INVOKE_I(setOrientation, orient);
+    _mutex->unlock();
 }
+
+int RbRobotAgent::getUIState()
+{
+    QVariant var;
+    RB_THREAD_BLOCKING_INVOKE_RET(_itemUI, getState, var)
+    return var.toInt();
+}
+
+void RbRobotAgent::setUIState(int state)
+{
+    _mutex->lock();
+    RB_THREAD_INVOKE_I(_itemUI, setState, state);
+    _mutex->unlock();
+}
+
+

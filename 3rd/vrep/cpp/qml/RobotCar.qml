@@ -65,11 +65,11 @@ Entity {
     property Material material
     property vector3d _orientAngles : Qt.vector3d(0,0,0)
 
-    property var _color: _state === _CSTATE_ERROR           ? RBRC.COLOR.RED   :
-                         _state === _CSTATE_IDLE            ? RBRC.COLOR.GREEN :
-                         _state === _CSTATE_OPERATING       ? RBRC.COLOR.BLUE  :
-                         _state === _CSTATE_ABOUT_COLLISION ? RBRC.COLOR.LIGHT_BROWN :
-                         _state === _CSTATE_COLLISION       ? RBRC.COLOR.BROWN : RBRC.COLOR.WHITE
+    property string _color: _state === _CSTATE_ERROR           ? RBRC.COLOR.RED   :
+                            _state === _CSTATE_INITIALIZED     ? RBRC.COLOR.WHITE :
+                            _state === _CSTATE_IDLE            ? RBRC.COLOR.GREEN :
+                            _state === _CSTATE_OPERATING       ? RBRC.COLOR.BLUE  :
+                            _state === _CSTATE_COLLIDING       ? RBRC.COLOR.BROWN : RBRC.COLOR.WHITE
 
     property string _name
     property int _state              : _CSTATE_IDLE
@@ -77,8 +77,7 @@ Entity {
     property int _CSTATE_INITIALIZED : 0
     property int _CSTATE_IDLE        : 1
     property int _CSTATE_OPERATING   : 2
-    property int _CSTATE_ABOUT_COLLISION : 3
-    property int _CSTATE_COLLISION   : 4
+    property int _CSTATE_COLLIDING   : 3
 
     property var _itemAgent // Point to RobotAgent*
     function regItemAgent(itemAgent) {

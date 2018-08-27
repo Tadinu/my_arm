@@ -72,7 +72,7 @@ SOURCES += \
     src/VREPAdapter.cpp \
     src/RbSensorAgent.cpp \
     src/main.cpp \
-    src/RbRobotMangThread.cpp
+    src/RbRobotManager.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -100,7 +100,7 @@ HEADERS += \
     include/RbGlobal.h \
     include/VREPAdapter.h \
     include/RbSensorAgent.h \
-    include/RbRobotMangThread.h
+    include/RbRobotManager.h
 
 DISTFILES += \
     qml/RobotPanel.qml \

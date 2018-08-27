@@ -18,11 +18,11 @@ class RbRobotAgent : public QMLItemAgent
 public:
 
     enum RB_ROBOT_STATE {
+        ERROR = -1,
         INITIALIZED,
         IDLE,
         OPERATING,
-        ABOUT_COLLISION, // OBJECT IN PROXIMITY DETECTED
-        COLLISION,
+        COLLIDING,
 
         RB_ROBOT_STATE_TOTAL
     };
@@ -39,6 +39,8 @@ public:
     }
 
     // Functionality Methods ------------------------
+    int getUIState();
+    void setUIState(int state);
     bool isOperating();
     bool isIdle();
     bool isHalted();

@@ -72,6 +72,8 @@ void RbRobotSensorAdapter::initializeSensorAgents()
         {RbGlobal::RB_SENSOR_TYPE_ULTRASONIC, RB_SENSOR_ULTRASONIC_14,    "Pioneer_p3dx_ultrasonicSensor14" },
         {RbGlobal::RB_SENSOR_TYPE_ULTRASONIC, RB_SENSOR_ULTRASONIC_15,    "Pioneer_p3dx_ultrasonicSensor15" },
         {RbGlobal::RB_SENSOR_TYPE_ULTRASONIC, RB_SENSOR_ULTRASONIC_16,    "Pioneer_p3dx_ultrasonicSensor16" },
+        {RbGlobal::RB_SENSOR_TYPE_TACTILE,    RB_SENSOR_MAIN_BODY_TACTILE, "mainBodyTactileSensor"          },
+        {RbGlobal::RB_SENSOR_TYPE_TACTILE,    RB_SENSOR_HEAD_TACTILE,      "headTactileSensor"              }
     };
 
     for(int i = RB_SENSOR_FIRST; i < RB_SENSOR_TOTAL; i++) {

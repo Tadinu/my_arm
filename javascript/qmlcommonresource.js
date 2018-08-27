@@ -50,7 +50,7 @@ var COLOR = {
     LIGHTGRAY   : "#E2E7EB"    ,
     BLACK       : "#2B2B29"    ,
     BROWN       : "#804000"    ,
-    LIGHT_BROWN : "#cc6600"
+    LIGHT_BROWN : "#CC6600"
 };
 
 var TOOLTIP_POS = {

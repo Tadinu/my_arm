@@ -13,18 +13,19 @@
 #include "RbStateMachine.h"
 #include "RbRobotAgent.h"
 
-class RbRobotMangThread : public QObject {
+class RbRobotManager : public QObject {
     Q_OBJECT
     Q_ENUMS(RB_ROBOT_MANAGEMENT_STATE)
 
 public:
-    RbRobotMangThread(int argc, char **pArgv);
-    virtual ~RbRobotMangThread();
+    RbRobotManager(int argc, char **pArgv);
+    virtual ~RbRobotManager();
 
     enum RB_ROBOT_MANAGEMENT_STATE {
         INITIALIZED,
-        ROBOT_AGENT_STARTED,
-        SENSOR_AGENT_STARTED,
+        ROBOT_CHECK,
+        SENSOR_CHECK,
+        SENSOR_SIGNAL_HANDLE,
 
         RB_ROBOT_MANAGE_STATE_TOTAL
     };
@@ -36,7 +37,7 @@ public:
     void initializeStateMachine();
     void runStateMachineOperation();
 
-    RbSMRule<RbRobotMangThread>* getStateMachine() {
+    RbSMRule<RbRobotManager>* getStateMachine() {
         return _stateMachine;
     }
 
@@ -49,6 +50,7 @@ public:
     bool isSensorFaulted();
     void troubleshootRobotCom();
     void troubleshootSensors();
+
     QTimer* getServiceTimer() { return _serviceTimer; }
 
 public slots:
@@ -59,6 +61,7 @@ public slots:
 
     // Sensor Agent service ----------------
     void queryRobotSensorData(int sensorType, int sensorId);
+    void queryRobotCameraData();
 
 signals:
 
@@ -71,7 +74,9 @@ private:
 
 private:
     int _currentStateRuleId;
-    RbSMRule<RbRobotMangThread>* _stateMachine; // pointing to static defined data
+    RbSMRule<RbRobotManager>* _stateMachine; // pointing to static defined data
+    unsigned char _vrepStrSignalData[1][100];
+    int _vrepIntSignalData;
 
     // ##############################################################################
     // THREADING --------------------------------------------------------------------

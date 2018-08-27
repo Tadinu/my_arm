@@ -5,7 +5,7 @@
 #include <QtCore>
 #include "QMLAdapter.h"
 #include "QMLItemAgent.h"
-#include "RbRobotMangThread.h"
+#include "RbRobotManager.h"
 
 class RbMainWindowAgent : public QObject
 {
@@ -32,7 +32,7 @@ public slots:
 
 private:
     static RbMainWindowAgent *_instance;
-    RbRobotMangThread* _robotThread;
+    RbRobotManager* _robotThread;
     RbRobotAgent* _robotAgent;
 };
 

@@ -3,6 +3,7 @@
 
 #include <QtCore>
 #include <QMutex>
+#include <QImage>
 #include "RbGlobal.h"
 #include "RbSensorAgent.h"
 
@@ -55,6 +56,10 @@ public:
     const QVector<RbSensorAgent*>& sensorAgentList() { return _sensorAgentList; }
     RbSensorAgent* sensorAgent(int sensorId);
     bool isHalted();
+
+    void setVisionSensorImage(int sensorId, const QImage& image);
+    QImage& getVisionSensorImage(int sensorId);
+
 signals:
 
 
@@ -64,6 +69,8 @@ private:
 
     QMutex* _mutex;
     QVector<RbSensorAgent*> _sensorAgentList;
+    QImage _frontVisionSensorImage;
+    QImage _groundVisionSensorImage;
 };
 
 #endif // _ROBOT_SENSOR_ADAPTER_H_

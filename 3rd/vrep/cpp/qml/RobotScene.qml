@@ -80,38 +80,22 @@ Scene3D {
     property alias _camera: camera
 
     function setArrowVisible(arrowId, visible) {
-        if(arrow1._index === arrowId)
-            arrow1._visible = visible;
-        else if(arrow2._index === arrowId)
-            arrow2._visible = visible;
-        else if(arrow3._index === arrowId)
-            arrow3._visible = visible;
-        else if(arrow4._index === arrowId)
-            arrow4._visible = visible;
-        else if(arrow5._index === arrowId)
-            arrow5._visible = visible;
-        else if(arrow6._index === arrowId)
-            arrow6._visible = visible;
-        else if(arrow7._index === arrowId)
-            arrow7._visible = visible;
-        else if(arrow8._index === arrowId)
-            arrow8._visible = visible;
-        else if(arrow9._index === arrowId)
-            arrow9._visible = visible;
-        else if(arrow10._index === arrowId)
-            arrow10._visible = visible;
-        else if(arrow11._index === arrowId)
-            arrow11._visible = visible;
-        else if(arrow12._index === arrowId)
-            arrow12._visible = visible;
-        else if(arrow13._index === arrowId)
-            arrow13._visible = visible;
-        else if(arrow14._index === arrowId)
-            arrow14._visible = visible;
-        else if(arrow15._index === arrowId)
-            arrow15._visible = visible;
-        else if(arrow16._index === arrowId)
-            arrow16._visible = visible;
+        if(arrow1._index === arrowId)       arrow1._visible  = visible;
+        else if(arrow2._index === arrowId)  arrow2._visible  = visible;
+        else if(arrow3._index === arrowId)  arrow3._visible  = visible;
+        else if(arrow4._index === arrowId)  arrow4._visible  = visible;
+        else if(arrow5._index === arrowId)  arrow5._visible  = visible;
+        else if(arrow6._index === arrowId)  arrow6._visible  = visible;
+        else if(arrow7._index === arrowId)  arrow7._visible  = visible;
+        else if(arrow8._index === arrowId)  arrow8._visible  = visible;
+        else if(arrow9._index === arrowId)  arrow9._visible  = visible;
+        else if(arrow10._index === arrowId) arrow10._visible = visible;
+        else if(arrow11._index === arrowId) arrow11._visible = visible;
+        else if(arrow12._index === arrowId) arrow12._visible = visible;
+        else if(arrow13._index === arrowId) arrow13._visible = visible;
+        else if(arrow14._index === arrowId) arrow14._visible = visible;
+        else if(arrow15._index === arrowId) arrow15._visible = visible;
+        else if(arrow16._index === arrowId) arrow16._visible = visible;
     }
 
     Entity {

@@ -1,13 +1,7 @@
 <RCC>
     <qresource prefix="/">
-        <file>qml/MainGBSingletonObject.qml</file>
-        <file>res/images/joypad.svg</file>
-        <file>res/images/joystick_background.png</file>
-        <file>res/images/joystick_thumb.png</file>
         <file>javascript/qmlcommonresource.js</file>
-        <file>qml/RobotControl.qml</file>
-        <file>qml/RobotPanelMain.qml</file>
-        <file>qml/RBJoypad.qml</file>
+        <file>qml/MainGBSingletonObject.qml</file>
         <file>qml/AdsEffect.qml</file>
         <file>qml/AdsMaterial.qml</file>
         <file>qml/GroundPlane.qml</file>
@@ -25,5 +19,6 @@
         <file>qml/ShadowMapLight.qml</file>
         <file>qml/RobotScene.qml</file>
         <file>qml/Arrow.qml</file>
+        <file>qml/VImage.qml</file>
     </qresource>
 </RCC>

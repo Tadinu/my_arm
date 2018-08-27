@@ -105,3 +105,13 @@ bool RbMainWindowAgent::isSensorAgentsHalted()
     return false;
 #endif
 }
+
+QVariant RbMainWindowAgent::getFrontVisionSensorImageId()
+{
+    return QMLAdapter::getInstance()->frontVisionImageProvider()->getImageId(0);
+}
+
+QVariant RbMainWindowAgent::getGroundVisionSensorImageId()
+{
+    return QMLAdapter::getInstance()->groundVisionImageProvider()->getImageId(0);
+}

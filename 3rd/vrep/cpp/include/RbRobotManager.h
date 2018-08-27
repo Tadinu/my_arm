@@ -7,6 +7,7 @@
 #include <QQuaternion>
 #include <QStringList>
 #include <QMutex>
+#include <QImage>
 #include <iostream>
 #include <assert.h>
 
@@ -61,7 +62,7 @@ public slots:
 
     // Sensor Agent service ----------------
     void queryRobotSensorData(int sensorType, int sensorId);
-    void queryRobotCameraData();
+    QImage queryRobotCameraData(const char* visionSensorName);
 
 signals:
 

@@ -53,6 +53,8 @@ int main(int argc, char *argv[])
         QQmlEngine* mainQmlEngine = mainWindow.engine();
         mainQmlEngine->rootContext()->setContextProperty("_mainWindow", &mainWindow);
         mainQmlEngine->addImportPath("qrc:///qml"); // For Identified Module Import
+        mainQmlEngine->addImageProvider(QMLQuickImageProvider::frontVisionSensorImageName, QMLAdapter::getInstance()->frontVisionImageProvider());
+        mainQmlEngine->addImageProvider(QMLQuickImageProvider::floorVisionSensorImageName, QMLAdapter::getInstance()->groundVisionImageProvider());
 
         // 2.1 - LOAD MAIN QML MAIN WINDOW
         mainWindow.setSource(RB_MAIN_APP);

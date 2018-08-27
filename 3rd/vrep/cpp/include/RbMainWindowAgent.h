@@ -28,6 +28,8 @@ public:
     bool isSensorAgentsHalted();
 
     RbRobotAgent* getRobotAgent() { return _robotAgent; }
+    Q_INVOKABLE QVariant getFrontVisionSensorImageId();
+    Q_INVOKABLE QVariant getGroundVisionSensorImageId();
 public slots:
 
 private:

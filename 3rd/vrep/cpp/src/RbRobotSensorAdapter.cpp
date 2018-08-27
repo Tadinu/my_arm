@@ -109,3 +109,17 @@ bool RbRobotSensorAdapter::isHalted()
 
     return haltedSensorId;
 }
+
+void RbRobotSensorAdapter::setVisionSensorImage(int sensorId, const QImage& image)
+{
+    if(sensorId == RbRobotSensorAdapter::RB_SENSOR_FRONT_VISION)
+        _frontVisionSensorImage = image;
+    else if(sensorId == RbRobotSensorAdapter::RB_SENSOR_GROUND_VISION)
+        _groundVisionSensorImage = image;
+}
+
+QImage& RbRobotSensorAdapter::getVisionSensorImage(int sensorId)
+{
+    return (sensorId == RbRobotSensorAdapter::RB_SENSOR_FRONT_VISION)  ? _frontVisionSensorImage  :
+           /*(sensorId == RbRobotSensorAdapter::RB_SENSOR_GROUND_VISION) ? */_groundVisionSensorImage;
+}

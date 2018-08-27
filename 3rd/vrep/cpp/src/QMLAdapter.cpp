@@ -35,7 +35,9 @@ QMLAdapter* QMLAdapter::getInstance()
 }
 
 
-QMLAdapter::QMLAdapter()
+QMLAdapter::QMLAdapter():
+            _frontVisionImageProvider(QMLQuickImageProvider::FRONT_VISION_SENSOR_IMAGE),
+            _groundVisionImageProvider(QMLQuickImageProvider::GROUND_VISION_SENSOR_IMAGE)
 {
     if (s_instance)
     {

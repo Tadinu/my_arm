@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QQmlProperty>
 #include "RbGlobal.h"
+#include "QMLQuickImageProvider.h"
+
 class QJSEngine;
 class QQmlEngine;
 class RbMainWindowAgent;
@@ -206,12 +208,18 @@ public:
 
     void registerOperations();
 
+    // Global Quick Image Provider
+    QMLQuickImageProvider* frontVisionImageProvider() { return &_frontVisionImageProvider; }
+    QMLQuickImageProvider* groundVisionImageProvider() { return &_groundVisionImageProvider; }
+
     // QML Items --
     void openQMLItem(int qmlItemId); // Open a QML Item
     QObject* getRbQMLItem(int qmlItemId);
 
 private:
     static QMLAdapter* s_instance;
+    QMLQuickImageProvider _frontVisionImageProvider;
+    QMLQuickImageProvider _groundVisionImageProvider;
 };
 
 #endif // QML_ADAPTER_H

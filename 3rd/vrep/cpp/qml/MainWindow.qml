@@ -82,9 +82,43 @@ Item {
         rbScene.setArrowVisible(arrowId, visible);
     }
 
+    // MAIN ROBOT SCENE --
+    //
     RobotScene {
         id: rbScene
         anchors.fill: parent
+    }
+
+    // FRONT CAMERA IMAGE --
+    //
+    property string _frontCamImgSource: gbMainWindow.getFloorCamImageSource()
+    function getFrontCamImage() {
+        return "image://frontVisionSensorImage" + _rbMainWindowAgent.getFrontVisionSensorImageId()
+    }
+
+    VImage {
+        id: frontCamImg
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: parent.height/4
+        width: height
+        source: gbMainWindow._frontCamImgSource
+    }
+
+    // FLOOR CAMERA IMAGE --
+    //
+    property string _floorCamImgSource: gbMainWindow.getFloorCamImageSource()
+    function getFloorCamImageSource() {
+        return "image://floorVisionSensorImage" + _rbMainWindowAgent.getFloorVisionSensorImageId()
+    }
+
+    VImage {
+        id: floorCamImg
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: parent.height/4
+        width: height
+        source: gbMainWindow._floorCamImgSource
     }
 
     Component.onCompleted: {
@@ -96,15 +130,4 @@ Item {
     //    anchors.fill: parent
     //    acceptedButtons: Qt.LeftButton
     //}
-
-    // JOYPAD ===============================================
-    RBJoypad {
-        id: joyPad
-        anchors.right : parent.right
-        anchors.verticalCenter : parent.verticalCenter
-        anchors.rightMargin : 80
-        onPosMoved : {
-            //_rbMainWindowAgent.moveTarget(distance);
-        }
-    }
 }

@@ -14,6 +14,7 @@ var COLOR = {
     BLUE        : "#3A90DF"    ,
     GREEN       : "#4FB5AD"    ,
     RED         : "#FD595B"    ,
+    YELLOW      : "#F4CB42"    ,
     GRAY        : "#AAAFB3"    ,
     LIGHTGRAY   : "#E2E7EB"    ,
     BLACK       : "#2B2B29"    ,

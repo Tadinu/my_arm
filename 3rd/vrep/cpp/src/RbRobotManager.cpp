@@ -2,7 +2,6 @@
 #include <QMutexLocker>
 #include <QtMath>
 #include <mutex>
-#include <QImage>
 #include <QByteArray>
 #include <QString>
 
@@ -163,7 +162,9 @@ void RbRobotManager::queryRobotSensorData(int sensorType, int sensorId)
     simxUChar *outputBuffer;
 
     // TACTILE SENSOR TYPES ------------------------------------------------
-    if(sensorType == RbGlobal::RB_SENSOR_TYPE_TACTILE) {
+    switch(sensorType) {
+    case RbGlobal::RB_SENSOR_TYPE_TACTILE:
+    {
         int res = VREP_QUERY_SENSOR_DATA_CALL("detectCollisionWithObjectFromClient", simx_opmode_oneshot_wait);
         if(res == simx_return_ok && outputIntsCnt > 0) {
             static int lastState = RbMainWindowAgent::getInstance()->getRobotAgent()->getUIState();
@@ -177,9 +178,16 @@ void RbRobotManager::queryRobotSensorData(int sensorType, int sensorId)
             printf("(I) Failed calling VREP! - [%d]: %d - %d\n", outputIntsCnt, inputInts[0], inputInts[1]);
         }
     }
-
+    break;
+    case RbGlobal::RB_SENSOR_TYPE_VISION:
+    {
+        RB_SENSOR_SYSTEM()->setVisionSensorImage(sensorId,
+                                                 this->queryRobotCameraData(RB_SENSOR_SYSTEM()->sensorAgentList()[sensorId]->name()));
+    }
+    break;
     // OTHER SENSOR TYPES ------------------------------------------------
-    else {
+    default:
+    {
 #if 1
         int res = VREP_QUERY_SENSOR_DATA_CALL("getSensorDataFromClient", simx_opmode_oneshot_wait);
 #else
@@ -207,6 +215,8 @@ void RbRobotManager::queryRobotSensorData(int sensorType, int sensorId)
             printf("(II) Failed calling VREP! - [%d]: %d - %d\n", outputFloatsCnt, inputInts[0], inputInts[1]);
         }
     }
+    break;
+    } // switch(sensorType)
 }
 
 void RbRobotManager::initState() {}
@@ -216,11 +226,11 @@ void RbRobotManager::troubleshootRobotCom() { /* Call to RobotAgent trouble shoo
 void RbRobotManager::troubleshootSensors()  { /* Call to SensorAgent trouble shooting function.*/ }
 
 #define VREP_GET_VISISON_SENSOR_IMAGE(opMode) simxGetVisionSensorImage(VREP_INSTANCE()->vrepClientId(), camHandle, &reso, (unsigned char**)img, 0, opMode)
-void RbRobotManager::queryRobotCameraData()
+QImage RbRobotManager::queryRobotCameraData(const char* visionSensorName)
 {
     // Receiving and image from V-REP and sending it back:
     int camHandle;
-    int res = simxGetObjectHandle(VREP_INSTANCE()->vrepClientId(),"frontCamSensor", &camHandle, simx_opmode_oneshot_wait);
+    int res = simxGetObjectHandle(VREP_INSTANCE()->vrepClientId(), visionSensorName, &camHandle, simx_opmode_oneshot_wait);
 
     int reso = 512;
     unsigned char img[reso][reso];
@@ -238,6 +248,6 @@ void RbRobotManager::queryRobotCameraData()
         }
     }
 
-    QImage image = QImage::fromData(imageData, reso*reso);
+    return QImage::fromData(imageData, reso*reso);
     //#image obtained as a Image object. Use it according to need.
 }

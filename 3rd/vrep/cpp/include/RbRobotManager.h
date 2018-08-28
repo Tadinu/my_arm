@@ -56,9 +56,12 @@ public:
 
 public slots:
     void runTask();
+    void setServiceTimeout(int timeout);
+    void setFallingObjTimeInterval(int timeInterval);
 
     // Robot Agent service -----------------
     void queryRobotOrientation();
+    void setRobotVel(float vel);
 
     // Sensor Agent service ----------------
     void queryRobotSensorData(int sensorType, int sensorId);

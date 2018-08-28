@@ -72,8 +72,8 @@ import "qrc:///javascript/qmlcommonresource.js" as RBRC
 
 Item {
     id: gbMainWindow
-    width: 1280
-    height: 768
+    width: Screen.width/3
+    height: Screen.height/3
     visible: true
 
     property alias _robotCar: rbScene._autoCar
@@ -91,35 +91,35 @@ Item {
 
     // FRONT CAMERA IMAGE --
     //
-    property string _frontCamImgSource: gbMainWindow.getFloorCamImageSource()
-    function getFrontCamImage() {
+    function getFrontCamImageSource() {
         return "image://frontVisionSensorImage" + _rbMainWindowAgent.getFrontVisionSensorImageId()
     }
 
-    VImage {
-        id: frontCamImg
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: parent.height/4
-        width: height
-        source: gbMainWindow._frontCamImgSource
-    }
+    //VImage {
+    //    id: frontCamImg
+    //    z:10
+    //    anchors.right: parent.right
+    //    anchors.top: parent.top
+    //    height: parent.height/4
+    //    width: height
+    //    source: gbMainWindow.getFrontCamImageSource()
+    //}
 
-    // FLOOR CAMERA IMAGE --
+    // GROUND CAMERA IMAGE --
     //
-    property string _floorCamImgSource: gbMainWindow.getFloorCamImageSource()
-    function getFloorCamImageSource() {
-        return "image://floorVisionSensorImage" + _rbMainWindowAgent.getFloorVisionSensorImageId()
+    function getGroundCamImageSource() {
+        return "image://groundVisionSensorImage" + _rbMainWindowAgent.getGroundVisionSensorImageId()
     }
 
-    VImage {
-        id: floorCamImg
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: parent.height/4
-        width: height
-        source: gbMainWindow._floorCamImgSource
-    }
+    //VImage {
+    //    id: groundCamImg
+    //    z:12
+    //    anchors.right: parent.right
+    //    anchors.bottom: parent.bottom
+    //    height: parent.height/4
+    //    width: height
+    //    source: gbMainWindow.getGroundCamImageSource()
+    //}
 
     Component.onCompleted: {
         //var rotateQuaternion = rbScene._camera.rotation(90, RBRC.AXIS.Y); // Qt.quaternion()
@@ -130,4 +130,93 @@ Item {
     //    anchors.fill: parent
     //    acceptedButtons: Qt.LeftButton
     //}
+
+    //
+    Column {
+        id: sliderGroup
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 30
+        anchors.leftMargin: 30
+
+        spacing: 5
+
+        // ROBOT SPEED --
+        Slider {
+            id: robotSpeedSlider
+            tickmarksEnabled: true
+            orientation: Qt.Horizontal
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 20
+            stepSize: 30
+            value : 120
+            minimumValue: 120
+            maximumValue: 720
+            onValueChanged: {
+                _rbMainWindowAgent.setRobotVel(value);
+            }
+
+            Label {
+                text: "Robot speed[deg/sec]: " + robotSpeedSlider.value
+                font.pixelSize: 12
+                font.italic: true
+                color: "steelblue"
+                anchors.horizontalCenter: robotSpeedSlider.horizontalCenter
+                anchors.right: robotSpeedSlider.left
+                anchors.rightMargin: 10
+            }
+        }
+
+        // -------------------------------------------------------------
+        // SENSOR QUERY TIMEOUT --
+        Slider {
+            id: sensorQueryTimeoutSlider
+            tickmarksEnabled: true
+            orientation: Qt.Horizontal
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 20
+            stepSize: 300
+            value : 500
+            minimumValue: 500
+            maximumValue: 5000
+            onValueChanged: {
+                _rbMainWindowAgent.setRobotQueryTimeout(value);
+            }
+            Label {
+                text: "Sensor Query Timeout[ms]: " + sensorQueryTimeoutSlider.value
+                font.pixelSize: 12
+                font.italic: true
+                color: "steelblue"
+                anchors.horizontalCenter: sensorQueryTimeoutSlider.horizontalCenter
+                anchors.right: sensorQueryTimeoutSlider.left
+                anchors.rightMargin: 10
+            }
+        }
+
+        // -------------------------------------------------------------
+        // FALLING OBJECT INTERVAL --
+        Slider {
+            id: fallingObjectTimeIntervalSlider
+            tickmarksEnabled: true
+            orientation: Qt.Horizontal
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 20
+            stepSize: 300
+            value : 500
+            minimumValue: 500
+            maximumValue: 5000
+            onValueChanged: {
+                _rbMainWindowAgent.setFallingObjectTimeInterval(value);
+            }
+            Label {
+                text: "Falling Object Timeout Interval [ms]: " + fallingObjectTimeIntervalSlider.value
+                font.pixelSize: 12
+                font.italic: true
+                color: "steelblue"
+                anchors.horizontalCenter: fallingObjectTimeIntervalSlider.horizontalCenter
+                anchors.right: fallingObjectTimeIntervalSlider.left
+                anchors.rightMargin: 10
+            }
+        }
+    }
 }

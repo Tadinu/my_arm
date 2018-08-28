@@ -18,6 +18,7 @@
 
 // ROBOT TO RUN
 #define CRUN_ROBOT (RbGlobal::RB_ROBOT_CAR)
+#define CORIG_ROBOT_QUERY_TIME_INTERVAL (500)
 
 const QVector3D CX(1,0,0);
 const QVector3D CY(0,1,0);
@@ -92,9 +93,11 @@ bool RbRobotManager::startThreading()
     // Start Service Timer, note that RbRobotManager may be blocked by its possible internal loop
     //
     _serviceTimer = new QTimer();
-    _serviceTimer->setInterval(500);
+    _serviceTimer->setInterval(CORIG_ROBOT_QUERY_TIME_INTERVAL);
     connect(_serviceTimer, &QTimer::timeout, this, &RbRobotManager::runTask);
     _serviceTimer->start();
+    _serviceTimer->moveToThread(_thread);
+    connect(_thread, &QThread::finished, _serviceTimer, &QObject::deleteLater);
 
     // -----------------------------------------------------------
     // START EVENT LOOP OF THE THREAD:
@@ -118,6 +121,20 @@ void RbRobotManager::runTask()
     }
 }
 
+void RbRobotManager::setServiceTimeout(int timeout)
+{
+    printf("Set Service Timeout %d\n", timeout);
+    static bool firstTime = true;
+    if(firstTime) {
+        firstTime = false;
+        // Still on main thread, not allowed to reset timer from another thread
+    }
+    else {
+        _serviceTimer->setInterval(timeout);
+        printf("Robot Query service timeout reset %d\n", timeout);
+    }
+}
+
 // =========================================================================================
 // ROBOT AGENT SERVICE FUNCTIONS -----------------------------------------------------------
 //
@@ -128,6 +145,69 @@ void RbRobotManager::queryRobotOrientation()
     // --------------------------------------------------------------------
     // UPDATE TO UI
     RbMainWindowAgent::getInstance()->getRobotAgent()->updateOrientationUI(orient);
+    printf("Robot orientation updated: [%f]-[%f]-[%f]\n", orient.x(), orient.y(), orient.z());
+}
+
+void RbRobotManager::setRobotVel(float vel)
+{
+    int inputInts[]           = {};
+    float inputFloats[]        = {vel};
+    const char* inputStrings[] = {""};
+    simxUChar inputBuffer[]    = {};
+
+    int *outputInts;
+    float *outputFloats;
+    simxChar* outputStrings = {""};
+    simxUChar *outputBuffer;
+
+    int res = simxCallScriptFunction(VREP_INSTANCE()->vrepClientId(), CB::CSERVER_REMOTE_API_OBJECT_NAME,
+                                     sim_scripttype_childscript,
+                                     "setMaxVelocityFromClient",
+                                     0, inputInts,
+                                     1, inputFloats,
+                                     1, inputStrings[0],
+                                     0, inputBuffer,
+                                     nullptr, &outputInts,
+                                     nullptr, &outputFloats,
+                                     nullptr, &outputStrings,
+                                     nullptr, &outputBuffer,
+                                     simx_opmode_oneshot_wait
+                                     );
+   if(res == simx_return_ok)
+        printf("Set Robot Vel %f [deg/sec]\n", vel);
+   else
+        printf("[%d - Failed call to V-REP Server] on Set Robot Vel %f [deg/sec]\n", res, vel);
+}
+
+void RbRobotManager::setFallingObjTimeInterval(int timeInterval)
+{
+    int inputInts[1]           = {timeInterval};
+    float inputFloats[]        = {};
+    const char* inputStrings[] = {""};
+    simxUChar inputBuffer[]    = {};
+
+    int *outputInts;
+    float *outputFloats;
+    simxChar* outputStrings = {""};
+    simxUChar *outputBuffer;
+
+   int res = simxCallScriptFunction(VREP_INSTANCE()->vrepClientId(), CB::CSERVER_REMOTE_API_OBJECT_NAME,
+                                    sim_scripttype_childscript,
+                                    "setFallingObjTimeIntervalFromClient",
+                                    1, inputInts,
+                                    0, inputFloats,
+                                    1, inputStrings[0],
+                                    0, inputBuffer,
+                                    nullptr, &outputInts,
+                                    nullptr, &outputFloats,
+                                    nullptr, &outputStrings,
+                                    nullptr, &outputBuffer,
+                                    simx_opmode_oneshot_wait
+                                    );
+   if(res == simx_return_ok)
+        printf("Set Falling Obj Time Interval %d [msec]\n", timeInterval);
+   else
+        printf("[%d - Failed call to V-REP Server] on Set Falling Obj Time Interval %d [msec]\n", res, timeInterval);
 }
 
 // SENSOR AGENT SERVICE FUNCTIONS -----------------------------------------------------------
@@ -161,30 +241,45 @@ void RbRobotManager::queryRobotSensorData(int sensorType, int sensorId)
     simxChar* outputStrings = {""};
     simxUChar *outputBuffer;
 
+    const char* sensorName = RB_SENSOR_SYSTEM()->sensorAgentList()[sensorId]->name();
     // TACTILE SENSOR TYPES ------------------------------------------------
     switch(sensorType) {
+
     case RbGlobal::RB_SENSOR_TYPE_TACTILE:
     {
+        printf("Query Robot tactile sensor data...\n");
         int res = VREP_QUERY_SENSOR_DATA_CALL("detectCollisionWithObjectFromClient", simx_opmode_oneshot_wait);
         if(res == simx_return_ok && outputIntsCnt > 0) {
             static int lastState = RbMainWindowAgent::getInstance()->getRobotAgent()->getUIState();
 
             int newState = (outputInts[0] != 0)? RbRobotAgent::COLLIDING : lastState;
             //printf("NEWSTATE: %d", newState);
-            if(newState != lastState)
+            if(newState != lastState) {
                 RbMainWindowAgent::getInstance()->getRobotAgent()->setUIState(newState);
+                printf("Robot state updated: %d\n", newState);
+                if(newState == RbRobotAgent::COLLIDING)
+                    printf("Robot - Object collision detected!\n");
+            }
         }
         else {
             printf("(I) Failed calling VREP! - [%d]: %d - %d\n", outputIntsCnt, inputInts[0], inputInts[1]);
         }
     }
     break;
-    case RbGlobal::RB_SENSOR_TYPE_VISION:
-    {
-        RB_SENSOR_SYSTEM()->setVisionSensorImage(sensorId,
-                                                 this->queryRobotCameraData(RB_SENSOR_SYSTEM()->sensorAgentList()[sensorId]->name()));
-    }
-    break;
+
+    //case RbGlobal::RB_SENSOR_TYPE_VISION:
+    //{
+    //    printf("Query Robot Camera data...\n");
+    //    RB_SENSOR_SYSTEM()->setVisionSensorImage(sensorId,
+    //                                             this->queryRobotCameraData(sensorName));
+    //
+    //    if(sensorId == RbRobotSensorAdapter::RB_SENSOR_FRONT_VISION)
+    //        QMLAdapter::getInstance()->frontVisionImageProvider()->updateFromVisionSensor(sensorName);
+    //    else if(sensorId == RbRobotSensorAdapter::RB_SENSOR_GROUND_VISION)
+    //        QMLAdapter::getInstance()->groundVisionImageProvider()->updateFromVisionSensor(sensorName);
+    //}
+    //break;
+
     // OTHER SENSOR TYPES ------------------------------------------------
     default:
     {
@@ -199,16 +294,20 @@ void RbRobotManager::queryRobotSensorData(int sensorType, int sensorId)
 #endif
 
         if(res == simx_return_ok && outputFloatsCnt > 0) {
+            printf("Sensor Data[%s] - Sensor Type[%d] - Sensor Id[%d]: \n", sensorName, sensorType, sensorId);
             for (int i = 0; i < outputFloatsCnt; i++) {
                 //printf("%d - Data [%d]: %f\n", sensorId, i, outputFloats[i]);
                 sensorData << outputFloats[i];
+                printf("%f    ", outputFloats[i]);
             }
+            printf("\n================================================\n");
 
             // --------------------------------------------------------------------
             // UPDATE TO UI
             if(sensorType == RbGlobal::RB_SENSOR_TYPE_ULTRASONIC) {
-                //printf("%d - %d",  this->id()-4, sensorData[0] != 0);
-                RB_QML_INVOKE_II(setUltraSonicSensorArrowVisible, sensorId-4, sensorData[0] != 0);
+                RB_QML_INVOKE_II(setUltraSonicSensorArrowVisible,
+                                 sensorId-(RbRobotSensorAdapter::RB_SENSOR_ULTRASONIC_START - RbRobotSensorAdapter::RB_SENSOR_FIRST),
+                                 sensorData[0] != 0);
             }
         }
         else {

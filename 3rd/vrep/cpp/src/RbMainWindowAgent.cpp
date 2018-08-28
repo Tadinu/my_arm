@@ -20,7 +20,12 @@ RbMainWindowAgent::RbMainWindowAgent(int argc, char **argv, QObject *parent)
     :QObject(parent),
      _robotThread(new RbRobotManager(argc, argv))
 {
+    // 1-
     _robotThread->startThreading();
+    // 2- (After robot manager thread starts
+    connect(this, &RbMainWindowAgent::robotVelUpdateOrdered,    _robotThread, &RbRobotManager::setRobotVel);
+    connect(this, &RbMainWindowAgent::robotQueryTimeoutUpdated, _robotThread, &RbRobotManager::setServiceTimeout);
+    connect(this, &RbMainWindowAgent::fallingObjTimeInvervalUpdated, _robotThread, &RbRobotManager::setFallingObjTimeInterval);
 }
 
 RbMainWindowAgent::~RbMainWindowAgent()
@@ -114,4 +119,22 @@ QVariant RbMainWindowAgent::getFrontVisionSensorImageId()
 QVariant RbMainWindowAgent::getGroundVisionSensorImageId()
 {
     return QMLAdapter::getInstance()->groundVisionImageProvider()->getImageId(0);
+}
+
+void RbMainWindowAgent::setRobotVel(float vel)
+{
+    printf("[Order] Reset robot velocity...\n");
+    emit robotVelUpdateOrdered(vel);
+}
+
+void RbMainWindowAgent::setRobotQueryTimeout(int timeout)
+{
+    printf("[Order] Reset robot query timeout...\n");
+    emit robotQueryTimeoutUpdated(timeout);
+}
+
+void RbMainWindowAgent::setFallingObjectTimeInterval(int timeInterval)
+{
+    printf("[Order] Reset falling obj time interval...\n");
+    emit fallingObjTimeInvervalUpdated(timeInterval);
 }

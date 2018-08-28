@@ -6,7 +6,7 @@ import QtQuick.Controls.Private 1.0
 import QtQuick.Layouts  1.3  // Provide Qt layouts
 import QtQuick.Dialogs  1.2  // StandardButton
 
-import com.k3d.qmladapter 1.0
+import com.rb.qmladapter 1.0
 import MainGBSingletonObject 1.0
 import "qrc:///javascript/qmlcommonresource.js" as RBRC
 

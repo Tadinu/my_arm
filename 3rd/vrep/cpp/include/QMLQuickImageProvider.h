@@ -24,11 +24,10 @@ public:
         GROUND_VISION_SENSOR_IMAGE
     };
     static constexpr const char* frontVisionSensorImageName = "frontVisionSensorImage";
-    static constexpr const char* floorVisionSensorImageName = "floorVisionSensorImage";
+    static constexpr const char* groundVisionSensorImageName = "groundVisionSensorImage";
 
     int _sourceType;
-    void updateFromFrontVisionSensor();
-    void updateFromFloorVisionSensor();
+    void updateFromVisionSensor(const QString& prefix);
     QString getImageId(int index);
 
     QImage requestImage(const QString &id, QSize *size, const QSize& requestedSize);

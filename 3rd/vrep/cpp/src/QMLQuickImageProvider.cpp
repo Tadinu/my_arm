@@ -104,14 +104,9 @@ void QMLQuickImageProvider::remImageId(int index)
     _imageIdMap.swap(tempMap);
 }
 
-void QMLQuickImageProvider::updateFromFrontVisionSensor()
+void QMLQuickImageProvider::updateFromVisionSensor(const QString& prefix)
 {
+    //printf("Update: %s", prefix.constData());
     clear();
-    this->addImageId("front", 0);
-}
-
-void QMLQuickImageProvider::updateFromFloorVisionSensor()
-{
-    clear();
-    this->addImageId("floor", 0);
+    this->addImageId(prefix, 0);
 }

@@ -30,7 +30,15 @@ public:
     RbRobotAgent* getRobotAgent() { return _robotAgent; }
     Q_INVOKABLE QVariant getFrontVisionSensorImageId();
     Q_INVOKABLE QVariant getGroundVisionSensorImageId();
+    Q_INVOKABLE void setRobotVel(float vel);
+    Q_INVOKABLE void setRobotQueryTimeout(int timeout);
+    Q_INVOKABLE void setFallingObjectTimeInterval(int timeInterval);
 public slots:
+
+signals:
+    void robotVelUpdateOrdered(float vel);
+    void robotQueryTimeoutUpdated(int timeout);
+    void fallingObjTimeInvervalUpdated(int timeInterval);
 
 private:
     static RbMainWindowAgent *_instance;

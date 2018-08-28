@@ -58,7 +58,7 @@ void RbRobotAgent::operate()
     // State --
     setUIState(OPERATING);
 
-    //printf("Query Orientation\n");
+    printf("Query Robot Orientation...\n");
     emit queryOrientation();
 }
 

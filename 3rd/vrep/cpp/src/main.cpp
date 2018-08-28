@@ -46,26 +46,27 @@ int main(int argc, char *argv[])
         // 1 - Main Window --
         //
         QQuickView mainWindow;
-        mainWindow.resize(1600, 800);
+        mainWindow.resize(500, 300);
 
         // 2 - Main QML Engine --
         //
         QQmlEngine* mainQmlEngine = mainWindow.engine();
-        mainQmlEngine->rootContext()->setContextProperty("_mainWindow", &mainWindow);
+        // - [BEFORE LOAD QML]
         mainQmlEngine->addImportPath("qrc:///qml"); // For Identified Module Import
         mainQmlEngine->addImageProvider(QMLQuickImageProvider::frontVisionSensorImageName, QMLAdapter::getInstance()->frontVisionImageProvider());
-        mainQmlEngine->addImageProvider(QMLQuickImageProvider::floorVisionSensorImageName, QMLAdapter::getInstance()->groundVisionImageProvider());
+        mainQmlEngine->addImageProvider(QMLQuickImageProvider::groundVisionSensorImageName, QMLAdapter::getInstance()->groundVisionImageProvider());
 
-        // 2.1 - LOAD MAIN QML MAIN WINDOW
-        mainWindow.setSource(RB_MAIN_APP);
-
-        // 2.2 - INITIATE MAIN WINDOW AGENT, STARTING ROBOT MANAGEMENT THREAD
-        RbMainWindowAgent::getInstance(argc, argv)->setQmlCom((QObject*)mainWindow.rootObject());
-
-        // 2.3 - SET MAIN QML CONTEXT PROPERTY (_app used by used as an property of RB_MAIN_APP QML type)
+        // 2.1 - [BEFORE LOAD QML] SET MAIN QML CONTEXT PROPERTY (_app used by used as an property of RB_MAIN_APP QML type)
+        //mainQmlEngine->rootContext()->setContextProperty("_mainWindow", &mainWindow);
         mainQmlEngine->rootContext()->setContextProperty(QMLAdapter::CONTEXT_PROPERTY[QMLAdapter::ROBOT_APPLICATION], QCoreApplication::instance());
         mainQmlEngine->rootContext()->setContextProperty(QMLAdapter::CONTEXT_PROPERTY[QMLAdapter::MAIN_WINDOW_AGENT], RbMainWindowAgent::getInstance());
         mainQmlEngine->rootContext()->setContextProperty(QMLAdapter::CONTEXT_PROPERTY[QMLAdapter::RB_QML_ADAPTER], QMLAdapter::getInstance());
+
+        // 2.2 - LOAD MAIN QML MAIN WINDOW
+        mainWindow.setSource(RB_MAIN_APP);
+
+        // 2.3 - INITIATE MAIN WINDOW AGENT, STARTING ROBOT MANAGEMENT THREAD
+        RbMainWindowAgent::getInstance(argc, argv)->setQmlCom((QObject*)mainWindow.rootObject());
 
         // 2.4 - INITIALIZE QML CONTENT
         RbMainWindowAgent::getInstance()->initializeQMLContent();

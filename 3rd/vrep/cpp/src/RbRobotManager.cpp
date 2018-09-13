@@ -48,13 +48,29 @@ void RbRobotManager::runStateMachineOperation()
 
 // ==========================================================================================
 //
-RbRobotManager::RbRobotManager(int argc, char** pArgv)
-            : _init_argc(argc),
-              _pInit_argv(pArgv),
-              _robotId(CRUN_ROBOT),
-              _robot_pos(QVector3D(0,0,0)),
+RbRobotManager* RbRobotManager::_instance = nullptr;
+RbRobotManager* RbRobotManager::getInstance()
+{
+    if(_instance == nullptr) {
+        _instance = new RbRobotManager();
+    }
 
-              _thread(nullptr),
+    return _instance;
+}
+
+bool RbRobotManager::checkInstance()
+{
+    return _instance != nullptr;
+}
+
+void RbRobotManager::deleteInstance()
+{
+    delete _instance;
+    _instance = nullptr;
+}
+
+RbRobotManager::RbRobotManager()
+            : _thread(nullptr),
               _mutex(nullptr),
               _currentStateRuleId(0)
 {
@@ -112,7 +128,7 @@ void RbRobotManager::runTask()
     this->runStateMachineOperation();
 
     // Robot Agent Operation --
-    RbMainWindowAgent::getInstance()->getRobotAgent()->runTask();
+    _robotAgent->runTask();
 
     // Sensor Agents Operation --
     const QVector<RbSensorAgent*>& sensorAgentList = RB_SENSOR_SYSTEM()->sensorAgentList();
@@ -138,13 +154,51 @@ void RbRobotManager::setServiceTimeout(int timeout)
 // =========================================================================================
 // ROBOT AGENT SERVICE FUNCTIONS -----------------------------------------------------------
 //
+
+void RbRobotManager::startRobotAgent()
+{
+    printf("START ROBOT AGENT\n");
+    //
+    _robotAgent = new RbRobotAgent();
+    connect(_robotAgent, &RbRobotAgent::queryOrientation, this, &RbRobotManager::queryRobotOrientation);
+    _robotAgent->startThreading(); // Also run its state machine inside (being connected to QThread::started())
+}
+
+bool RbRobotManager::isRobotAgentHalted()
+{
+    return _robotAgent->isHalted();
+}
+
+void RbRobotManager::startSensorAgents()
+{
+    printf("START SENSOR AGENTS\n");
+#ifdef ROBOT_SENSORS
+    RB_SENSOR_SYSTEM()->initialize();
+    //
+    const QVector<RbSensorAgent*>& sensorAgentList = RB_SENSOR_SYSTEM()->sensorAgentList();
+    for(int i = 0; i < sensorAgentList.size(); i++) {
+        connect(sensorAgentList[i], &RbSensorAgent::querySensorData, this, &RbRobotManager::queryRobotSensorData);
+    }
+    //
+    RB_SENSOR_SYSTEM()->runSensorOperation(); // Run their own state machine inside (being connected to QThread::started())
+#endif
+}
+
+bool RbRobotManager::isSensorAgentsHalted()
+{
+#ifdef ROBOT_SENSORS
+    return RB_SENSOR_SYSTEM()->isHalted();
+#else
+    return false;
+#endif
+}
 void RbRobotManager::queryRobotOrientation()
 {
     // Orientation --
     QVector3D orient(VREP_INSTANCE()->getObjectOrientation(RB_NAME));
     // --------------------------------------------------------------------
     // UPDATE TO UI
-    RbMainWindowAgent::getInstance()->getRobotAgent()->updateOrientationUI(orient);
+    _robotAgent->updateOrientationUI(orient);
     printf("Robot orientation updated: [%f]-[%f]-[%f]\n", orient.x(), orient.y(), orient.z());
 }
 
@@ -250,12 +304,12 @@ void RbRobotManager::queryRobotSensorData(int sensorType, int sensorId)
         printf("Query Robot tactile sensor data...\n");
         int res = VREP_QUERY_SENSOR_DATA_CALL("detectCollisionWithObjectFromClient", simx_opmode_oneshot_wait);
         if(res == simx_return_ok && outputIntsCnt > 0) {
-            static int lastState = RbMainWindowAgent::getInstance()->getRobotAgent()->getUIState();
+            static int lastState = _robotAgent->getUIState();
 
             int newState = (outputInts[0] != 0)? RbRobotAgent::COLLIDING : lastState;
             //printf("NEWSTATE: %d", newState);
             if(newState != lastState) {
-                RbMainWindowAgent::getInstance()->getRobotAgent()->setUIState(newState);
+                _robotAgent->setUIState(newState);
                 printf("Robot state updated: %d\n", newState);
                 if(newState == RbRobotAgent::COLLIDING)
                     printf("Robot - Object collision detected!\n");

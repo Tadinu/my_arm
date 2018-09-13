@@ -19,6 +19,7 @@ GB_MODE_ENJOYING = 0
 # ================================================================
 # SERVER INFO ----------------------------------------------------
 #
+CSERVER_ADD  = '127.0.0.1'
 CSERVER_PORT = 19999
 CSERVER_REMOTE_API_OBJECT_NAME = 'remoteApiCommandServer'
 
@@ -201,7 +202,7 @@ def initialize_vrep():
     vrep.simxFinish(-1) # just in case, close all opened connections
 
     global _GB_CLIENT_ID
-    _GB_CLIENT_ID=vrep.simxStart('127.0.0.1', CSERVER_PORT,True,True,5000,5) # Connect to V-REP
+    _GB_CLIENT_ID=vrep.simxStart(CSERVER_ADD, CSERVER_PORT,True,True,5000,5) # Connect to V-REP
     if _GB_CLIENT_ID!=-1:
         print ('Connected to remote API server',_GB_CLIENT_ID)
 

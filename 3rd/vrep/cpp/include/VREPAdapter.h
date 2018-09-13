@@ -68,7 +68,7 @@ private:
     int _vrepRobotHandle;
     int _vrepClientId;
 
-    // Mutex to allow only one agent threat to make a call to V-REP API Server at a time!
+    // Mutex to allow only one agent thread to make a call to V-REP API Server at a time!
     QMutex* _vrepMutex;
 };
 

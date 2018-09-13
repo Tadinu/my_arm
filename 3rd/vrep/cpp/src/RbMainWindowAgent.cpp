@@ -6,6 +6,7 @@
 #include "RbMainWindowAgent.h"
 #include "RbGlobal.h"
 #include "VREPAdapter.h"
+#include "RbRobotManager.h"
 
 #ifdef ROBOT_SENSORS
 #include "RbRobotSensorAdapter.h"
@@ -17,15 +18,8 @@ RbMainWindowAgent* RbMainWindowAgent::_instance = nullptr;
 
 // --- CalibrationDialog ---
 RbMainWindowAgent::RbMainWindowAgent(int argc, char **argv, QObject *parent)
-    :QObject(parent),
-     _robotThread(new RbRobotManager(argc, argv))
+    :QObject(parent)
 {
-    // 1-
-    _robotThread->startThreading();
-    // 2- (After robot manager thread starts
-    connect(this, &RbMainWindowAgent::robotVelUpdateOrdered,    _robotThread, &RbRobotManager::setRobotVel);
-    connect(this, &RbMainWindowAgent::robotQueryTimeoutUpdated, _robotThread, &RbRobotManager::setServiceTimeout);
-    connect(this, &RbMainWindowAgent::fallingObjTimeInvervalUpdated, _robotThread, &RbRobotManager::setFallingObjTimeInterval);
 }
 
 RbMainWindowAgent::~RbMainWindowAgent()
@@ -64,51 +58,26 @@ void RbMainWindowAgent::initializeQMLContent()
 {
     this->initializeQMLItemAgents();
     //RB_QML_INVOKE_I(setWindowTitle, "Robot Sensors");
+    this->startRobotManager();
 }
 
 void RbMainWindowAgent::initializeQMLItemAgents()
-{
-    // Robot & Sensor Agents (must be done while this RbRobotManager is still running on Main thread and after root QML component is loaded!)
-    this->startRobotAgent();
-    this->startSensorAgents();
-}
+{}
 
-void RbMainWindowAgent::startRobotAgent()
+void RbMainWindowAgent::startRobotManager()
 {
-    printf("START ROBOT AGENT\n");
-    //
-    _robotAgent = new RbRobotAgent();
-    connect(_robotAgent, &RbRobotAgent::queryOrientation, _robotThread, &RbRobotManager::queryRobotOrientation);
-    _robotAgent->startThreading(); // Also run its state machine inside (being connected to QThread::started())
-}
+    // 0- Robot & Sensor Agents (must be done while this RbRobotManager is still running on Main thread and after root QML component is loaded!)
+    RbRobotManager* robotManager = RbRobotManager::getInstance();
+    robotManager->startRobotAgent();
+    robotManager->startSensorAgents();
 
-bool RbMainWindowAgent::isRobotAgentHalted()
-{
-    return _robotAgent->isHalted();
-}
+    // 1-
+    robotManager->startThreading();
 
-void RbMainWindowAgent::startSensorAgents()
-{
-    printf("START SENSOR AGENTS\n");
-#ifdef ROBOT_SENSORS
-    RB_SENSOR_SYSTEM()->initialize();
-    //
-    const QVector<RbSensorAgent*>& sensorAgentList = RB_SENSOR_SYSTEM()->sensorAgentList();
-    for(int i = 0; i < sensorAgentList.size(); i++) {
-        connect(sensorAgentList[i], &RbSensorAgent::querySensorData, _robotThread, &RbRobotManager::queryRobotSensorData);
-    }
-    //
-    RB_SENSOR_SYSTEM()->runSensorOperation(); // Run their own state machine inside (being connected to QThread::started())
-#endif
-}
-
-bool RbMainWindowAgent::isSensorAgentsHalted()
-{
-#ifdef ROBOT_SENSORS
-    return RB_SENSOR_SYSTEM()->isHalted();
-#else
-    return false;
-#endif
+    // 2- (After robot manager thread starts
+    connect(this, &RbMainWindowAgent::robotVelUpdateOrdered,    robotManager, &RbRobotManager::setRobotVel);
+    connect(this, &RbMainWindowAgent::robotQueryTimeoutUpdated, robotManager, &RbRobotManager::setServiceTimeout);
+    connect(this, &RbMainWindowAgent::fallingObjTimeInvervalUpdated, robotManager, &RbRobotManager::setFallingObjTimeInterval);
 }
 
 QVariant RbMainWindowAgent::getFrontVisionSensorImageId()

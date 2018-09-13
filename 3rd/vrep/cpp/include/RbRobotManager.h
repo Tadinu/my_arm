@@ -19,7 +19,7 @@ class RbRobotManager : public QObject {
     Q_ENUMS(RB_ROBOT_MANAGEMENT_STATE)
 
 public:
-    RbRobotManager(int argc, char **pArgv);
+    RbRobotManager();
     virtual ~RbRobotManager();
 
     enum RB_ROBOT_MANAGEMENT_STATE {
@@ -30,6 +30,10 @@ public:
 
         RB_ROBOT_MANAGE_STATE_TOTAL
     };
+
+    static RbRobotManager* getInstance();
+    static void deleteInstance();
+    static bool checkInstance();
 
     // ##############################################################################
     // STATE MACHINE METHODS & PROPERTIES -------------------------------------------
@@ -60,10 +64,18 @@ public slots:
     void setFallingObjTimeInterval(int timeInterval);
 
     // Robot Agent service -----------------
+    void startRobotAgent();
+    bool isRobotAgentHalted();
+
     void queryRobotOrientation();
     void setRobotVel(float vel);
 
+    RbRobotAgent* getRobotAgent() { return _robotAgent; }
+
     // Sensor Agent service ----------------
+    void startSensorAgents();
+    bool isSensorAgentsHalted();
+
     void queryRobotSensorData(int sensorType, int sensorId);
     QImage queryRobotCameraData(const char* visionSensorName);
 
@@ -72,15 +84,11 @@ signals:
 private:
     int _init_argc;
     char** _pInit_argv;
-    const char * _topic;
-
-    int _robotId;
 
 private:
     int _currentStateRuleId;
     RbSMRule<RbRobotManager>* _stateMachine; // pointing to static defined data
-    unsigned char _vrepStrSignalData[1][100];
-    int _vrepIntSignalData;
+    RbRobotAgent* _robotAgent;
 
     // ##############################################################################
     // THREADING --------------------------------------------------------------------
@@ -89,10 +97,10 @@ public:
     bool startThreading();
 
 private:
+    static RbRobotManager* _instance;
     QTimer* _serviceTimer;
     QThread *_thread;
     QMutex* _mutex;
-    QVector3D _robot_pos;
 };
 #endif
 

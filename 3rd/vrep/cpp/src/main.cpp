@@ -43,6 +43,8 @@ int main(int argc, char *argv[])
         qmlRegisterSingletonType(QUrl("qrc:///qml/MainGBSingletonObject.qml"), "MainGBSingletonObject", 1, 0, "MAINGB");
 
         // -- QML COMPONENT INIT -----------------------------------------------------------
+        QMLAdapter::getInstance();
+
         // 1 - Main Window --
         //
         QQuickView mainWindow;
@@ -88,7 +90,7 @@ int main(int argc, char *argv[])
         // - http://qt-project.org/doc/qt-4.8/qcoreapplication.html#exec
         // - MainDialog::finalizingMainApp() [slot]
     }
-    
+
     catch (std::exception* e)
     {
     }

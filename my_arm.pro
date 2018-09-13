@@ -247,7 +247,8 @@ SOURCES += main.cpp \
     3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/04_RMLVelocitySampleApplication.cpp \
     3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/05_RMLVelocitySampleApplication.cpp \
     3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/06_RMLVelocitySampleApplication.cpp \
-    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/08_RMLVelocitySampleApplication.cpp
+    3rd/ReflexxesTypeII/src/RMLVelocitySampleApplications/08_RMLVelocitySampleApplication.cpp \
+    src/my_arm/RobotGazeboAdapter.cpp
 
 RESOURCES += qml.qrc
 
@@ -901,7 +902,8 @@ HEADERS += \
     include/Gazebo/gazebo_voxel_mesh_renderer.h \
     include/my_arm/RobotMoveIt.h \
     include/my_arm/base64.h \
-    include/my_arm/commondefines.h
+    include/my_arm/commondefines.h \
+    include/my_arm/RobotGazeboAdapter.h
 
 
 ##

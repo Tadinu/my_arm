@@ -5,7 +5,6 @@
 #include <QtCore>
 #include "QMLAdapter.h"
 #include "QMLItemAgent.h"
-#include "RbRobotManager.h"
 
 class RbMainWindowAgent : public QObject
 {
@@ -22,12 +21,7 @@ public:
     void initializeQMLContent();
     void setQmlCom(QObject* qmlCom);
 
-    void startRobotAgent();
-    bool isRobotAgentHalted();
-    void startSensorAgents();
-    bool isSensorAgentsHalted();
-
-    RbRobotAgent* getRobotAgent() { return _robotAgent; }
+    void startRobotManager();
     Q_INVOKABLE QVariant getFrontVisionSensorImageId();
     Q_INVOKABLE QVariant getGroundVisionSensorImageId();
     Q_INVOKABLE void setRobotVel(float vel);
@@ -42,8 +36,6 @@ signals:
 
 private:
     static RbMainWindowAgent *_instance;
-    RbRobotManager* _robotThread;
-    RbRobotAgent* _robotAgent;
 };
 
 #endif // RB_MAINWINDOW_AGENT_H

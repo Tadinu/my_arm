@@ -28,7 +28,7 @@ project(my_arm)
 ## rosbuild_init()
 ## rosbuild_genmsg()
 
-# check c++11 / c++0x
+# CHECK C++11/C++0x
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
@@ -40,9 +40,10 @@ else()
     message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-# http://doc.qt.io/qt-5/cmake-manual.html
 set(CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS} ${CMAKE_CXX_FLAGS}")
 message(STATUS "GAZEBO_CXX_FLAGS:" ${GAZEBO_CXX_FLAGS})
+
+## DEFINE QT_DIR:
 ## http://doc.qt.io/qt-5/cmake-manual.html
 # In order for find_package to be successful, Qt 5 must be found below the CMAKE_PREFIX_PATH,
 # or the Qt5<Module>_DIR must be set in the CMake cache to the location of the Qt5WidgetsConfig.cmake
@@ -53,6 +54,7 @@ message(STATUS "QT_DIR:" ${QT_DIR})
 set(CMAKE_PREFIX_PATH "${QT_DIR} $ENV{HOME}/DUC/RobotArm/src/my_arm/3rd ${CMAKE_PREFIX_PATH}")
 message(STATUS "CMAKE_PREFIX_PATH: " ${CMAKE_PREFIX_PATH})
 
+## DEFINE MY_ARM_DIR:
 set(MY_ARM_DIR ${CMAKE_CURRENT_LIST_DIR}) ## "$ENV{HOME}/DUC/RobotArm/src/my_arm"
 file(GLOB ${MY_ARM_DIR} "*.cpp" "*.h" "*.hpp")
 message(STATUS "CMAKE_CURRENT_LIST_DIR:" ${CMAKE_CURRENT_LIST_DIR})
@@ -73,7 +75,8 @@ set(BULLET_INCLUDE "/usr/local/include/bullet")
 ##TEST VAR
 ##message("CATKIN DIRS " $ENV{librealsense_INCLUDE_DIRS} $ENV{librealsense_LIBRARY_DIRS})
 
-## Find catkin macros and libraries
+## FIND CATKIN MACROS & LIBRARIES:
+##
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS

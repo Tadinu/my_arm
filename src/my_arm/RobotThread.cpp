@@ -11,13 +11,16 @@
 #ifdef ROBOT_LEAP_HANDS
 #include "RobotLeapAdapter.h"
 #endif
+
 #ifdef ROBOT_REAL_SENSE_HANDS
 #include "RobotRealSenseAdapter.h"
 #endif
 #include "RobotVoxelyzeAdapter.h"
+
 #ifdef ROBOT_DART
 #include "RobotDartAdapter.h"
 #endif
+
 #include "RobotMoveIt.h"
 #include "bullet_server.h"
 

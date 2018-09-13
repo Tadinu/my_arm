@@ -29,7 +29,7 @@ public:
     //
     static int run(T* object)
     {
-        RbSMRule<T>* smRules = object->getStateMachine();
+        SMEStateMachine smRules = object->getStateMachine();
         int currentState     = object->getCurrentStateRuleId();
         bool (T::*pfCheck)() = nullptr;
         void (T::*pAction)() = nullptr;
